@@ -1,0 +1,16 @@
+[log]
+level = "Info"
+    [[log.file]]
+    format = "json"
+    path = "chat.log"
+    max_size = 1 # megabytes
+    max_age = 28 # days
+[account]
+appID = " "
+appSecret = " "
+token = " "
+encodingAESKey = " "
+[apiserver]
+listen = "127.0.0.1:8080"
+[redis]
+host = "192.168.10.251:6379"
