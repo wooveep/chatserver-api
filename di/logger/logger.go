@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-02-15 16:24:59
- * @LastEditTime: 2023-03-28 14:31:33
+ * @LastEditTime: 2023-03-29 11:07:54
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/di/logger/logger.go
  */
@@ -9,73 +9,101 @@ package logger
 
 import (
 	"chatserver-api/di/config"
-	"fmt"
+	"chatserver-api/internal/constant"
 	"os"
-	"path"
 	"time"
 
 	"github.com/natefinch/lumberjack"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-func InitLogger(conf config.Log) {
-	newLoggerCount := len(conf.File)
-	if newLoggerCount != 0 {
-		for i := 0; i < newLoggerCount; i++ {
-			AddLogger(logrus.New())
+// InitLogger 初始化日志配置
+func InitLogger(_cfg *config.LogConfig, appName string) {
+	once.Do(func() {
+		_logger = &logger{
+			cfg: _cfg,
 		}
+		lumber := _logger.newLumber()
+		writeSyncer := zapcore.NewMultiWriteSyncer(zapcore.AddSync(lumber))
+		sugar := zap.New(_logger.newCore(writeSyncer),
+			zap.ErrorOutput(writeSyncer),
+			zap.AddCaller(),
+			zap.AddCallerSkip(1),
+			zap.Fields(zap.String("appName", appName))).
+			Sugar()
+
+		_logger.sugar = sugar
+	})
+}
+
+func (l *logger) newCore(ws zapcore.WriteSyncer) zapcore.Core {
+	// 默认日志级别
+	atomicLevel := zap.NewAtomicLevel()
+	defaultLevel := zapcore.DebugLevel
+	// 会解码传递的日志级别，生成新的日志级别
+	_ = (&defaultLevel).UnmarshalText([]byte(l.cfg.Level))
+	atomicLevel.SetLevel(defaultLevel)
+	l._level = defaultLevel
+
+	// encoder 这部分没有放到配置文件，因为一般配置一次就不会改动
+	encoder := zapcore.EncoderConfig{
+		MessageKey:     "msg",
+		LevelKey:       "level",
+		TimeKey:        "time",
+		NameKey:        "logger",
+		CallerKey:      "caller",
+		StacktraceKey:  "stack",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.CapitalColorLevelEncoder,
+		EncodeTime:     l.customTimeEncoder,
+		EncodeDuration: zapcore.StringDurationEncoder,
+		EncodeCaller:   zapcore.ShortCallerEncoder,
+		EncodeName:     zapcore.FullNameEncoder,
 	}
-	nextLoggerIndex := 1
-
-	SetLevel(LevelToLogrusLevel(conf.Level))
-
-	for _, file := range conf.File {
-		currentLogger := DefaultCombinedLogger.GetLogger(nextLoggerIndex)
-
-		switch file.Format {
-		case config.LogFormatJSON:
-			currentLogger.SetFormatter(&logrus.JSONFormatter{})
-		case config.LogFormatText:
-			currentLogger.SetFormatter(&logrus.TextFormatter{})
-		}
-		currentLogger.SetOutput(&lumberjack.Logger{
-			Filename:   file.Path,
-			MaxSize:    file.MaxSize,
-			MaxAge:     file.MaxAge,
-			MaxBackups: 3,
-			Compress:   true,
-		})
-		nextLoggerIndex++
+	var writeSyncer zapcore.WriteSyncer
+	if l.cfg.Console {
+		writeSyncer = zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout))
+	} else {
+		// 输出到文件时，不使用彩色日志，否则会出现乱码
+		encoder.EncodeLevel = zapcore.CapitalLevelEncoder
+		writeSyncer = ws
 	}
-
+	// Tips: 如果使用zapcore.NewJSONEncoder
+	// encoderConfig里面就不要配置 EncodeLevel 为zapcore.CapitalColorLevelEncoder或者是
+	// zapcore.LowercaseColorLevelEncoder, 不但日志级别字段不会出现颜色，而且日志级别level字段
+	// 会出现乱码，因为控制颜色的字符也被JSON编码了。
+	return zapcore.NewCore(zapcore.NewConsoleEncoder(encoder),
+		writeSyncer,
+		atomicLevel)
 }
 
-type ProtocolLogger struct{}
-
-const fromProtocol = "Protocol -> "
-
-func (p ProtocolLogger) Info(format string, arg ...any) {
-	Infof(fromProtocol+format, arg...)
+// CustomTimeEncoder 实现了 zapcore.TimeEncoder
+// 实现对日期格式的自定义转换
+func (l *logger) customTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+	format := l.cfg.TimeFormat
+	if len(format) <= 0 {
+		format = constant.TimeLayoutMs
+	}
+	enc.AppendString(t.Format(format))
 }
 
-func (p ProtocolLogger) Warning(format string, arg ...any) {
-	Warnf(fromProtocol+format, arg...)
+func (l *logger) newLumber() *lumberjack.Logger {
+	return &lumberjack.Logger{
+		Filename:   l.cfg.FileName,
+		MaxSize:    l.cfg.MaxSize,
+		MaxAge:     l.cfg.MaxAge,
+		MaxBackups: l.cfg.MaxBackups,
+		LocalTime:  l.cfg.LocalTime,
+		Compress:   l.cfg.Compress,
+	}
 }
 
-func (p ProtocolLogger) Debug(format string, arg ...any) {
-	Debugf(fromProtocol+format, arg...)
+func (l *logger) EnabledLevel(level zapcore.Level) bool {
+	return level >= l._level
 }
 
-func (p ProtocolLogger) Error(format string, arg ...any) {
-	Errorf(fromProtocol+format, arg...)
-}
-
-func (p ProtocolLogger) Dump(data []byte, format string, arg ...any) {
-	// if !tools.FileExist("DumpsPath") {
-	// 	_ = os.MkdirAll("DumpsPath", 0o755)
-	// }
-	dumpFile := path.Join("DumpsPath", fmt.Sprintf("%v.dump", time.Now().Unix()))
-	message := fmt.Sprintf(format, arg...)
-	Errorf("出现错误 %v. 详细信息已转储至文件 %v 请连同日志提交给开发者处理", message, dumpFile)
-	_ = os.WriteFile(dumpFile, data, 0o644)
+// Sync 关闭时需要同步日志到输出
+func Sync() {
+	_ = _logger.sugar.Sync()
 }

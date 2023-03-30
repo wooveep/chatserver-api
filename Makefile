@@ -6,8 +6,8 @@ go_version = $(shell go version)
 commit_id = $(shell git rev-parse HEAD)
 branch_name = $(shell git name-rev --name-only HEAD)
 build_time = $(shell date -u '+%Y-%m-%d_%H:%M:%S')
-app_version = 1.0.0
-version_package = internal/utils/version
+app_version = 0.0.1-dev
+version_package = chatserver-api/utils/version
 
 dev: mac
 
@@ -37,7 +37,7 @@ linux: prepare
 		[ -z "$$BIN_NAME" ] && continue; \
 		for GOARCH in $(GOARCHS); do \
 			mkdir -p dist/linux_$$GOARCH; \
-			GOOS=linux GOARCH=$$GOARCH go go build -ldflags \
+			GOOS=linux GOARCH=$$GOARCH go  build -ldflags \
 			"-X ${version_package}.CommitId=${commit_id} \
 			-X ${version_package}.BranchName=${branch_name} \
 			-X ${version_package}.BuildTime=${build_time} \
@@ -51,7 +51,7 @@ mac: prepare
 		[ -z "$$BIN_NAME" ] && continue; \
 		for GOARCH in $(GOARCHS_MAC); do \
 			mkdir -p dist/mac_$$GOARCH; \
-			GOOS=darwin GOARCH=$$GOARCH go go build -ldflags \
+			GOOS=darwin GOARCH=$$GOARCH go  build -ldflags \
 			"-X ${version_package}.CommitId=${commit_id} \
 			-X ${version_package}.BranchName=${branch_name} \
 			-X ${version_package}.BuildTime=${build_time} \

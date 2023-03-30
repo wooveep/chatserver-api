@@ -1,376 +1,269 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-02-15 11:44:21
- * @LastEditTime: 2023-02-15 16:25:11
+ * @LastEditTime: 2023-03-29 11:08:01
  * @LastEditors: cloudyi.li
- * @FilePath: /chatbot/di/logger/log.go
+ * @FilePath: /chatserver-api/di/logger/log.go
  */
 package logger
 
 import (
+	"chatserver-api/di/config"
+	"chatserver-api/internal/constant"
 	"context"
-	"io"
-	"time"
+	"sync"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-var DefaultCombinedLogger = New()
+var (
+	_logger *logger
+	once    sync.Once
+)
 
-type nothingWriter struct{}
-
-func (nothingWriter) Write(p []byte) (n int, err error) {
-	return len(p), nil
+type logger struct {
+	cfg    *config.LogConfig
+	sugar  *zap.SugaredLogger
+	_level zapcore.Level
 }
 
-func init() {
-	DefaultCombinedLogger.AddHook(&logHook{})
-	var nilWrite nothingWriter
-	DefaultCombinedLogger.SetOutput(nilWrite)
+// DefaultPair 表示接收打印的键值对参数
+type DefaultPair struct {
+	key   string
+	value interface{}
 }
 
-type CombinedLogger struct {
-	*logrus.Logger
-	additionalLoggers []*logrus.Logger
-}
-
-func New() *CombinedLogger {
-	return &CombinedLogger{
-		Logger:            logrus.New(),
-		additionalLoggers: []*logrus.Logger{},
+func Pair(key string, v interface{}) DefaultPair {
+	return DefaultPair{
+		key:   key,
+		value: v,
 	}
-
 }
 
-type logHook struct {
-}
-
-func (hook *logHook) Levels() []logrus.Level {
-	return logrus.AllLevels
-}
-
-func (hook *logHook) Fire(entry *logrus.Entry) error {
-	for _, logger := range DefaultCombinedLogger.additionalLoggers {
-		// pass entry to all additionalLoggers
-		logger.WithFields(entry.Data).Log(entry.Level, entry.Message)
+func spread(kvs ...DefaultPair) []interface{} {
+	s := make([]interface{}, 0, len(kvs))
+	for _, v := range kvs {
+		s = append(s, v.key, v.value)
 	}
-	return nil
+	return s
 }
 
-func AddLogger(logger *logrus.Logger) {
-	DefaultCombinedLogger.additionalLoggers = append(DefaultCombinedLogger.additionalLoggers, logger)
-}
-
-func (logger *CombinedLogger) GetLogger(index int) *logrus.Logger {
-	if index == 0 {
-		return logger.Logger
-	}
-	if index > len(logger.additionalLoggers) || index < 0 {
-		return nil
-	}
-	return logger.additionalLoggers[index-1]
-}
-
-func (logger *CombinedLogger) Apply(index int, fn func(*logrus.Logger)) {
-	if index == 0 {
-		fn(logger.Logger)
+// Debug 打印debug级别信息
+func Debug(message string, kvs ...DefaultPair) {
+	if !_logger.EnabledLevel(zapcore.DebugLevel) {
 		return
 	}
-	if index > len(logger.additionalLoggers) || index < 0 {
-		panic("index of logger out of range")
+	args := spread(kvs...)
+	_logger.sugar.Debugw(message, args...)
+}
+
+// Info 打印info级别信息
+func Info(message string, kvs ...DefaultPair) {
+	if !_logger.EnabledLevel(zapcore.InfoLevel) {
+		return
 	}
-	fn(logger.additionalLoggers[index-1])
+	args := spread(kvs...)
+	_logger.sugar.Infow(message, args...)
 }
 
-func (logger *CombinedLogger) ApplyAll(fn func(*logrus.Logger)) {
-	fn(logger.Logger)
-	for _, l := range logger.additionalLoggers {
-		fn(l)
+// Warn 打印warn级别信息
+func Warn(message string, kvs ...DefaultPair) {
+	if !_logger.EnabledLevel(zapcore.WarnLevel) {
+		return
 	}
+	args := spread(kvs...)
+	_logger.sugar.Warnw(message, args...)
 }
 
-// SetOutput sets the standard logger output.
-func SetOutput(out io.Writer) {
-	DefaultCombinedLogger.ApplyAll(
-		func(l *logrus.Logger) {
-			l.SetOutput(out)
-		},
-	)
-}
-
-// SetFormatter sets the standard logger formatter.
-func SetFormatter(formatter logrus.Formatter) {
-	DefaultCombinedLogger.ApplyAll(func(l *logrus.Logger) {
-		l.SetFormatter(formatter)
-	})
-}
-
-// SetReportCaller sets whether the standard logger will include the calling
-// method as a field.
-func SetReportCaller(include bool) {
-	DefaultCombinedLogger.ApplyAll(func(l *logrus.Logger) {
-		l.SetReportCaller(include)
-	})
-}
-
-// SetLevel sets the standard logger level.
-func SetLevel(level logrus.Level) {
-	DefaultCombinedLogger.ApplyAll(func(l *logrus.Logger) {
-		l.SetLevel(level)
-	})
-}
-
-// GetLevel returns the standard logger level.
-func GetLevel() logrus.Level {
-	return DefaultCombinedLogger.GetLevel()
-}
-
-// IsLevelEnabled checks if the log level of the standard logger is greater than the level param
-func IsLevelEnabled(level logrus.Level) bool {
-	return DefaultCombinedLogger.IsLevelEnabled(level)
-}
-
-// AddHook adds a hook to the standard logger hooks.
-func AddHook(hook logrus.Hook) {
-	DefaultCombinedLogger.AddHook(hook)
-}
-
-// WithError creates an entry from the standard logger and adds an error to it, using the value defined in ErrorKey as key.
-func WithError(err error) *logrus.Entry {
-	return DefaultCombinedLogger.WithField(logrus.ErrorKey, err)
-}
-
-// WithContext creates an entry from the standard logger and adds a context to it.
-func WithContext(ctx context.Context) *logrus.Entry {
-	return DefaultCombinedLogger.WithContext(ctx)
-}
-
-// WithField creates an entry from the standard logger and adds a field to
-// it. If you want multiple fields, use `WithFields`.
-//
-// Note that it doesn't log until you call Debug, Print, Info, Warn, Fatal
-// or Panic on the Entry it returns.
-func WithField(key string, value interface{}) *logrus.Entry {
-	return DefaultCombinedLogger.WithField(key, value)
-}
-
-// WithFields creates an entry from the standard logger and adds multiple
-// fields to it. This is simply a helper for `WithField`, invoking it
-// once for each field.
-//
-// Note that it doesn't log until you call Debug, Print, Info, Warn, Fatal
-// or Panic on the Entry it returns.
-func WithFields(fields logrus.Fields) *logrus.Entry {
-	return DefaultCombinedLogger.WithFields(fields)
-}
-
-// WithTime creates an entry from the standard logger and overrides the time of
-// logs generated with it.
-//
-// Note that it doesn't log until you call Debug, Print, Info, Warn, Fatal
-// or Panic on the Entry it returns.
-func WithTime(t time.Time) *logrus.Entry {
-	return DefaultCombinedLogger.WithTime(t)
-}
-
-// Trace logs a message at level Trace on the standard logger.
-func Trace(args ...interface{}) {
-	DefaultCombinedLogger.Trace(args...)
-}
-
-// Debug logs a message at level Debug on the standard logger.
-func Debug(args ...interface{}) {
-	DefaultCombinedLogger.Debug(args...)
-}
-
-// Print logs a message at level Info on the standard logger.
-func Print(args ...interface{}) {
-	DefaultCombinedLogger.Print(args...)
-}
-
-// Info logs a message at level Info on the standard logger.
-func Info(args ...interface{}) {
-	DefaultCombinedLogger.Info(args...)
-}
-
-// Warn logs a message at level Warn on the standard logger.
-func Warn(args ...interface{}) {
-	DefaultCombinedLogger.Warn(args...)
-}
-
-// Warning logs a message at level Warn on the standard logger.
-func Warning(args ...interface{}) {
-	DefaultCombinedLogger.Warning(args...)
-}
-
-// Error logs a message at level Error on the standard logger.
-func Error(args ...interface{}) {
-	DefaultCombinedLogger.Error(args...)
-}
-
-// Panic logs a message at level Panic on the standard logger.
-func Panic(args ...interface{}) {
-	DefaultCombinedLogger.Panic(args...)
-}
-
-// Fatal logs a message at level Fatal on the standard logger then the process will exit with status set to 1.
-func Fatal(args ...interface{}) {
-	DefaultCombinedLogger.Fatal(args...)
-}
-
-// TraceFn logs a message from a func at level Trace on the standard logger.
-func TraceFn(fn logrus.LogFunction) {
-	DefaultCombinedLogger.TraceFn(fn)
-}
-
-// DebugFn logs a message from a func at level Debug on the standard logger.
-func DebugFn(fn logrus.LogFunction) {
-	DefaultCombinedLogger.DebugFn(fn)
-}
-
-// PrintFn logs a message from a func at level Info on the standard logger.
-func PrintFn(fn logrus.LogFunction) {
-	DefaultCombinedLogger.PrintFn(fn)
-}
-
-// InfoFn logs a message from a func at level Info on the standard logger.
-func InfoFn(fn logrus.LogFunction) {
-	DefaultCombinedLogger.InfoFn(fn)
-}
-
-// WarnFn logs a message from a func at level Warn on the standard logger.
-func WarnFn(fn logrus.LogFunction) {
-	DefaultCombinedLogger.WarnFn(fn)
-}
-
-// WarningFn logs a message from a func at level Warn on the standard logger.
-func WarningFn(fn logrus.LogFunction) {
-	DefaultCombinedLogger.WarningFn(fn)
-}
-
-// ErrorFn logs a message from a func at level Error on the standard logger.
-func ErrorFn(fn logrus.LogFunction) {
-	DefaultCombinedLogger.ErrorFn(fn)
-}
-
-// PanicFn logs a message from a func at level Panic on the standard logger.
-func PanicFn(fn logrus.LogFunction) {
-	DefaultCombinedLogger.PanicFn(fn)
-}
-
-// FatalFn logs a message from a func at level Fatal on the standard logger then the process will exit with status set to 1.
-func FatalFn(fn logrus.LogFunction) {
-	DefaultCombinedLogger.FatalFn(fn)
-}
-
-// Tracef logs a message at level Trace on the standard logger.
-func Tracef(format string, args ...interface{}) {
-	DefaultCombinedLogger.Tracef(format, args...)
-}
-
-// Debugf logs a message at level Debug on the standard logger.
-func Debugf(format string, args ...interface{}) {
-	DefaultCombinedLogger.Debugf(format, args...)
-}
-
-// Printf logs a message at level Info on the standard logger.
-func Printf(format string, args ...interface{}) {
-	DefaultCombinedLogger.Printf(format, args...)
-}
-
-// Infof logs a message at level Info on the standard logger.
-func Infof(format string, args ...interface{}) {
-	DefaultCombinedLogger.Infof(format, args...)
-}
-
-// Warnf logs a message at level Warn on the standard logger.
-func Warnf(format string, args ...interface{}) {
-	DefaultCombinedLogger.Warnf(format, args...)
-}
-
-// Warningf logs a message at level Warn on the standard logger.
-func Warningf(format string, args ...interface{}) {
-	DefaultCombinedLogger.Warningf(format, args...)
-}
-
-// Errorf logs a message at level Error on the standard logger.
-func Errorf(format string, args ...interface{}) {
-	DefaultCombinedLogger.Errorf(format, args...)
-}
-
-// Panicf logs a message at level Panic on the standard logger.
-func Panicf(format string, args ...interface{}) {
-	DefaultCombinedLogger.Panicf(format, args...)
-}
-
-// Fatalf logs a message at level Fatal on the standard logger then the process will exit with status set to 1.
-func Fatalf(format string, args ...interface{}) {
-	DefaultCombinedLogger.Fatalf(format, args...)
-}
-
-// Traceln logs a message at level Trace on the standard logger.
-func Traceln(args ...interface{}) {
-	DefaultCombinedLogger.Traceln(args...)
-}
-
-// Debugln logs a message at level Debug on the standard logger.
-func Debugln(args ...interface{}) {
-	DefaultCombinedLogger.Debugln(args...)
-}
-
-// Println logs a message at level Info on the standard logger.
-func Println(args ...interface{}) {
-	DefaultCombinedLogger.Println(args...)
-}
-
-// Infoln logs a message at level Info on the standard logger.
-func Infoln(args ...interface{}) {
-	DefaultCombinedLogger.Infoln(args...)
-}
-
-// Warnln logs a message at level Warn on the standard logger.
-func Warnln(args ...interface{}) {
-	DefaultCombinedLogger.Warnln(args...)
-}
-
-// Warningln logs a message at level Warn on the standard logger.
-func Warningln(args ...interface{}) {
-	DefaultCombinedLogger.Warningln(args...)
-}
-
-// Errorln logs a message at level Error on the standard logger.
-func Errorln(args ...interface{}) {
-	DefaultCombinedLogger.Errorln(args...)
-}
-
-// Panicln logs a message at level Panic on the standard logger.
-func Panicln(args ...interface{}) {
-	DefaultCombinedLogger.Panicln(args...)
-}
-
-// Fatalln logs a message at level Fatal on the standard logger then the process will exit with status set to 1.
-func Fatalln(args ...interface{}) {
-	DefaultCombinedLogger.Fatalln(args...)
-}
-
-// levelToLogrusLevel converts a string to a logrus.Level
-func LevelToLogrusLevel(level string) logrus.Level {
-	switch level {
-	case "debug":
-		return logrus.DebugLevel
-	case "info":
-		return logrus.InfoLevel
-	case "warn":
-		return logrus.WarnLevel
-	case "warning":
-		return logrus.WarnLevel
-	case "error":
-		return logrus.ErrorLevel
-	case "fatal":
-		return logrus.FatalLevel
-	case "panic":
-		return logrus.PanicLevel
-	default:
-		return logrus.InfoLevel
+// Error 打印error级别信息
+func Error(message string, kvs ...DefaultPair) {
+	if !_logger.EnabledLevel(zapcore.ErrorLevel) {
+		return
 	}
+	args := spread(kvs...)
+	_logger.sugar.Errorw(message, args...)
+}
+
+// Panic 打印错误信息，然后panic
+func Panic(message string, kvs ...DefaultPair) {
+	if !_logger.EnabledLevel(zapcore.PanicLevel) {
+		return
+	}
+	args := spread(kvs...)
+	_logger.sugar.Panicw(message, args...)
+}
+
+// Fatal 打印错误信息，然后退出
+func Fatal(message string, kvs ...DefaultPair) {
+	if !_logger.EnabledLevel(zapcore.FatalLevel) {
+		return
+	}
+	args := spread(kvs...)
+	_logger.sugar.Fatalw(message, args...)
+}
+
+// Debugf 格式化输出debug级别日志
+func Debugf(template string, args ...interface{}) {
+	_logger.sugar.Debugf(template, args...)
+}
+
+// Infof 格式化输出info级别日志
+func Infof(template string, args ...interface{}) {
+	_logger.sugar.Infof(template, args...)
+}
+
+// Warnf 格式化输出warn级别日志
+func Warnf(template string, args ...interface{}) {
+	_logger.sugar.Warnf(template, args...)
+}
+
+// Errorf 格式化输出error级别日志
+func Errorf(template string, args ...interface{}) {
+	_logger.sugar.Errorf(template, args...)
+}
+
+// Panicf 格式化输出日志，并panic
+func Panicf(template string, args ...interface{}) {
+	_logger.sugar.Panicf(template, args...)
+}
+
+// Fatalf 格式化输出日志，并退出
+func Fatalf(template string, args ...interface{}) {
+	_logger.sugar.Fatalf(template, args...)
+}
+
+// tempLogger 临时的logger
+type tempLogger struct {
+	extra []DefaultPair
+}
+
+// getPrefix 根据extra生成日志前缀，比如 "requestId:%s name:%s "
+func (tl *tempLogger) getPrefix(template string, args []interface{}) ([]interface{}, string) {
+
+	if len(tl.extra) > 0 {
+		var prefix string
+		tmp := make([]interface{}, 0, len(args)+len(tl.extra))
+		for _, pair := range tl.extra {
+			prefix += pair.key + ":%s,"
+			tmp = append(tmp, pair.value)
+		}
+		args = append(tmp, args...)
+		template = prefix + template
+	}
+	return args, template
+}
+
+func (tl *tempLogger) getArgs(kvs []DefaultPair) []interface{} {
+	var args []interface{}
+	if len(tl.extra) > 0 {
+		tl.extra = append(tl.extra, kvs...)
+		args = spread(tl.extra...)
+	} else {
+		args = spread(kvs...)
+	}
+	return args
+}
+
+// RID 实现rid(RequestID打印) 使用格式 log.RID(ctx).Debug(), 可以继续拓展 比如Log.RID(ctx).AppName(ctx).Debug()
+func RID(ctx context.Context) *tempLogger {
+	tl := &tempLogger{extra: make([]DefaultPair, 0)}
+	if ctx == nil {
+		return tl
+	}
+	if v := ctx.Value(constant.RequestId); v != nil && v != "" {
+		tl.extra = append(tl.extra, Pair(constant.RequestId, v))
+	}
+	return tl
+}
+
+func (tl *tempLogger) Debug(message string, kvs ...DefaultPair) {
+	// 这里重复写的原因是zap的log设置的SKIP是1，
+	//并且使用的全局只有一个logger，不能修改SKIP，否则打印的位置不正确，后续都是重复代码
+	// Debug(message, tl.extra...) 这种写法要修改SKIP
+	if !_logger.EnabledLevel(zapcore.DebugLevel) {
+		return
+	}
+	args := tl.getArgs(kvs)
+	_logger.sugar.Debugw(message, args...)
+}
+
+func (tl *tempLogger) Info(message string, kvs ...DefaultPair) {
+	if !_logger.EnabledLevel(zapcore.InfoLevel) {
+		return
+	}
+	args := tl.getArgs(kvs)
+	_logger.sugar.Infow(message, args...)
+}
+
+// Warn 打印warn级别信息
+func (tl *tempLogger) Warn(message string, kvs ...DefaultPair) {
+	if !_logger.EnabledLevel(zapcore.WarnLevel) {
+		return
+	}
+	args := tl.getArgs(kvs)
+	_logger.sugar.Warnw(message, args...)
+}
+
+// Error 打印error级别信息
+func (tl *tempLogger) Error(message string, kvs ...DefaultPair) {
+	if !_logger.EnabledLevel(zapcore.ErrorLevel) {
+		return
+	}
+	args := tl.getArgs(kvs)
+	_logger.sugar.Errorw(message, args...)
+}
+
+// Panic 打印错误信息，然后panic
+func (tl *tempLogger) Panic(message string, kvs ...DefaultPair) {
+	if !_logger.EnabledLevel(zapcore.PanicLevel) {
+		return
+	}
+	args := tl.getArgs(kvs)
+	_logger.sugar.Panicw(message, args...)
+}
+
+// Fatal 打印错误信息，然后退出
+func (tl *tempLogger) Fatal(message string, kvs ...DefaultPair) {
+	if !_logger.EnabledLevel(zapcore.FatalLevel) {
+		return
+	}
+	args := tl.getArgs(kvs)
+	_logger.sugar.Fatalw(message, args...)
+}
+
+// Debugf 格式化输出debug级别日志
+func (tl *tempLogger) Debugf(template string, args ...interface{}) {
+	args, template = tl.getPrefix(template, args)
+	_logger.sugar.Debugf(template, args...)
+}
+
+// Infof 格式化输出info级别日志
+func (tl *tempLogger) Infof(template string, args ...interface{}) {
+	args, template = tl.getPrefix(template, args)
+	_logger.sugar.Infof(template, args...)
+}
+
+// Warnf 格式化输出warn级别日志
+func (tl *tempLogger) Warnf(template string, args ...interface{}) {
+	args, template = tl.getPrefix(template, args)
+	_logger.sugar.Warnf(template, args...)
+}
+
+// Errorf 格式化输出error级别日志
+func (tl *tempLogger) Errorf(template string, args ...interface{}) {
+	args, template = tl.getPrefix(template, args)
+	_logger.sugar.Errorf(template, args...)
+}
+
+// Panicf 格式化输出日志，并panic
+func (tl *tempLogger) Panicf(template string, args ...interface{}) {
+	args, template = tl.getPrefix(template, args)
+	_logger.sugar.Panicf(template, args...)
+}
+
+// Fatalf 格式化输出日志，并退出
+func (tl *tempLogger) Fatalf(template string, args ...interface{}) {
+	args, template = tl.getPrefix(template, args)
+	_logger.sugar.Fatalf(template, args...)
 }
