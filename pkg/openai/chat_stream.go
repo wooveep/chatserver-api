@@ -1,8 +1,14 @@
+/*
+ * @Author: cloudyi.li
+ * @Date: 2023-03-30 18:16:23
+ * @LastEditTime: 2023-03-31 17:04:24
+ * @LastEditors: cloudyi.li
+ * @FilePath: /chatserver-api/pkg/openai/chat_stream.go
+ */
 package openai
 
 import (
 	"bufio"
-	"context"
 )
 
 type ChatCompletionStreamChoiceDelta struct {
@@ -34,7 +40,6 @@ type ChatCompletionStream struct {
 // sent as data-only server-sent events as they become available, with the
 // stream terminated by a data: [DONE] message.
 func (c *Client) CreateChatCompletionStream(
-	ctx context.Context,
 	request ChatCompletionRequest,
 ) (stream *ChatCompletionStream, err error) {
 	urlSuffix := "/chat/completions"
@@ -44,7 +49,7 @@ func (c *Client) CreateChatCompletionStream(
 	}
 
 	request.Stream = true
-	req, err := c.newStreamRequest(ctx, "POST", urlSuffix, request)
+	req, err := c.newStreamRequest("POST", urlSuffix, request)
 	if err != nil {
 		return
 	}

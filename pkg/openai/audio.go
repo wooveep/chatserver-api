@@ -2,7 +2,6 @@ package openai
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -32,25 +31,24 @@ type AudioResponse struct {
 
 // CreateTranscription — API call to create a transcription. Returns transcribed text.
 func (c *Client) CreateTranscription(
-	ctx context.Context,
+
 	request AudioRequest,
 ) (response AudioResponse, err error) {
-	response, err = c.callAudioAPI(ctx, request, "transcriptions")
+	response, err = c.callAudioAPI(request, "transcriptions")
 	return
 }
 
 // CreateTranslation — API call to translate audio into English.
 func (c *Client) CreateTranslation(
-	ctx context.Context,
+
 	request AudioRequest,
 ) (response AudioResponse, err error) {
-	response, err = c.callAudioAPI(ctx, request, "translations")
+	response, err = c.callAudioAPI(request, "translations")
 	return
 }
 
 // callAudioAPI — API call to an audio endpoint.
 func (c *Client) callAudioAPI(
-	ctx context.Context,
 	request AudioRequest,
 	endpointSuffix string,
 ) (response AudioResponse, err error) {
@@ -62,7 +60,7 @@ func (c *Client) callAudioAPI(
 	}
 
 	urlSuffix := fmt.Sprintf("/audio/%s", endpointSuffix)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.fullURL(urlSuffix), &formBody)
+	req, err := http.NewRequestWithContext(c.ctx, http.MethodPost, c.fullURL(urlSuffix), &formBody)
 	if err != nil {
 		return
 	}

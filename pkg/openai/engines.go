@@ -1,7 +1,13 @@
+/*
+ * @Author: cloudyi.li
+ * @Date: 2023-03-30 18:16:24
+ * @LastEditTime: 2023-03-31 17:05:18
+ * @LastEditors: cloudyi.li
+ * @FilePath: /chatserver-api/pkg/openai/engines.go
+ */
 package openai
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 )
@@ -21,8 +27,8 @@ type EnginesList struct {
 
 // ListEngines Lists the currently available engines, and provides basic
 // information about each option such as the owner and availability.
-func (c *Client) ListEngines(ctx context.Context) (engines EnginesList, err error) {
-	req, err := c.requestBuilder.build(ctx, http.MethodGet, c.fullURL("/engines"), nil)
+func (c *Client) ListEngines() (engines EnginesList, err error) {
+	req, err := c.requestBuilder.build(c.ctx, http.MethodGet, c.fullURL("/engines"), nil)
 	if err != nil {
 		return
 	}
@@ -34,11 +40,10 @@ func (c *Client) ListEngines(ctx context.Context) (engines EnginesList, err erro
 // GetEngine Retrieves an engine instance, providing basic information about
 // the engine such as the owner and availability.
 func (c *Client) GetEngine(
-	ctx context.Context,
 	engineID string,
 ) (engine Engine, err error) {
 	urlSuffix := fmt.Sprintf("/engines/%s", engineID)
-	req, err := c.requestBuilder.build(ctx, http.MethodGet, c.fullURL(urlSuffix), nil)
+	req, err := c.requestBuilder.build(c.ctx, http.MethodGet, c.fullURL(urlSuffix), nil)
 	if err != nil {
 		return
 	}

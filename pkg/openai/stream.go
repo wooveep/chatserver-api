@@ -1,8 +1,14 @@
+/*
+ * @Author: cloudyi.li
+ * @Date: 2023-03-30 18:16:24
+ * @LastEditTime: 2023-03-31 17:06:39
+ * @LastEditors: cloudyi.li
+ * @FilePath: /chatserver-api/pkg/openai/stream.go
+ */
 package openai
 
 import (
 	"bufio"
-	"context"
 	"errors"
 )
 
@@ -19,7 +25,6 @@ type CompletionStream struct {
 // sent as data-only server-sent events as they become available, with the
 // stream terminated by a data: [DONE] message.
 func (c *Client) CreateCompletionStream(
-	ctx context.Context,
 	request CompletionRequest,
 ) (stream *CompletionStream, err error) {
 	urlSuffix := "/completions"
@@ -29,7 +34,7 @@ func (c *Client) CreateCompletionStream(
 	}
 
 	request.Stream = true
-	req, err := c.newStreamRequest(ctx, "POST", urlSuffix, request)
+	req, err := c.newStreamRequest("POST", urlSuffix, request)
 	if err != nil {
 		return
 	}

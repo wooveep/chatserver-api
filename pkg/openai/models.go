@@ -1,7 +1,13 @@
+/*
+ * @Author: cloudyi.li
+ * @Date: 2023-03-30 18:16:24
+ * @LastEditTime: 2023-03-31 17:06:59
+ * @LastEditors: cloudyi.li
+ * @FilePath: /chatserver-api/pkg/openai/models.go
+ */
 package openai
 
 import (
-	"context"
 	"net/http"
 )
 
@@ -39,8 +45,8 @@ type ModelsList struct {
 
 // ListModels Lists the currently available models,
 // and provides basic information about each model such as the model id and parent.
-func (c *Client) ListModels(ctx context.Context) (models ModelsList, err error) {
-	req, err := c.requestBuilder.build(ctx, http.MethodGet, c.fullURL("/models"), nil)
+func (c *Client) ListModels() (models ModelsList, err error) {
+	req, err := c.requestBuilder.build(c.ctx, http.MethodGet, c.fullURL("/models"), nil)
 	if err != nil {
 		return
 	}

@@ -1,20 +1,16 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 14:11:49
- * @LastEditTime: 2023-03-29 14:13:04
+ * @LastEditTime: 2023-03-31 16:50:45
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/chat.go
  */
 package model
 
-type ChatEvent struct {
-	Message chan string
-	// New client connections
-	NewClients chan chan string
+type ChatChattingReq struct {
+	ChatId   string `json:"chatid"`
+	Qmessage string `json:"qmessage"`
+}
 
-	// Closed client connections
-	ClosedClients chan chan string
-
-	// Total client connections
-	TotalClients map[chan string]bool
+type ChatChattingRes struct {
 }

@@ -1,7 +1,6 @@
 package openai
 
 import (
-	"context"
 	"errors"
 	"net/http"
 )
@@ -129,7 +128,6 @@ type CompletionResponse struct {
 // If using a fine-tuned model, simply provide the model's ID in the CompletionRequest object,
 // and the server will use the model's parameters to generate the completion.
 func (c *Client) CreateCompletion(
-	ctx context.Context,
 	request CompletionRequest,
 ) (response CompletionResponse, err error) {
 	if request.Stream {
@@ -143,7 +141,7 @@ func (c *Client) CreateCompletion(
 		return
 	}
 
-	req, err := c.requestBuilder.build(ctx, http.MethodPost, c.fullURL(urlSuffix), request)
+	req, err := c.requestBuilder.build(c.ctx, http.MethodPost, c.fullURL(urlSuffix), request)
 	if err != nil {
 		return
 	}

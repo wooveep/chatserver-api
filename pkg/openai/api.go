@@ -9,8 +9,8 @@ import (
 
 // Client is OpenAI GPT-3 API client.
 type Client struct {
-	config ClientConfig
-
+	config         ClientConfig
+	ctx            context.Context
 	requestBuilder requestBuilder
 }
 
@@ -24,6 +24,7 @@ func NewClient() *Client {
 func NewClientWithConfig(config ClientConfig) *Client {
 	return &Client{
 		config:         config,
+		ctx:            context.Background(),
 		requestBuilder: newRequestBuilder(),
 	}
 }
@@ -86,11 +87,10 @@ func (c *Client) fullURL(suffix string) string {
 }
 
 func (c *Client) newStreamRequest(
-	ctx context.Context,
 	method string,
 	urlSuffix string,
 	body any) (*http.Request, error) {
-	req, err := c.requestBuilder.build(ctx, method, c.fullURL(urlSuffix), body)
+	req, err := c.requestBuilder.build(c.ctx, method, c.fullURL(urlSuffix), body)
 	if err != nil {
 		return nil, err
 	}

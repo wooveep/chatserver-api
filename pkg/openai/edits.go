@@ -1,7 +1,13 @@
+/*
+ * @Author: cloudyi.li
+ * @Date: 2023-03-30 18:16:24
+ * @LastEditTime: 2023-03-31 17:04:55
+ * @LastEditors: cloudyi.li
+ * @FilePath: /chatserver-api/pkg/openai/edits.go
+ */
 package openai
 
 import (
-	"context"
 	"net/http"
 )
 
@@ -30,8 +36,8 @@ type EditsResponse struct {
 }
 
 // Perform an API call to the Edits endpoint.
-func (c *Client) Edits(ctx context.Context, request EditsRequest) (response EditsResponse, err error) {
-	req, err := c.requestBuilder.build(ctx, http.MethodPost, c.fullURL("/edits"), request)
+func (c *Client) Edits(request EditsRequest) (response EditsResponse, err error) {
+	req, err := c.requestBuilder.build(c.ctx, http.MethodPost, c.fullURL("/edits"), request)
 	if err != nil {
 		return
 	}

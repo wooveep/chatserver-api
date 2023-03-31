@@ -1,7 +1,13 @@
+/*
+ * @Author: cloudyi.li
+ * @Date: 2023-03-30 18:16:23
+ * @LastEditTime: 2023-03-31 17:04:35
+ * @LastEditors: cloudyi.li
+ * @FilePath: /chatserver-api/pkg/openai/chat.go
+ */
 package openai
 
 import (
-	"context"
 	"errors"
 	"net/http"
 )
@@ -63,7 +69,6 @@ type ChatCompletionResponse struct {
 
 // CreateChatCompletion — API call to Create a completion for the chat message.
 func (c *Client) CreateChatCompletion(
-	ctx context.Context,
 	request ChatCompletionRequest,
 ) (response ChatCompletionResponse, err error) {
 	if request.Stream {
@@ -77,7 +82,7 @@ func (c *Client) CreateChatCompletion(
 		return
 	}
 
-	req, err := c.requestBuilder.build(ctx, http.MethodPost, c.fullURL(urlSuffix), request)
+	req, err := c.requestBuilder.build(c.ctx, http.MethodPost, c.fullURL(urlSuffix), request)
 	if err != nil {
 		return
 	}

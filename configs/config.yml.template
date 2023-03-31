@@ -5,6 +5,9 @@ url: http://localhost #服务本地地址
 max-ping-count: 10 #自检次数
 jwt-secret: AC59075B964B0715
 language: zh # 项目语言，en或者zh
+openai:
+  authtoken:  
+  orgid:  
 # 数据库配置（mysql）
 database:
   dbname: apiserver_gin #数据库名称

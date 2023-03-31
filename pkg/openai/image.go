@@ -2,7 +2,6 @@ package openai
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -44,9 +43,9 @@ type ImageResponseDataInner struct {
 }
 
 // CreateImage - API call to create an image. This is the main endpoint of the DALL-E API.
-func (c *Client) CreateImage(ctx context.Context, request ImageRequest) (response ImageResponse, err error) {
+func (c *Client) CreateImage(request ImageRequest) (response ImageResponse, err error) {
 	urlSuffix := "/images/generations"
-	req, err := c.requestBuilder.build(ctx, http.MethodPost, c.fullURL(urlSuffix), request)
+	req, err := c.requestBuilder.build(c.ctx, http.MethodPost, c.fullURL(urlSuffix), request)
 	if err != nil {
 		return
 	}
@@ -65,7 +64,7 @@ type ImageEditRequest struct {
 }
 
 // CreateEditImage - API call to create an image. This is the main endpoint of the DALL-E API.
-func (c *Client) CreateEditImage(ctx context.Context, request ImageEditRequest) (response ImageResponse, err error) {
+func (c *Client) CreateEditImage(request ImageEditRequest) (response ImageResponse, err error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
@@ -105,7 +104,7 @@ func (c *Client) CreateEditImage(ctx context.Context, request ImageEditRequest) 
 	}
 	writer.Close()
 	urlSuffix := "/images/edits"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.fullURL(urlSuffix), body)
+	req, err := http.NewRequestWithContext(c.ctx, http.MethodPost, c.fullURL(urlSuffix), body)
 	if err != nil {
 		return
 	}
@@ -124,7 +123,7 @@ type ImageVariRequest struct {
 
 // CreateVariImage - API call to create an image variation. This is the main endpoint of the DALL-E API.
 // Use abbreviations(vari for variation) because ci-lint has a single-line length limit ...
-func (c *Client) CreateVariImage(ctx context.Context, request ImageVariRequest) (response ImageResponse, err error) {
+func (c *Client) CreateVariImage(request ImageVariRequest) (response ImageResponse, err error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
@@ -149,7 +148,7 @@ func (c *Client) CreateVariImage(ctx context.Context, request ImageVariRequest) 
 	writer.Close()
 	//https://platform.openai.com/docs/api-reference/images/create-variation
 	urlSuffix := "/images/variations"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.fullURL(urlSuffix), body)
+	req, err := http.NewRequestWithContext(c.ctx, http.MethodPost, c.fullURL(urlSuffix), body)
 	if err != nil {
 		return
 	}
