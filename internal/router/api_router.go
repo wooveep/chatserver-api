@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:51:00
- * @LastEditTime: 2023-03-29 16:37:57
+ * @LastEditTime: 2023-04-05 16:32:56
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/router/api_router.go
  */
@@ -41,4 +41,5 @@ func (ar *ApiRouter) Load(g *gin.Engine) {
 	g.GET("/user/avatar-url", ar.userHandler.GetAvatar())
 
 	g.POST("/chat/chatting", middleware.Stream(), ar.chatHandler.ChattingStreamSend())
+	g.POST("/chat/new", ar.chatHandler.CreateNewChat())
 }

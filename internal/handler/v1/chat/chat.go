@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:43:42
- * @LastEditTime: 2023-04-05 15:56:24
+ * @LastEditTime: 2023-04-05 16:36:56
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/chat/chat.go
  */
@@ -32,28 +32,30 @@ func NewChatHandler(_cSrv service.ChatService) *ChatHandler {
 
 func (ch *ChatHandler) ChattingStreamSend() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var chatChattingReq model.ChatChattingReq
-		chanStream := make(chan string)
-		if err := ctx.Bind(&chatChattingReq); err != nil {
+		chatChattingReq := model.ChatChattingReq{}
+		if err := ctx.ShouldBindJSON(&chatChattingReq); err != nil {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
+		} else {
+			chanStream := make(chan string)
+			genMessage := ch.cSrv.REQMessageProcess(chatChattingReq)
+			go ch.cSrv.GetChatResponse(genMessage, ctx.Writer.CloseNotify(), chanStream)
+			messages, err := ch.cSrv.RESMessageProcess(ctx, chanStream)
+			if err != nil {
+				response.JSON(ctx, err, nil)
+			}
+			logger.Info(messages)
 		}
-		genMessage := ch.cSrv.REQMessageProcess(chatChattingReq)
-		go ch.cSrv.GetChatResponse(genMessage, ctx.Writer.CloseNotify(), chanStream)
-		messages, err := ch.cSrv.RESMessageProcess(ctx, chanStream)
-		if err != nil {
-			response.JSON(ctx, err, nil)
-		}
-		logger.Info(messages)
 	}
 }
 
 func (ch *ChatHandler) CreateNewChat() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var chatCreateNewReq model.ChatCreateNewReq
-		if err := ctx.ShouldBind(&chatCreateNewReq); err != nil {
+		chatCreateNewReq := model.ChatCreateNewReq{}
+		if err := ctx.ShouldBindJSON(&chatCreateNewReq); err != nil {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
+		} else {
+			response.JSON(ctx, nil, chatCreateNewReq)
 		}
-
 	}
 
 }

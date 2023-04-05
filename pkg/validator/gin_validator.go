@@ -6,9 +6,10 @@ package validator
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin/binding"
 	"reflect"
 	"strings"
+
+	"github.com/gin-gonic/gin/binding"
 )
 
 func LazyInitGinValidator(language string) {
