@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:55:27
- * @LastEditTime: 2023-03-29 12:00:16
+ * @LastEditTime: 2023-04-05 15:56:17
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/middleware/jwt.go
  */
@@ -13,8 +13,8 @@
 package middleware
 
 import (
-	"chatserver-api/di/config"
-	"chatserver-api/internal/constant"
+	"chatserver-api/internal/consts"
+	"chatserver-api/pkg/config"
 	"chatserver-api/pkg/errors"
 	"chatserver-api/pkg/errors/ecode"
 	"chatserver-api/pkg/jwt"
@@ -38,13 +38,13 @@ func AuthToken() gin.HandlerFunc {
 			return
 		}
 		// 验证token是否正确
-		claims, err := jwt.ParseToken(token, config.AppConfig.JwtSecret)
+		claims, err := jwt.ParseToken(token, config.AppConfig.JwtConfig.Secret)
 		if err != nil {
 			response.JSON(c, errors.Wrap(err, ecode.RequireAuthErr, "invalid token"), nil)
 			c.Abort()
 			return
 		}
-		c.Set(constant.UserID, claims.UserId)
+		c.Set(consts.UserID, claims.UserId)
 		c.Next()
 	}
 }

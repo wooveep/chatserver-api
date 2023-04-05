@@ -1,10 +1,13 @@
 package openai
 
 import (
+	"chatserver-api/pkg/config"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"golang.org/x/net/proxy"
 )
 
 // Client is OpenAI GPT-3 API client.
@@ -15,9 +18,24 @@ type Client struct {
 }
 
 // NewClient creates new OpenAI API client.
-func NewClient() *Client {
-	config := DefaultConfig()
-	return NewClientWithConfig(config)
+func NewClient() (*Client, error) {
+	c := DefaultConfig()
+	config := config.AppConfig.OpenAIConfig
+	if config.ProxyMode == "socks5" {
+		address := fmt.Sprintf("%s:%s", config.ProxyIP, config.ProxyPort)
+		dialer, err := proxy.SOCKS5("tcp", address, nil, proxy.Direct)
+		if err != nil {
+			return nil, err
+		}
+		transport := &http.Transport{
+			Dial: dialer.Dial,
+		}
+		c.HTTPClient = &http.Client{
+			Transport: transport,
+		}
+
+	}
+	return NewClientWithConfig(c), nil
 }
 
 // NewClientWithConfig creates new OpenAI API client for specified config.

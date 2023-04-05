@@ -1,11 +1,11 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:51:03
- * @LastEditTime: 2023-03-30 18:22:10
+ * @LastEditTime: 2023-04-04 14:15:54
  * @LastEditors: cloudyi.li
- * @FilePath: /chatserver-api/internal/constant/constant.go
+ * @FilePath: /chatserver-api/internal/consts/constant.go
  */
-package constant
+package consts
 
 const (
 	// RequestId 请求id名称

@@ -1,51 +1,59 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:43:42
- * @LastEditTime: 2023-03-31 22:27:50
+ * @LastEditTime: 2023-04-05 15:56:24
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/chat/chat.go
  */
 package chat
 
 import (
-	"chatserver-api/di/logger"
 	"chatserver-api/internal/model"
 	"chatserver-api/internal/service"
+	"chatserver-api/pkg/errors"
+	"chatserver-api/pkg/errors/ecode"
+	"chatserver-api/pkg/logger"
 	"chatserver-api/pkg/response"
-	"io"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
 type ChatHandler struct {
-	chatSrv service.ChatService
+	cSrv service.ChatService
 }
 
-func NewChatHandler(_chatSrv service.ChatService) *ChatHandler {
+func NewChatHandler(_cSrv service.ChatService) *ChatHandler {
 
-	chah := &ChatHandler{
-		chatSrv: _chatSrv,
+	ch := &ChatHandler{
+		cSrv: _cSrv,
 	}
-	return chah
+	return ch
 }
 
-func (chah *ChatHandler) ChattingStreamSend() gin.HandlerFunc {
+func (ch *ChatHandler) ChattingStreamSend() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var chatChattingReq model.ChatChattingReq
 		chanStream := make(chan string)
 		if err := ctx.Bind(&chatChattingReq); err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
+		}
+		genMessage := ch.cSrv.REQMessageProcess(chatChattingReq)
+		go ch.cSrv.GetChatResponse(genMessage, ctx.Writer.CloseNotify(), chanStream)
+		messages, err := ch.cSrv.RESMessageProcess(ctx, chanStream)
+		if err != nil {
 			response.JSON(ctx, err, nil)
 		}
-
-		go chah.chatSrv.GetChatResponse(ctx.Writer.CloseNotify(), chanStream)
-		ctx.Stream(func(w io.Writer) bool {
-			if msg, ok := <-chanStream; ok {
-				ctx.SSEvent("chatting", response.UnifyRes(ctx, nil, map[string]string{"a": "b", "msg": msg}))
-				logger.Infof("stream-event:%d", time.Now().UnixMilli())
-				return true
-			}
-			return false
-		})
+		logger.Info(messages)
 	}
+}
+
+func (ch *ChatHandler) CreateNewChat() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var chatCreateNewReq model.ChatCreateNewReq
+		if err := ctx.ShouldBind(&chatCreateNewReq); err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
+		}
+
+	}
+
 }

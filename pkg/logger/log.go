@@ -1,15 +1,15 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-02-15 11:44:21
- * @LastEditTime: 2023-03-29 11:08:01
+ * @LastEditTime: 2023-04-05 15:54:43
  * @LastEditors: cloudyi.li
- * @FilePath: /chatserver-api/di/logger/log.go
+ * @FilePath: /chatserver-api/pkg/logger/log.go
  */
 package logger
 
 import (
-	"chatserver-api/di/config"
-	"chatserver-api/internal/constant"
+	"chatserver-api/internal/consts"
+	"chatserver-api/pkg/config"
 	"context"
 	"sync"
 
@@ -171,8 +171,8 @@ func RID(ctx context.Context) *tempLogger {
 	if ctx == nil {
 		return tl
 	}
-	if v := ctx.Value(constant.RequestId); v != nil && v != "" {
-		tl.extra = append(tl.extra, Pair(constant.RequestId, v))
+	if v := ctx.Value(consts.RequestId); v != nil && v != "" {
+		tl.extra = append(tl.extra, Pair(consts.RequestId, v))
 	}
 	return tl
 }

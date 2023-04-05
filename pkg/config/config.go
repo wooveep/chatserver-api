@@ -1,14 +1,13 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-02-15 16:22:00
- * @LastEditTime: 2023-03-29 11:19:55
+ * @LastEditTime: 2023-04-05 15:55:12
  * @LastEditors: cloudyi.li
- * @FilePath: /chatserver-api/di/config/config.go
+ * @FilePath: /chatserver-api/pkg/config/config.go
  */
 package config
 
 import (
-	"log"
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
@@ -46,7 +45,6 @@ func initConfig() error {
 	if err := viper.Unmarshal(AppConfig); err != nil {
 		panic(err)
 	}
-	log.Println("The application configuration file is loaded successfully!")
 	return nil
 }
 
@@ -55,7 +53,6 @@ func initConfig() error {
 func watchConfig() {
 	viper.WatchConfig()
 	viper.OnConfigChange(func(in fsnotify.Event) {
-		log.Printf("Configuration file changed: %s, reload it", in.Name)
 		// 忽略错误
 		Load(in.Name)
 	})

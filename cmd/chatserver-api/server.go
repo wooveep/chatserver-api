@@ -1,15 +1,15 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:05:07
- * @LastEditTime: 2023-03-29 11:35:59
+ * @LastEditTime: 2023-04-05 15:53:30
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/cmd/chatserver-api/server.go
  */
 package chatserverapi
 
 import (
-	"chatserver-api/di/config"
-	"chatserver-api/di/logger"
+	"chatserver-api/pkg/config"
+	"chatserver-api/pkg/logger"
 	"chatserver-api/pkg/validator"
 	"context"
 	"fmt"

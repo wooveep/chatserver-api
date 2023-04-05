@@ -1,9 +1,9 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-02-15 14:05:41
- * @LastEditTime: 2023-03-30 19:04:16
+ * @LastEditTime: 2023-04-05 15:55:07
  * @LastEditors: cloudyi.li
- * @FilePath: /chatserver-api/di/config/main.go
+ * @FilePath: /chatserver-api/pkg/config/conf.go
  */
 package config
 
@@ -13,8 +13,8 @@ type Config struct {
 	AppName      string       `mapstructure:"app-name"`       //应用名称
 	Url          string       `mapstructure:"url"`            // 应用地址,用于自检 eg. http://127.0.0.1
 	MaxPingCount int          `mapstructure:"max-ping-count"` // 最大自检次数，用户健康检查
-	JwtSecret    string       `mapstructure:"jwt-secret"`
-	Language     string       `mapstructure:"language"` // 项目语言
+	Language     string       `mapstructure:"language"`       // 项目语言
+	JwtConfig    JwtConfig    `mapstructure:"jwt"`
 	OpenAIConfig OpenAIConfig `mapstructure:"openai"`
 	DBConfig     DBConfig     `mapstructure:"database"` // 数据库信息
 	RedisConfig  RedisConfig  `mapstructure:"redis"`    // redis
@@ -22,9 +22,18 @@ type Config struct {
 
 }
 
+type JwtConfig struct {
+	Secret                  string `mapstructure:"secret"`
+	JwtTtl                  int64  `mapstructure:"ttl"`              // token 有效期（秒）
+	JwtBlacklistGracePeriod int64  `mapstructure:"blacklistperiod" ` // 黑名单宽限时间（秒）
+}
+
 type OpenAIConfig struct {
 	AuthToken string `mapstructure:"authtoken"`
 	OrgID     string `mapstructure:"orgid"`
+	ProxyMode string `mapstructure:"proxymode"`
+	ProxyIP   string `mapstructure:"proxyip"`
+	ProxyPort string `mapstructure:"proxyport"`
 }
 
 // DBConfig is used to configure mysql database

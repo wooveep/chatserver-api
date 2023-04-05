@@ -8,7 +8,7 @@
 package response
 
 import (
-	"chatserver-api/internal/constant"
+	"chatserver-api/internal/consts"
 	"chatserver-api/pkg/errors"
 	"chatserver-api/pkg/errors/ecode"
 	"net/http"
@@ -29,7 +29,7 @@ func UnifyRes(c *gin.Context, err error, data interface{}) ApiResponse {
 	// 如果code != 0, 失败的话 返回http状态码400（一般也可以全部返回200）
 	// 返回400 更严谨一些，个人接触的项目中大部分都是400。
 	return ApiResponse{
-		RequestId: c.GetString(constant.RequestId),
+		RequestId: c.GetString(consts.RequestId),
 		ErrCode:   errCode,
 		Message:   message,
 		Data:      data,
@@ -48,7 +48,7 @@ func JSON(c *gin.Context, err error, data interface{}) {
 		httpStatus = http.StatusOK
 	}
 	c.JSON(httpStatus, ApiResponse{
-		RequestId: c.GetString(constant.RequestId),
+		RequestId: c.GetString(consts.RequestId),
 		ErrCode:   errCode,
 		Message:   message,
 		Data:      data,

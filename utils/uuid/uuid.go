@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:30:37
- * @LastEditTime: 2023-03-29 10:35:13
+ * @LastEditTime: 2023-04-04 12:15:34
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/utils/uuid/uuid.go
  */
@@ -26,10 +26,10 @@ func GenUUID16() string {
 }
 
 // ParseUUIDFromStr 从指定的字符串生成uuid
-func ParseUUIDFromStr(str string) (string, error) {
-	u, err := ParseUUIDFromStr(str)
-	if err != nil {
-		return "", err
-	}
-	return u, nil
-}
+// func ParseUUIDFromStr(str string) (string, error) {
+// 	u, err := ParseUUIDFromStr(str)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	return u, nil
+// }

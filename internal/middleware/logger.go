@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:55:27
- * @LastEditTime: 2023-03-29 11:56:35
+ * @LastEditTime: 2023-04-05 15:56:13
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/middleware/logger.go
  */
@@ -9,8 +9,8 @@ package middleware
 
 import (
 	"bytes"
-	"chatserver-api/di/logger"
-	"chatserver-api/internal/constant"
+	"chatserver-api/internal/consts"
+	"chatserver-api/pkg/logger"
 	"io/ioutil"
 	"time"
 
@@ -22,7 +22,7 @@ func Logger(c *gin.Context) {
 	// 请求前
 	t := time.Now()
 	reqPath := c.Request.URL.Path
-	reqId := c.GetString(constant.RequestId)
+	reqId := c.GetString(consts.RequestId)
 	method := c.Request.Method
 	ip := c.ClientIP()
 	requestBody, err := ioutil.ReadAll(c.Request.Body)
@@ -32,7 +32,7 @@ func Logger(c *gin.Context) {
 	c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(requestBody))
 
 	logger.Info("New request start",
-		logger.Pair(constant.RequestId, reqId),
+		logger.Pair(consts.RequestId, reqId),
 		logger.Pair("host", ip),
 		logger.Pair("host", ip),
 		logger.Pair("path", reqPath),
@@ -43,7 +43,7 @@ func Logger(c *gin.Context) {
 	// 请求后
 	latency := time.Since(t)
 	logger.Info("New request end",
-		logger.Pair(constant.RequestId, reqId),
+		logger.Pair(consts.RequestId, reqId),
 		logger.Pair("host", ip),
 		logger.Pair("path", reqPath),
 		logger.Pair("cost", latency))

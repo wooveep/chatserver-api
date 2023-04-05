@@ -8,7 +8,7 @@
 package user
 
 import (
-	"chatserver-api/internal/constant"
+	"chatserver-api/internal/consts"
 	"chatserver-api/internal/service"
 	"chatserver-api/pkg/errors"
 	"chatserver-api/pkg/errors/ecode"
@@ -30,7 +30,7 @@ func NewUserHandler(_userSrv service.UserService) *UserHandler {
 
 func (uh *UserHandler) GetAvatar() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id := c.GetInt64(constant.UserID)
+		id := c.GetInt64(consts.UserID)
 		user, err := uh.userSrv.GetByID(context.TODO(), id)
 		if err != nil {
 			response.JSON(c, errors.Wrap(err, ecode.NotFoundErr, "用户信息为空"), nil)

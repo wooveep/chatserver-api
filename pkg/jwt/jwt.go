@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:57:25
- * @LastEditTime: 2023-03-29 11:59:29
+ * @LastEditTime: 2023-04-05 15:54:24
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/jwt/jwt.go
  */
@@ -9,7 +9,7 @@
 package jwt
 
 import (
-	"chatserver-api/di/config"
+	"chatserver-api/pkg/config"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"

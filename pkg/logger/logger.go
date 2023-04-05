@@ -1,15 +1,15 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-02-15 16:24:59
- * @LastEditTime: 2023-03-29 11:07:54
+ * @LastEditTime: 2023-04-05 15:55:41
  * @LastEditors: cloudyi.li
- * @FilePath: /chatserver-api/di/logger/logger.go
+ * @FilePath: /chatserver-api/pkg/logger/logger.go
  */
 package logger
 
 import (
-	"chatserver-api/di/config"
-	"chatserver-api/internal/constant"
+	"chatserver-api/internal/consts"
+	"chatserver-api/pkg/config"
 	"os"
 	"time"
 
@@ -83,7 +83,7 @@ func (l *logger) newCore(ws zapcore.WriteSyncer) zapcore.Core {
 func (l *logger) customTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 	format := l.cfg.TimeFormat
 	if len(format) <= 0 {
-		format = constant.TimeLayoutMs
+		format = consts.TimeLayoutMs
 	}
 	enc.AppendString(t.Format(format))
 }

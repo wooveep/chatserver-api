@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"chatserver-api/internal/constant"
+	"chatserver-api/internal/consts"
 	"chatserver-api/utils/uuid"
 	"net/http"
 	"strings"
@@ -67,7 +67,7 @@ func RequestId() gin.HandlerFunc {
 		c.Header("X-Request-Id", requestId)
 
 		// 设置requestId到context中，便于后面调用链的透传
-		c.Set(constant.RequestId, requestId)
+		c.Set(consts.RequestId, requestId)
 		c.Next()
 	}
 }

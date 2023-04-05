@@ -1,35 +1,43 @@
 mode: debug #启动模式 debug, release, test
-port: :8080 #启动端口
-app-name: apiserver-gin #服务名称
+port: :18080 #启动端口
+app-name: chatserver-api #服务名称
 url: http://localhost #服务本地地址
 max-ping-count: 10 #自检次数
-jwt-secret: AC59075B964B0715
+jwt-secret: 
 language: zh # 项目语言，en或者zh
+jwt:
+  secret: 
+  ttl: 
+  blacklistperiod: 10
 openai:
-  authtoken:  
-  orgid:  
+  authtoken: 
+  orgid: 
+  proxymode: socks5 
+  proxyip: 
+  proxyport: 
+
 # 数据库配置（mysql）
 database:
-  dbname: apiserver_gin #数据库名称
-  host: 127.0.0.1 #数据库服务地址
-  port: 3306 #数据库端口
-  username: root #用户名(实际线上不可使用root,请授权一个账户)
-  password: 123456 #密码
-  maximum-pool-size: 50  #连接池最大连接数
-  maximum-idle-size: 10  #连接池最大空闲数
+  dbname:   #数据库名称
+  host:   #数据库服务地址
+  port: #数据库端口 
+  username:   #用户名(实际线上不可使用root,请授权一个账户)
+  password:   #密码
+  maximum-pool-size: 10  #连接池最大连接数
+  maximum-idle-size: 2  #连接池最大空闲数
 # 缓存redis配置
-# redis:
-#   address: localhost:6379 #redis server地址
-#   password: 123456 #redis auth 密码，可选，默认无密码
-#   db: 0 #数据库，可选，默认0
-#   pool-size: 100 #同一时刻池中最大连接数
-#   min-idle-conns: 10 #建立连接时维持的最小空闲连接数量，避免新建连接速度慢
-#   idle-timeout: 3000 #最大空闲时长，单位是秒s
+redis:
+  address:  :6379 #redis server地址
+  password: #redis auth 密码，可选，默认无密码
+  db: 1 #数据库，可选，默认0
+  pool-size: 10 #同一时刻池中最大连接数
+  min-idle-conns: 1 #建立连接时维持的最小空闲连接数量，避免新建连接速度慢
+  idle-timeout: 3000 #最大空闲时长，单位是秒s
 
 # 日志配置(使用zap&lumberjack)
 log:
   level: debug
-  file-name: web-server.log
+  file-name: logs/chatserver-api.log
   time-format: '2006-01-02 15:04:05.000'
   max-size: 500 #单个日志文件大小MB
   max-backups: 7 #至多保留多少个日志文件
