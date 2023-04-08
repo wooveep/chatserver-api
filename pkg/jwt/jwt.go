@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:57:25
- * @LastEditTime: 2023-04-05 15:54:24
+ * @LastEditTime: 2023-04-08 15:59:55
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/jwt/jwt.go
  */
@@ -9,7 +9,11 @@
 package jwt
 
 import (
+	"chatserver-api/pkg/cache"
 	"chatserver-api/pkg/config"
+	"chatserver-api/utils/security"
+	"context"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -52,4 +56,34 @@ func ParseToken(jwtStr, secretKey string) (*CustomClaims, error) {
 	} else {
 		return nil, err
 	}
+}
+func getBlackListKey(token string) string {
+	return "jwt_black_list:" + security.Md5(token)
+}
+
+func JoinBlackList(tokenstr string, secretKey string) (err error) {
+	token, err := jwt.ParseWithClaims(tokenstr, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secretKey), nil
+	})
+	if err != nil {
+		return err
+	}
+	nowUnix := time.Now().Unix()
+	timer := time.Duration(token.Claims.(*CustomClaims).ExpiresAt.Unix()-nowUnix) * time.Second
+	rc := cache.GetRedisClient()
+	err = rc.SetNX(context.TODO(), getBlackListKey(token.Raw), nowUnix, timer).Err()
+	return
+}
+
+func IsInBlackList(token string) bool {
+	rc := cache.GetRedisClient()
+	joinUnixStr, err := rc.Get(context.TODO(), getBlackListKey(token)).Result()
+	joinUnix, err := strconv.ParseInt(joinUnixStr, 10, 64)
+	if joinUnixStr == "" || err != nil {
+		return false
+	}
+	if time.Now().Unix()-joinUnix < config.AppConfig.JwtConfig.JwtBlacklistGracePeriod {
+		return false
+	}
+	return true
 }

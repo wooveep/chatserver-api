@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:30:37
- * @LastEditTime: 2023-04-04 12:15:34
+ * @LastEditTime: 2023-04-08 12:34:28
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/utils/uuid/uuid.go
  */
@@ -10,6 +10,7 @@ package uuid
 import (
 	"strings"
 
+	"github.com/bwmarrin/snowflake"
 	"github.com/google/uuid"
 )
 
@@ -23,6 +24,12 @@ func GenUUID16() string {
 	uuidStr := uuid.NewString()
 	uuidStr = strings.ReplaceAll(uuidStr, "-", "")
 	return uuidStr[0:16]
+}
+
+func GenID() (id int64, err error) {
+	node, err := snowflake.NewNode(1)
+	id = node.Generate().Int64()
+	return
 }
 
 // ParseUUIDFromStr 从指定的字符串生成uuid

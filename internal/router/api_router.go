@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:51:00
- * @LastEditTime: 2023-04-05 16:32:56
+ * @LastEditTime: 2023-04-08 16:05:31
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/router/api_router.go
  */
@@ -38,8 +38,18 @@ func NewApiRouter(
 // Load 实现了server/http.go:40
 func (ar *ApiRouter) Load(g *gin.Engine) {
 	// login
-	g.GET("/user/avatar-url", ar.userHandler.GetAvatar())
+	g.POST("/login", ar.userHandler.UserLogin())
+	g.POST("/register", ar.userHandler.UserRegister())
+	ug := g.Group("/user", middleware.AuthToken())
+	{
+		ug.GET("/avatar-url", ar.userHandler.UserGetAvatar())
+		ug.GET("/info", ar.userHandler.UserGetInfo())
+		ug.GET("/logout", ar.userHandler.UserLogout())
 
-	g.POST("/chat/chatting", middleware.Stream(), ar.chatHandler.ChattingStreamSend())
-	g.POST("/chat/new", ar.chatHandler.CreateNewChat())
+	}
+	cg := g.Group("/chat", middleware.AuthToken())
+	{
+		cg.POST("/chatting", middleware.Stream(), ar.chatHandler.ChattingStreamSend())
+		cg.POST("/new", ar.chatHandler.CreateNewChat())
+	}
 }

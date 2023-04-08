@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:43:42
- * @LastEditTime: 2023-04-05 16:36:56
+ * @LastEditTime: 2023-04-08 12:59:06
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/chat/chat.go
  */
@@ -54,7 +54,14 @@ func (ch *ChatHandler) CreateNewChat() gin.HandlerFunc {
 		if err := ctx.ShouldBindJSON(&chatCreateNewReq); err != nil {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
 		} else {
-			response.JSON(ctx, nil, chatCreateNewReq)
+			chatCreateNewRes, err := ch.cSrv.ChatCreatNewProcess(ctx, &chatCreateNewReq)
+			if err != nil {
+				response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
+
+			} else {
+				response.JSON(ctx, nil, chatCreateNewRes)
+
+			}
 		}
 	}
 

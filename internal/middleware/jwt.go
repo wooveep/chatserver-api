@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:55:27
- * @LastEditTime: 2023-04-05 15:56:17
+ * @LastEditTime: 2023-04-08 16:20:40
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/middleware/jwt.go
  */
@@ -31,20 +31,26 @@ const authorizationHeader = "Authorization"
 // AuthToken 鉴权，验证用户token是否有效
 func AuthToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token, err := getJwtFromHeader(c)
+		tokenstr, err := getJwtFromHeader(c)
 		if err != nil {
 			response.JSON(c, errors.Wrap(err, ecode.RequireAuthErr, "invalid token"), nil)
 			c.Abort()
 			return
 		}
+		if jwt.IsInBlackList(tokenstr) {
+			response.JSON(c, errors.WithCode(ecode.AuthTokenErr, "invalid token"), nil)
+			c.Abort()
+			return
+		}
 		// 验证token是否正确
-		claims, err := jwt.ParseToken(token, config.AppConfig.JwtConfig.Secret)
+		claims, err := jwt.ParseToken(tokenstr, config.AppConfig.JwtConfig.Secret)
 		if err != nil {
 			response.JSON(c, errors.Wrap(err, ecode.RequireAuthErr, "invalid token"), nil)
 			c.Abort()
 			return
 		}
 		c.Set(consts.UserID, claims.UserId)
+		c.Set(consts.TokenCtx, tokenstr)
 		c.Next()
 	}
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-04-05 15:56:01
+ * @LastEditTime: 2023-04-08 13:00:10
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -11,9 +11,11 @@ import (
 	"chatserver-api/internal/consts"
 	"chatserver-api/internal/dao"
 	"chatserver-api/internal/model"
+	"chatserver-api/internal/model/entity"
 	"chatserver-api/pkg/logger"
 	"chatserver-api/pkg/openai"
 	"chatserver-api/pkg/response"
+	"chatserver-api/utils/uuid"
 	"errors"
 	"io"
 	"time"
@@ -25,8 +27,9 @@ var _ ChatService = (*chatService)(nil)
 
 type ChatService interface {
 	GetChatResponse(chatMessage []openai.ChatCompletionMessage, closeWorker <-chan bool, chanStream chan<- string)
-	REQMessageProcess(usermesage model.ChatChattingReq) (chatMessages []openai.ChatCompletionMessage)
+	REQMessageProcess(usermessage model.ChatChattingReq) (chatMessages []openai.ChatCompletionMessage)
 	RESMessageProcess(ctx *gin.Context, chanStream <-chan string) (messages string, err error)
+	ChatCreatNewProcess(ctx *gin.Context, newchatreq *model.ChatCreateNewReq) (newchatres model.ChatCreateNewRes, err error)
 }
 
 // userService 实现UserService接口
@@ -54,10 +57,10 @@ func (cs *chatService) reqChatCompletion(chatMessage []openai.ChatCompletionMess
 	return client.CreateChatCompletionStream(req)
 }
 
-func (cs *chatService) REQMessageProcess(usermesage model.ChatChattingReq) (chatMessages []openai.ChatCompletionMessage) {
+func (cs *chatService) REQMessageProcess(usermessage model.ChatChattingReq) (chatMessages []openai.ChatCompletionMessage) {
 	var chatmessage openai.ChatCompletionMessage
 	chatmessage.Role = openai.ChatMessageRoleUser
-	chatmessage.Content = usermesage.Message
+	chatmessage.Content = usermessage.Message
 	return append(chatMessages, chatmessage)
 }
 
@@ -106,4 +109,22 @@ func (cs *chatService) GetChatResponse(chatMessage []openai.ChatCompletionMessag
 		}
 
 	}
+}
+
+func (cs *chatService) ChatCreatNewProcess(ctx *gin.Context, newchatreq *model.ChatCreateNewReq) (newchatres model.ChatCreateNewRes, err error) {
+	chatsession := entity.ChatSession{}
+	chatsession.Id, err = uuid.GenID()
+	if err != nil {
+		return
+	}
+	newchatres.ChatId = chatsession.Id
+	chatsession.UserId = ctx.GetInt64(consts.UserID)
+	chatsession.PresetId = newchatreq.PresetId
+	chatsession.ChatName = newchatreq.ChatName
+	chatsession.MemoryLevel = newchatreq.MemoryLevel
+	err = cs.cd.ChatCreateNew(ctx, &chatsession)
+	if err != nil {
+		return
+	}
+	return
 }

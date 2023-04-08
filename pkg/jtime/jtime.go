@@ -1,11 +1,11 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:58:20
- * @LastEditTime: 2023-03-29 11:59:58
+ * @LastEditTime: 2023-04-08 08:08:45
  * @LastEditors: cloudyi.li
- * @FilePath: /chatserver-api/pkg/time/time.go
+ * @FilePath: /chatserver-api/pkg/jtime/jtime.go
  */
-package time
+package jtime
 
 import (
 	"chatserver-api/internal/consts"

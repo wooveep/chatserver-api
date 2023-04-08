@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 19:43:52
- * @LastEditTime: 2023-04-04 19:48:02
+ * @LastEditTime: 2023-04-08 14:51:30
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/user.go
  */
@@ -13,6 +13,7 @@ import (
 )
 
 type UserDao interface {
-	GetUserByName(ctx context.Context, name string) (*entity.User, error)
-	GetUserById(ctx context.Context, uid int64) (*entity.User, error)
+	UserGetByName(ctx context.Context, username string) (*entity.User, error)
+	UserGetById(ctx context.Context, uid int64) (*entity.User, error)
+	UserRegisterNew(ctx context.Context, user *entity.User) error
 }
