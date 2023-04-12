@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:54:42
- * @LastEditTime: 2023-04-05 15:53:21
+ * @LastEditTime: 2023-04-11 12:33:50
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/cmd/chatserver-api/init.go
  */
@@ -10,6 +10,7 @@ package chatserverapi
 import (
 	"chatserver-api/internal/dao/query"
 	"chatserver-api/internal/handler/v1/chat"
+	"chatserver-api/internal/handler/v1/preset"
 	"chatserver-api/internal/handler/v1/user"
 	"chatserver-api/internal/router"
 	"chatserver-api/internal/service"
@@ -23,7 +24,10 @@ func InitRouter(ds db.IDataSource) Router {
 	chatDao := query.NewChatDao(ds)
 	chatService := service.NewChatService(chatDao)
 	chathandler := chat.NewChatHandler(chatService)
-	apiRouter := router.NewApiRouter(userhandler, chathandler)
+	presetDao := query.NewPresetsDao(ds)
+	presetService := service.NewPresetService(presetDao)
+	presetHandler := preset.NewPresetHandler(presetService)
+	apiRouter := router.NewApiRouter(userhandler, chathandler, presetHandler)
 	return apiRouter
 
 }

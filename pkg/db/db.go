@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 14:38:52
- * @LastEditTime: 2023-04-05 15:54:17
+ * @LastEditTime: 2023-04-11 13:34:24
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/db/db.go
  */
@@ -9,14 +9,34 @@ package db
 
 import (
 	"chatserver-api/pkg/config"
+	slogger "chatserver-api/pkg/logger"
 	"fmt"
 	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 var _ IDataSource = (*defaultPostGresDataSource)(nil)
+
+type Writer struct {
+}
+
+func (w Writer) Printf(format string, args ...interface{}) {
+	// log.Infof(format, args...)
+	slogger.Infof(format, args...)
+}
+
+var slowLogger = logger.New(
+	Writer{},
+	logger.Config{
+		SlowThreshold:             200 * time.Millisecond, // Slow SQL threshold
+		LogLevel:                  logger.Warn,            // Log level
+		IgnoreRecordNotFoundError: true,                   // Ignore ErrRecordNotFound error for logger
+		Colorful:                  false,                  // Disable color
+	},
+)
 
 // IDataSource 定义数据库数据源接口，按照业务需求可以返回主库链接Master和从库链接Slave
 type IDataSource interface {
@@ -67,6 +87,7 @@ func connect(user, password, host, port, dbname string, maxPoolSize, maxIdle int
 		port)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		PrepareStmt: true, // 缓存每一条sql语句，提高执行速度
+		Logger:      slowLogger,
 	})
 	if err != nil {
 		panic(err)

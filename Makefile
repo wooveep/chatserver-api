@@ -27,7 +27,7 @@ windows: prepare
 			"-X ${version_package}.CommitId=${commit_id} \
 			-X ${version_package}.BranchName=${branch_name} \
 			-X ${version_package}.BuildTime=${build_time} \
-			-X ${version_package}.AppVersion=${app_version}" -v \
+			-X ${version_package}.AppVersion=${app_version}" \
 			-o dist/windows_$$GOARCH/$$BIN_NAME.exe cmd/main.go; \
 		done \
 	done
@@ -41,7 +41,7 @@ linux: prepare
 			"-X ${version_package}.CommitId=${commit_id} \
 			-X ${version_package}.BranchName=${branch_name} \
 			-X ${version_package}.BuildTime=${build_time} \
-			-X ${version_package}.AppVersion=${app_version}" -v \
+			-X ${version_package}.AppVersion=${app_version}"  \
 			 -o dist/linux_$$GOARCH/$$BIN_NAME cmd/main.go; \
 		done \
 	done
@@ -55,7 +55,7 @@ mac: prepare
 			"-X ${version_package}.CommitId=${commit_id} \
 			-X ${version_package}.BranchName=${branch_name} \
 			-X ${version_package}.BuildTime=${build_time} \
-			-X ${version_package}.AppVersion=${app_version}" -v \
+			-X ${version_package}.AppVersion=${app_version}"  \
 			-o dist/mac_$$GOARCH/$$BIN_NAME cmd/main.go; \
 		done \
 	done

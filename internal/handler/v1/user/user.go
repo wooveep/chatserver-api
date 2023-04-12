@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:36:21
- * @LastEditTime: 2023-04-08 16:07:16
+ * @LastEditTime: 2023-04-10 19:06:29
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/user/user.go
  */
@@ -91,6 +91,55 @@ func (uh *UserHandler) UserLogout() gin.HandlerFunc {
 			response.JSON(ctx, errors.Wrap(err, ecode.UserLoginErr, "登出失败"), nil)
 		} else {
 			response.JSON(ctx, errors.Wrap(err, ecode.Success, "登出成功"), nil)
+		}
+	}
+}
+
+func (uh *UserHandler) UserVerifyEmail() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var req model.UserVerifyEmailReq
+		if err := ctx.ShouldBindJSON(&req); err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
+			return
+		}
+		res, err := uh.userSrv.UserVerifyEmail(context.TODO(), req.Email)
+		if err != nil {
+			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "接口调用失败"), nil)
+		} else {
+			response.JSON(ctx, nil, res)
+		}
+	}
+}
+
+func (uh *UserHandler) UserVerifyUserName() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var req model.UserVerifyUserNameReq
+		if err := ctx.ShouldBindJSON(&req); err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
+			return
+		}
+		res, err := uh.userSrv.UserVerifyEmail(context.TODO(), req.Username)
+		if err != nil {
+			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "接口调用失败"), nil)
+		} else {
+			response.JSON(ctx, nil, res)
+		}
+	}
+}
+
+func (uh *UserHandler) UserUpdateNickName() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var req model.UserUpdateNickNameReq
+		id := ctx.GetInt64(consts.UserID)
+		if err := ctx.ShouldBindJSON(&req); err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
+			return
+		}
+		res, err := uh.userSrv.UserUpdateNickName(context.TODO(), id, req.Nickname)
+		if err != nil {
+			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "接口调用失败"), nil)
+		} else {
+			response.JSON(ctx, nil, res)
 		}
 	}
 }

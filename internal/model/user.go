@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 15:44:35
- * @LastEditTime: 2023-04-08 15:18:07
+ * @LastEditTime: 2023-04-10 17:26:45
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/user.go
  */
@@ -26,6 +26,7 @@ type UserRegisterReq struct {
 type UserRegisterRes struct {
 	IsSuccess bool `json:"is_success"`
 }
+
 type UserVerifyUserNameReq struct {
 	Username string `json:"username" validate:"required"  label:"用户名"`
 }
@@ -47,10 +48,18 @@ type UserGetAvatarRes struct {
 }
 
 type UserGetInfoRes struct {
-	Username  string  `json:"username"`
-	Nickname  string  `json:"nickname"`
-	Email     string  `json:"email"`
-	Phone     string  `json:"phone"`
-	AvatarUrl string  `json:"avatar_url"`
-	Balance   float64 `json:"balance"`
+	Username  string         `json:"username"`
+	Nickname  string         `json:"nickname"`
+	Email     string         `json:"email"`
+	Phone     string         `json:"phone"`
+	AvatarUrl string         `json:"avatar_url"`
+	ExpiredAt jtime.JsonTime `json:"expired_at"`
+	Balance   float64        `json:"balance"`
+}
+
+type UserUpdateNickNameReq struct {
+	Nickname string `json:"nickname" validate:"required"  label:"用户昵称"`
+}
+type UserUpdateNickNameRes struct {
+	IsChanged bool `json:"is_changed"`
 }

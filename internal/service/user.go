@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:37:13
- * @LastEditTime: 2023-04-08 16:02:52
+ * @LastEditTime: 2023-04-12 14:05:47
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/user.go
  */
@@ -34,6 +34,9 @@ type UserService interface {
 	UserGetAvatar(ctx context.Context, userid int64) (res model.UserGetAvatarRes, err error)
 	UserLogin(ctx context.Context, username, password string) (res model.UserLoginRes, err error)
 	UserGetInfo(ctx context.Context, userid int64) (res model.UserGetInfoRes, err error)
+	UserVerifyEmail(ctx context.Context, email string) (res model.UserVerifyEmailRes, err error)
+	UserVerifyUserName(ctx context.Context, username string) (res model.UserVerifyUserNameRes, err error)
+	UserUpdateNickName(ctx context.Context, userid int64, nickname string) (res model.UserUpdateNickNameRes, err error)
 }
 
 // userService 实现UserService接口
@@ -97,9 +100,10 @@ func (us *userService) UserGetInfo(ctx context.Context, userid int64) (res model
 	res.Nickname = user.Nickname
 	res.Username = user.Username
 	res.Phone = user.Phone
-
+	res.ExpiredAt = jtime.JsonTime(user.ExpiredAt)
 	return res, err
 }
+
 func (us *userService) UserRegister(ctx *gin.Context, req model.UserRegisterReq) (res model.UserRegisterRes, err error) {
 	user := entity.User{}
 	res.IsSuccess = false
@@ -111,6 +115,7 @@ func (us *userService) UserRegister(ctx *gin.Context, req model.UserRegisterReq)
 	user.Nickname = req.Username
 	user.RegisteredIp = ctx.ClientIP()
 	user.Email = req.Email
+	user.ExpiredAt = jtime.JsonTime(time.Now().AddDate(0, 1, 0))
 	user.AvatarUrl, err = avatar.GenNewAvatar(security.Md5WithSalt(req.Username, req.Email))
 	if err != nil {
 		return res, err
@@ -128,13 +133,42 @@ func (us *userService) UserRegister(ctx *gin.Context, req model.UserRegisterReq)
 	return
 }
 
-func (us *userService) UserVerifyUserName() {
-
+func (us *userService) UserVerifyEmail(ctx context.Context, email string) (res model.UserVerifyEmailRes, err error) {
+	count, err := us.ud.UserVerifyEmail(ctx, email)
+	if err != nil {
+		return
+	}
+	if count != 0 {
+		res.Isvalid = false
+	} else {
+		res.Isvalid = true
+	}
+	return
 }
-func (us *userService) UserVerifyEmail() {
 
+func (us *userService) UserVerifyUserName(ctx context.Context, username string) (res model.UserVerifyUserNameRes, err error) {
+	count, err := us.ud.UserVerifyUserName(ctx, username)
+	if err != nil {
+		return
+	}
+	if count != 0 {
+		res.Isvalid = false
+	} else {
+		res.Isvalid = true
+	}
+	return
 }
+
+func (us *userService) UserUpdateNickName(ctx context.Context, userid int64, nickname string) (res model.UserUpdateNickNameRes, err error) {
+	err = us.ud.UserUpdateNickName(ctx, userid, nickname)
+	if err != nil {
+		res.IsChanged = false
+	} else {
+		res.IsChanged = true
+	}
+	return
+}
+
 func (us *userService) UserLogout(tokenstr string) error {
 	return jwt.JoinBlackList(tokenstr, config.AppConfig.JwtConfig.Secret)
-
 }

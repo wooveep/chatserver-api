@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:51:00
- * @LastEditTime: 2023-04-08 16:05:31
+ * @LastEditTime: 2023-04-12 16:51:57
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/router/api_router.go
  */
@@ -14,6 +14,7 @@ package router
 
 import (
 	"chatserver-api/internal/handler/v1/chat"
+	"chatserver-api/internal/handler/v1/preset"
 	"chatserver-api/internal/handler/v1/user"
 	"chatserver-api/internal/middleware"
 
@@ -21,17 +22,20 @@ import (
 )
 
 type ApiRouter struct {
-	userHandler *user.UserHandler
-	chatHandler *chat.ChatHandler
+	userHandler   *user.UserHandler
+	chatHandler   *chat.ChatHandler
+	presetHandler *preset.PresetHandler
 }
 
 func NewApiRouter(
 	userHandler *user.UserHandler,
 	chatHandler *chat.ChatHandler,
+	presetHandler *preset.PresetHandler,
 ) *ApiRouter {
 	return &ApiRouter{
-		userHandler: userHandler,
-		chatHandler: chatHandler,
+		userHandler:   userHandler,
+		chatHandler:   chatHandler,
+		presetHandler: presetHandler,
 	}
 }
 
@@ -40,16 +44,26 @@ func (ar *ApiRouter) Load(g *gin.Engine) {
 	// login
 	g.POST("/login", ar.userHandler.UserLogin())
 	g.POST("/register", ar.userHandler.UserRegister())
+	g.POST("/checkemail", ar.userHandler.UserVerifyEmail())
+	g.POST("/checkusername", ar.userHandler.UserVerifyUserName())
 	ug := g.Group("/user", middleware.AuthToken())
 	{
 		ug.GET("/avatar-url", ar.userHandler.UserGetAvatar())
 		ug.GET("/info", ar.userHandler.UserGetInfo())
 		ug.GET("/logout", ar.userHandler.UserLogout())
+		ug.POST("/changenickname", ar.userHandler.UserUpdateNickName())
 
 	}
 	cg := g.Group("/chat", middleware.AuthToken())
 	{
 		cg.POST("/chatting", middleware.Stream(), ar.chatHandler.ChattingStreamSend())
 		cg.POST("/new", ar.chatHandler.CreateNewChat())
+		cg.GET("/history", ar.chatHandler.ChatSessionGetList())
+		cg.POST("/detail", ar.chatHandler.ChatDetailGet())
+	}
+	pg := g.Group("/preset", middleware.AuthToken())
+	{
+		pg.POST("/new", ar.presetHandler.PresetCreateNew())
+		pg.GET("/list", ar.presetHandler.PresetGetList())
 	}
 }

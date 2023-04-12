@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-04-08 13:00:10
+ * @LastEditTime: 2023-04-12 20:38:31
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -15,7 +15,10 @@ import (
 	"chatserver-api/pkg/logger"
 	"chatserver-api/pkg/openai"
 	"chatserver-api/pkg/response"
+	"chatserver-api/utils/security"
 	"chatserver-api/utils/uuid"
+	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"time"
@@ -26,10 +29,13 @@ import (
 var _ ChatService = (*chatService)(nil)
 
 type ChatService interface {
-	GetChatResponse(chatMessage []openai.ChatCompletionMessage, closeWorker <-chan bool, chanStream chan<- string)
-	REQMessageProcess(usermessage model.ChatChattingReq) (chatMessages []openai.ChatCompletionMessage)
-	RESMessageProcess(ctx *gin.Context, chanStream <-chan string) (messages string, err error)
-	ChatCreatNewProcess(ctx *gin.Context, newchatreq *model.ChatCreateNewReq) (newchatres model.ChatCreateNewRes, err error)
+	ChatGenStremResponse(req openai.ChatCompletionRequest, closeWorker <-chan bool, chanStream chan<- string)
+	ChatReqMessageProcess(ctx context.Context, chatid, userid int64) (req openai.ChatCompletionRequest, err error)
+	ChatResMessageProcess(ctx *gin.Context, chanStream <-chan string) (messages string, err error)
+	ChatCreateNewProcess(ctx context.Context, userid int64, newchatreq *model.ChatCreateNewReq) (newchatres model.ChatCreateNewRes, err error)
+	ChatGetList(ctx context.Context, userid int64) (res model.ChatListRes, err error)
+	ChatMessageSave(ctx context.Context, role, message string, chatid, userid int64) (err error)
+	ChatDetailGet(ctx context.Context, chatid, userid int64) (res model.ChatDetailRes, err error)
 }
 
 // userService 实现UserService接口
@@ -43,28 +49,81 @@ func NewChatService(_cd dao.ChatDao) *chatService {
 	}
 }
 
-func (cs *chatService) reqChatCompletion(chatMessage []openai.ChatCompletionMessage) (*openai.ChatCompletionStream, error) {
-	client, err := openai.NewClient()
+func (cs *chatService) ChatMessageSave(ctx context.Context, role, message string, chatid, userid int64) (err error) {
+	recocd := entity.Record{}
+	recocd.Id, err = uuid.GenID()
 	if err != nil {
-		return nil, err
+		return
 	}
-	req := openai.ChatCompletionRequest{
-		Model:     openai.GPT3Dot5Turbo,
-		MaxTokens: 200,
-		Messages:  chatMessage,
-		Stream:    true,
-	}
-	return client.CreateChatCompletionStream(req)
+	recocd.ChatId = chatid
+	// recocd.UserId = userid
+	recocd.Sender = role
+	recocd.Message = message
+	recocd.MessageHash = security.Md5(message)
+	err = cs.cd.ChatRecordSave(ctx, &recocd)
+	return
 }
-
-func (cs *chatService) REQMessageProcess(usermessage model.ChatChattingReq) (chatMessages []openai.ChatCompletionMessage) {
+func (cs *chatService) ChatDetailGet(ctx context.Context, chatid, userid int64) (res model.ChatDetailRes, err error) {
+	chatdet, err := cs.cd.ChatDetailGet(ctx, userid, chatid)
+	if err != nil {
+		return
+	}
+	res.MaxTokens = chatdet.MaxTokens
+	res.ModelName = chatdet.ModelName
+	res.PresetContent = chatdet.PresetContent
+	res.MemoryLevel = chatdet.MemoryLevel
+	return
+}
+func (cs *chatService) ChatRecordGet(ctx context.Context, chatid, userid int64, mem int16) ([]model.RecordOne, error) {
+	return cs.cd.ChatRecordGet(ctx, userid, chatid, mem)
+}
+func (cs *chatService) ChatReqMessageProcess(ctx context.Context, chatid, userid int64) (req openai.ChatCompletionRequest, err error) {
+	var chatMessages []openai.ChatCompletionMessage
 	var chatmessage openai.ChatCompletionMessage
-	chatmessage.Role = openai.ChatMessageRoleUser
-	chatmessage.Content = usermessage.Message
-	return append(chatMessages, chatmessage)
+	var logitbia map[string]int
+
+	preset, err := cs.cd.ChatDetailGet(ctx, userid, chatid)
+	if err != nil {
+		logger.Errorf("获取会话详情失败: %v\n", err)
+		return
+	}
+	data, err := preset.LogitBias.MarshalJSON()
+	if err != nil {
+		logger.Errorf("序列化LogitBias失败: %v\n", err)
+		return
+	}
+	err = json.Unmarshal(data, &logitbia)
+	if err != nil {
+		logger.Errorf("序列化LogitBias失败: %v\n", err)
+		return
+	}
+	records, err := cs.cd.ChatRecordGet(ctx, userid, chatid, preset.MemoryLevel)
+	if err != nil {
+		logger.Errorf("获取会话消息记录失败: %v\n", err)
+		return
+	}
+	chatmessage.Role = openai.ChatMessageRoleSystem
+	chatmessage.Content = preset.PresetContent
+	chatMessages = append(chatMessages, chatmessage)
+	for _, record := range records {
+		chatmessage.Role = record.Sender
+		chatmessage.Content = record.Message
+		logger.Debugf("ROLE:%s,Message:%s", record.Sender, record.Message)
+		chatMessages = append(chatMessages, chatmessage)
+	}
+	req.Model = preset.ModelName
+	req.Stream = true
+	req.MaxTokens = preset.MaxTokens
+	req.LogitBias = logitbia
+	req.Temperature = float32(preset.Temperature)
+	req.TopP = float32(preset.TopP)
+	req.FrequencyPenalty = float32(preset.Frequency)
+	req.PresencePenalty = float32(preset.Presence)
+	req.Messages = chatMessages
+	return
 }
 
-func (cs *chatService) RESMessageProcess(ctx *gin.Context, chanStream <-chan string) (messages string, err error) {
+func (cs *chatService) ChatResMessageProcess(ctx *gin.Context, chanStream <-chan string) (messages string, err error) {
 
 	msgtime := time.Now().Format(consts.TimeLayout)
 	ctx.Stream(func(w io.Writer) bool {
@@ -77,12 +136,17 @@ func (cs *chatService) RESMessageProcess(ctx *gin.Context, chanStream <-chan str
 		ctx.SSEvent("chatting", response.UnifyRes(ctx, nil, map[string]string{"time": msgtime, "msg": "[DONE]"}))
 		return false
 	})
+	logger.Debugf("Stream-message:%s", messages)
 	return
 }
 
-func (cs *chatService) GetChatResponse(chatMessage []openai.ChatCompletionMessage, closeWorker <-chan bool, chanStream chan<- string) {
+func (cs *chatService) ChatGenStremResponse(req openai.ChatCompletionRequest, closeWorker <-chan bool, chanStream chan<- string) {
 	defer close(chanStream)
-	stream, err := cs.reqChatCompletion(chatMessage)
+	client, err := openai.NewClient()
+	if err != nil {
+		return
+	}
+	stream, err := client.CreateChatCompletionStream(req)
 	if err != nil {
 		logger.Errorf("ChatCompletionStream error: %v\n", err)
 		return
@@ -105,26 +169,34 @@ func (cs *chatService) GetChatResponse(chatMessage []openai.ChatCompletionMessag
 			return
 		default:
 			chanStream <- response.Choices[0].Delta.Content
-			logger.Debugf("MessageGen:%s", response.Choices[0].Delta.Content)
+			// logger.Debugf("MessageGen:%s", response.Choices[0].Delta.Content)
 		}
-
 	}
 }
 
-func (cs *chatService) ChatCreatNewProcess(ctx *gin.Context, newchatreq *model.ChatCreateNewReq) (newchatres model.ChatCreateNewRes, err error) {
-	chatsession := entity.ChatSession{}
-	chatsession.Id, err = uuid.GenID()
+func (cs *chatService) ChatCreateNewProcess(ctx context.Context, userid int64, req *model.ChatCreateNewReq) (res model.ChatCreateNewRes, err error) {
+	chat := entity.Chat{}
+	chat.Id, err = uuid.GenID()
 	if err != nil {
 		return
 	}
-	newchatres.ChatId = chatsession.Id
-	chatsession.UserId = ctx.GetInt64(consts.UserID)
-	chatsession.PresetId = newchatreq.PresetId
-	chatsession.ChatName = newchatreq.ChatName
-	chatsession.MemoryLevel = newchatreq.MemoryLevel
-	err = cs.cd.ChatCreateNew(ctx, &chatsession)
+	res.ChatId = chat.Id
+	chat.UserId = userid
+	chat.PresetId = req.PresetId
+	chat.ChatName = req.ChatName
+	chat.MemoryLevel = req.MemoryLevel
+	err = cs.cd.ChatCreateNew(ctx, &chat)
 	if err != nil {
 		return
 	}
+	return
+}
+
+func (cs *chatService) ChatGetList(ctx context.Context, userid int64) (res model.ChatListRes, err error) {
+	chatlist, err := cs.cd.ChatGetList(ctx, userid)
+	if err != nil {
+		return
+	}
+	res.ChatList = chatlist
 	return
 }
