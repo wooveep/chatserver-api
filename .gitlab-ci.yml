@@ -24,6 +24,9 @@ unit-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
   script:
     - echo "Running unit tests... This will take about 60 seconds."
+    - export PATH=$PATH:/usr/local/go/bin
+    - export GOPATH=/nfs/code/go
+    - export GOBIN=$GOPATH/bin
     - make test
     - echo "Code coverage is 90%"
 
@@ -31,6 +34,9 @@ build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
     - echo "Compiling the code..."
+    - export PATH=$PATH:/usr/local/go/bin
+    - export GOPATH=/nfs/code/go
+    - export GOBIN=$GOPATH/bin
     - make build 
     - echo "Compile complete."
 
@@ -38,6 +44,9 @@ deploy-job:      # This job runs in the deploy stage.
   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
   script:
     - echo "Deploying application..."
+    - export PATH=$PATH:/usr/local/go/bin
+    - export GOPATH=/nfs/code/go
+    - export GOBIN=$GOPATH/bin
     - make  package
     - unzip  dist/chatserver-api-app-linux-amd64.zip  -d  /home/cloudyi/chatserver-api
     - echo "Application successfully deployed."
