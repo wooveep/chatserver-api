@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 14:11:49
- * @LastEditTime: 2023-04-12 20:10:26
+ * @LastEditTime: 2023-04-13 09:58:42
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/chat.go
  */
@@ -14,16 +14,16 @@ import (
 )
 
 type ChatCreateNewReq struct {
-	ChatName    string `json:"chatname" validate:"required" label:"会话名称"`
-	PresetId    int64  `json:"presetid" validate:"required" label:"预设ID"`
+	ChatName    string `json:"chat_name" validate:"required" label:"会话名称"`
+	PresetId    int64  `json:"preset_id" validate:"required" label:"预设ID"`
 	MemoryLevel int16  `json:"memorylevel" validate:"required" label:"消息记忆"`
 }
 type ChatCreateNewRes struct {
-	ChatId int64 `json:"chatid"`
+	ChatId int64 `json:"chat_id"`
 }
 
 type ChatChattingReq struct {
-	ChatId  int64  `json:"chatid" validate:"required" label:"会话ID"`
+	ChatId  int64  `json:"chat_id" validate:"required" label:"会话ID"`
 	Message string `json:"message" validate:"required" label:"消息"`
 }
 
@@ -34,9 +34,9 @@ type ChatListRes struct {
 	ChatList []ChatOne `json:"chat_list"`
 }
 type ChatOne struct {
-	Id        int64          `json:"id"`
-	ChatName  string         `json:"chat_name"`
-	CreatedAt jtime.JsonTime `json:"created_at"`
+	Id        int64          `gorm:"column:id" json:"chat_id"`
+	ChatName  string         `gorm:"column:chat_name" json:"chat_name"`
+	CreatedAt jtime.JsonTime `gorm:"column:created_at" json:"created_at"`
 }
 
 type ChatDetail struct {
@@ -60,4 +60,8 @@ type ChatDetailRes struct {
 	ModelName     string `json:"model_name"`
 	MaxTokens     int    `json:"max_token"`
 	MemoryLevel   int16  `json:"memorylevel"`
+}
+
+type ChatDeleteReq struct {
+	Id int64 `form:"chat_id"  validate:"required"`
 }

@@ -6,14 +6,14 @@ go_version = $(shell go version)
 commit_id = $(shell git rev-parse HEAD)
 branch_name = $(shell git name-rev --name-only HEAD)
 build_time = $(shell date -u '+%Y-%m-%d_%H:%M:%S')
-app_version = 0.0.1-dev
+app_version = 0.0.1-alpha
 version_package = chatserver-api/utils/version
 
 dev: mac
 
-default: all
+default: build 
 
-all: windows linux mac
+build: windows linux mac
 
 prepare:
 	@mkdir -p dist
@@ -60,7 +60,12 @@ mac: prepare
 		done \
 	done
 
-package: all
+package: build
+	ARCH_RELEASE_DIRS=$$(find dist -type d -name "*_*"); \
+	for ARCH_RELEASE_DIR in $$ARCH_RELEASE_DIRS; do \
+		mkdir $$ARCH_RELEASE_DIR/configs;\
+		cp configs/config.yml.template $$ARCH_RELEASE_DIR/configs/config.yml; \
+	done
 	for GOARCH in $(GOARCHS); do \
 		zip -q -r dist/$(PROJECT_NAME)-windows-$$GOARCH.zip dist/windows_$$GOARCH/; \
 		zip -q -r dist/$(PROJECT_NAME)-linux-$$GOARCH.zip dist/linux_$$GOARCH/; \
@@ -69,13 +74,7 @@ package: all
 	for GOARCH in $(GOARCHS_MAC); do \
 		zip -q -r dist/$(PROJECT_NAME)-mac-$$GOARCH.zip dist/mac_$$GOARCH/; \
 	done
-
-	ARCH_RELEASE_DIRS=$$(find dist -type d -name "*_*"); \
-	for ARCH_RELEASE_DIR in $$ARCH_RELEASE_DIRS; do \
-		cp conf/config.default.toml $$ARCH_RELEASE_DIR/config.toml; \
-		rm -rfd $$ARCH_RELEASE_DIR; \
-	done
-
+	
 test:
 	go test -v ./...
 

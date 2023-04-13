@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:37:13
- * @LastEditTime: 2023-04-12 14:05:47
+ * @LastEditTime: 2023-04-13 15:52:27
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/user.go
  */
@@ -29,7 +29,7 @@ var _ UserService = (*userService)(nil)
 
 type UserService interface {
 	UserLogout(tokenstr string) error
-	UserGetByID(ctx context.Context, uid int64) (user *entity.User, err error)
+	UserGetByID(ctx context.Context, uid int64) (user entity.User, err error)
 	UserRegister(ctx *gin.Context, req model.UserRegisterReq) (res model.UserRegisterRes, err error)
 	UserGetAvatar(ctx context.Context, userid int64) (res model.UserGetAvatarRes, err error)
 	UserLogin(ctx context.Context, username, password string) (res model.UserLoginRes, err error)
@@ -41,12 +41,14 @@ type UserService interface {
 
 // userService 实现UserService接口
 type userService struct {
-	ud dao.UserDao
+	ud   dao.UserDao
+	iSrv uuid.SnowNode
 }
 
 func NewUserService(_ud dao.UserDao) *userService {
 	return &userService{
-		ud: _ud,
+		ud:   _ud,
+		iSrv: *uuid.NewNode(3),
 	}
 }
 
@@ -56,9 +58,17 @@ func (us *userService) UserLogin(ctx context.Context, username, password string)
 		logger.Infof("查询用户失败%s", err)
 		return res, err
 	}
+	if userInfo.IsActive != true {
+		err = errors.New("用户未激活")
+		return res, err
+	}
 	if !security.ValidatePassword(password, userInfo.Password) {
 		err = errors.New("Password Error")
 		logger.Infof("密码错误%s", username)
+		return res, err
+	}
+	if userInfo.ExpiredAt.GetUnixTime() < time.Now().Unix() {
+		err = errors.New("用户授权过期")
 		return res, err
 	}
 	expireAt := time.Now().Add(time.Duration(config.AppConfig.JwtConfig.JwtTtl) * time.Second)
@@ -75,7 +85,7 @@ func (us *userService) UserLogin(ctx context.Context, username, password string)
 }
 
 // GetByName 通过用户名 查找用户
-func (us *userService) UserGetByID(ctx context.Context, uid int64) (user *entity.User, err error) {
+func (us *userService) UserGetByID(ctx context.Context, uid int64) (user entity.User, err error) {
 	return us.ud.UserGetById(ctx, uid)
 }
 
@@ -107,10 +117,7 @@ func (us *userService) UserGetInfo(ctx context.Context, userid int64) (res model
 func (us *userService) UserRegister(ctx *gin.Context, req model.UserRegisterReq) (res model.UserRegisterRes, err error) {
 	user := entity.User{}
 	res.IsSuccess = false
-	user.Id, err = uuid.GenID()
-	if err != nil {
-		return res, err
-	}
+	user.Id = us.iSrv.GenSnowID()
 	user.Username = req.Username
 	user.Nickname = req.Username
 	user.RegisteredIp = ctx.ClientIP()

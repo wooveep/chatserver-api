@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:58:20
- * @LastEditTime: 2023-04-10 14:16:50
+ * @LastEditTime: 2023-04-13 14:43:51
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/jtime/jtime.go
  */
@@ -59,4 +59,10 @@ func (t *JsonTime) Scan(value interface{}) error {
 		*t = JsonTime(tm)
 	}
 	return nil
+}
+
+func (t JsonTime) GetUnixTime() int64 {
+	tm := time.Time(t).Unix()
+	//return tm.Format(consts.TimeLayout), nil
+	return tm
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:43:42
- * @LastEditTime: 2023-04-12 16:50:46
+ * @LastEditTime: 2023-04-13 16:05:15
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/chat/chat.go
  */
@@ -41,12 +41,17 @@ func (ch *ChatHandler) ChattingStreamSend() gin.HandlerFunc {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
 			return
 		}
-		if err := ch.cSrv.ChatMessageSave(context.TODO(), openai.ChatMessageRoleUser, req.Message, req.ChatId, userid); err != nil {
+		balance, err := ch.cSrv.ChatBalanceVerify(context.TODO(), userid)
+		if balance < 0 || err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足"), nil)
+			return
+		}
+		if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleUser, req.Message, req.ChatId, userid); err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "保存失败"), nil)
 			return
 		}
 		chanStream := make(chan string)
-		openAIReq, err := ch.cSrv.ChatReqMessageProcess(context.TODO(), req.ChatId, userid)
+		openAIReq, err := ch.cSrv.ChatReqMessageProcess(ctx, req.ChatId, userid)
 		if err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "消息请求生成失败"), nil)
 			return
@@ -57,8 +62,12 @@ func (ch *ChatHandler) ChattingStreamSend() gin.HandlerFunc {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "消息返回失败"), nil)
 			return
 		}
-		if err := ch.cSrv.ChatMessageSave(context.TODO(), openai.ChatMessageRoleAssistant, messages, req.ChatId, userid); err != nil {
-			logger.Errorf("消息保存失败:%s", messages)
+		if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleAssistant, messages, req.ChatId, userid); err != nil {
+			logger.Errorf("消息保存失败:%s", err)
+			return
+		}
+		if err := ch.cSrv.ChatCostCalculate(ctx, userid, balance, openAIReq.Messages, messages); err != nil {
+			logger.Errorf("消息计费失败:%s", err)
 			return
 		}
 	}
@@ -84,13 +93,12 @@ func (ch *ChatHandler) CreateNewChat() gin.HandlerFunc {
 		}
 
 	}
-
 }
 
 func (ch *ChatHandler) ChatSessionGetList() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		userid := ctx.GetInt64(consts.UserID)
-		res, err := ch.cSrv.ChatGetList(context.TODO(), userid)
+		res, err := ch.cSrv.ChatGetList(ctx, userid)
 		if err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "接口调用失败"), nil)
 
@@ -109,14 +117,49 @@ func (ch *ChatHandler) ChatDetailGet() gin.HandlerFunc {
 		if err := ctx.ShouldBindJSON(&req); err != nil {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
 			return
-
 		}
-		res, err := ch.cSrv.ChatDetailGet(context.TODO(), req.Id, userid)
+		res, err := ch.cSrv.ChatDetailGet(ctx, req.Id, userid)
 		if err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "接口调用失败"), nil)
 
 		} else {
 			response.JSON(ctx, nil, res)
+		}
+	}
+}
+
+func (ch *ChatHandler) ChatRecordHistory() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var req model.RecordHistoryReq
+		userid := ctx.GetInt64(consts.UserID)
+		if err := ctx.ShouldBindQuery(&req); err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
+			return
+		}
+		res, err := ch.cSrv.ChatRecordGet(ctx, req.Id, userid)
+		if err != nil {
+			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "接口调用失败"), nil)
+
+		} else {
+			response.JSON(ctx, nil, res)
+		}
+	}
+}
+
+func (ch *ChatHandler) ChatDelete() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var req model.ChatDeleteReq
+		userid := ctx.GetInt64(consts.UserID)
+		if err := ctx.ShouldBindQuery(&req); err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
+			return
+		}
+		err := ch.cSrv.ChatDelete(ctx, userid, req.Id)
+		if err != nil {
+			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "接口调用失败"), nil)
+
+		} else {
+			response.JSON(ctx, nil, nil)
 		}
 	}
 }

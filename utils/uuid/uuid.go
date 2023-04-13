@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:30:37
- * @LastEditTime: 2023-04-08 12:34:28
+ * @LastEditTime: 2023-04-12 21:34:40
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/utils/uuid/uuid.go
  */
@@ -14,6 +14,10 @@ import (
 	"github.com/google/uuid"
 )
 
+type SnowNode struct {
+	Node *snowflake.Node
+}
+
 // GenUUID 生成一个随机的唯一ID
 func GenUUID() string {
 	return uuid.NewString()
@@ -25,7 +29,24 @@ func GenUUID16() string {
 	uuidStr = strings.ReplaceAll(uuidStr, "-", "")
 	return uuidStr[0:16]
 }
+func NewNode(i int64) *SnowNode {
+	node, err := snowflake.NewNode(i)
+	if err != nil {
+		panic(err)
+	}
+	return &SnowNode{
+		Node: node,
+	}
+}
 
+func (sn *SnowNode) GenSnowID() int64 {
+	id := sn.Node.Generate().Int64()
+	return id
+}
+func (sn *SnowNode) GenSnowStr() string {
+	id := sn.Node.Generate().String()
+	return id
+}
 func GenID() (id int64, err error) {
 	node, err := snowflake.NewNode(1)
 	id = node.Generate().Int64()

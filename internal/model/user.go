@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 15:44:35
- * @LastEditTime: 2023-04-10 17:26:45
+ * @LastEditTime: 2023-04-13 15:38:03
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/user.go
  */
@@ -62,4 +62,8 @@ type UserUpdateNickNameReq struct {
 }
 type UserUpdateNickNameRes struct {
 	IsChanged bool `json:"is_changed"`
+}
+
+type UserBalance struct {
+	Balance float64 `json:"balance"`
 }

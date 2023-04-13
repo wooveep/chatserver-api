@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-11 11:55:58
- * @LastEditTime: 2023-04-11 12:26:45
+ * @LastEditTime: 2023-04-13 15:51:55
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/preset/preset.go
  */
@@ -13,7 +13,6 @@ import (
 	"chatserver-api/pkg/errors"
 	"chatserver-api/pkg/errors/ecode"
 	"chatserver-api/pkg/response"
-	"context"
 
 	"github.com/gin-gonic/gin"
 )
@@ -37,7 +36,7 @@ func (ph *PresetHandler) PresetCreateNew() gin.HandlerFunc {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
 			return
 		}
-		res, err := ph.pSrv.PresetCreateNew(context.TODO(), &req)
+		res, err := ph.pSrv.PresetCreateNew(ctx, &req)
 		if err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "创建失败"), nil)
 		} else {
@@ -50,7 +49,7 @@ func (ph *PresetHandler) PresetCreateNew() gin.HandlerFunc {
 
 func (ph *PresetHandler) PresetGetList() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		res, err := ph.pSrv.PresetGetList(context.TODO())
+		res, err := ph.pSrv.PresetGetList(ctx)
 		if err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "查询失败"), nil)
 		} else {

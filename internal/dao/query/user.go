@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 19:47:43
- * @LastEditTime: 2023-04-10 17:24:30
+ * @LastEditTime: 2023-04-13 16:27:22
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/query/user.go
  */
@@ -29,20 +29,20 @@ func NewUserDao(_ds db.IDataSource) *userDao {
 func (ud *userDao) UserRegisterNew(ctx context.Context, user *entity.User) error {
 	return ud.ds.Master().Create(user).Error
 }
-func (ud *userDao) UserGetByName(ctx context.Context, username string) (*entity.User, error) {
-	user := &entity.User{}
-	err := ud.ds.Master().Where("username = ?", username).Find(user).Error
+func (ud *userDao) UserGetByName(ctx context.Context, username string) (entity.User, error) {
+	var user entity.User
+	err := ud.ds.Master().Where("username = ?", username).Find(&user).Error
 	return user, err
 }
 
-func (ud *userDao) UserGetById(ctx context.Context, userid int64) (*entity.User, error) {
-	user := &entity.User{}
-	err := ud.ds.Master().Where("id = ?", userid).Find(user).Error
+func (ud *userDao) UserGetById(ctx context.Context, userid int64) (entity.User, error) {
+	var user entity.User
+	err := ud.ds.Master().Where("id = ?", userid).Find(&user).Error
 	return user, err
 }
-func (ud *userDao) UserGetByEmail(ctx context.Context, email string) (*entity.User, error) {
-	user := &entity.User{}
-	err := ud.ds.Master().Where("email = ?", email).Find(user).Error
+func (ud *userDao) UserGetByEmail(ctx context.Context, email string) (entity.User, error) {
+	var user entity.User
+	err := ud.ds.Master().Where("email = ?", email).Find(&user).Error
 	return user, err
 }
 

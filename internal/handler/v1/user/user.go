@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:36:21
- * @LastEditTime: 2023-04-10 19:06:29
+ * @LastEditTime: 2023-04-13 15:53:16
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/user/user.go
  */
@@ -14,7 +14,6 @@ import (
 	"chatserver-api/pkg/errors"
 	"chatserver-api/pkg/errors/ecode"
 	"chatserver-api/pkg/response"
-	"context"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,24 +29,24 @@ func NewUserHandler(_userSrv service.UserService) *UserHandler {
 }
 
 func (uh *UserHandler) UserGetAvatar() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		id := c.GetInt64(consts.UserID)
-		useravatar, err := uh.userSrv.UserGetAvatar(context.TODO(), id)
+	return func(ctx *gin.Context) {
+		id := ctx.GetInt64(consts.UserID)
+		useravatar, err := uh.userSrv.UserGetAvatar(ctx, id)
 		if err != nil {
-			response.JSON(c, errors.Wrap(err, ecode.NotFoundErr, "未找到头像"), nil)
+			response.JSON(ctx, errors.Wrap(err, ecode.NotFoundErr, "未找到头像"), nil)
 		} else {
-			response.JSON(c, nil, useravatar)
+			response.JSON(ctx, nil, useravatar)
 		}
 	}
 }
 func (uh *UserHandler) UserGetInfo() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		id := c.GetInt64(consts.UserID)
-		userinfo, err := uh.userSrv.UserGetInfo(context.TODO(), id)
+	return func(ctx *gin.Context) {
+		id := ctx.GetInt64(consts.UserID)
+		userinfo, err := uh.userSrv.UserGetInfo(ctx, id)
 		if err != nil {
-			response.JSON(c, errors.Wrap(err, ecode.NotFoundErr, "未找到用户信息"), nil)
+			response.JSON(ctx, errors.Wrap(err, ecode.NotFoundErr, "未找到用户信息"), nil)
 		} else {
-			response.JSON(c, nil, userinfo)
+			response.JSON(ctx, nil, userinfo)
 		}
 	}
 }
@@ -102,7 +101,7 @@ func (uh *UserHandler) UserVerifyEmail() gin.HandlerFunc {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
 			return
 		}
-		res, err := uh.userSrv.UserVerifyEmail(context.TODO(), req.Email)
+		res, err := uh.userSrv.UserVerifyEmail(ctx, req.Email)
 		if err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "接口调用失败"), nil)
 		} else {
@@ -118,7 +117,7 @@ func (uh *UserHandler) UserVerifyUserName() gin.HandlerFunc {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
 			return
 		}
-		res, err := uh.userSrv.UserVerifyEmail(context.TODO(), req.Username)
+		res, err := uh.userSrv.UserVerifyEmail(ctx, req.Username)
 		if err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "接口调用失败"), nil)
 		} else {
@@ -135,7 +134,7 @@ func (uh *UserHandler) UserUpdateNickName() gin.HandlerFunc {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
 			return
 		}
-		res, err := uh.userSrv.UserUpdateNickName(context.TODO(), id, req.Nickname)
+		res, err := uh.userSrv.UserUpdateNickName(ctx, id, req.Nickname)
 		if err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "接口调用失败"), nil)
 		} else {

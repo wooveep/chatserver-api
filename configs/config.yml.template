@@ -7,16 +7,16 @@ jwt-secret:
 language: zh # 项目语言，en或者zh
 jwt:
   secret: 
-  ttl: 
+  ttl:  7200
   blacklistperiod: 10
 openai:
   authtoken: 
   orgid: 
   proxymode: socks5 
-  proxyip: 
-  proxyport: 
+  proxyip:  127.0.0.1
+  proxyport: 1080
 
-# 数据库配置（mysql）
+# 数据库配置（posgresql）
 database:
   dbname:   #数据库名称
   host:   #数据库服务地址
@@ -27,7 +27,7 @@ database:
   maximum-idle-size: 2  #连接池最大空闲数
 # 缓存redis配置
 redis:
-  address:  :6379 #redis server地址
+  address:  127.0.0.1:6379 #redis server地址
   password: #redis auth 密码，可选，默认无密码
   db: 1 #数据库，可选，默认0
   pool-size: 10 #同一时刻池中最大连接数

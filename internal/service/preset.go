@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-11 10:22:31
- * @LastEditTime: 2023-04-12 18:21:39
+ * @LastEditTime: 2023-04-12 21:37:56
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/preset.go
  */
@@ -28,21 +28,21 @@ type PresetService interface {
 
 // userService 实现UserService接口
 type presetService struct {
-	pd dao.PresetDao
+	pd   dao.PresetDao
+	iSrv uuid.SnowNode
 }
 
 func NewPresetService(_pd dao.PresetDao) *presetService {
 	return &presetService{
-		pd: _pd,
+		pd:   _pd,
+		iSrv: *uuid.NewNode(2),
 	}
 }
 
 func (ps *presetService) PresetCreateNew(ctx context.Context, req *model.PresetCreateNewReq) (res model.PresetCreateNewRes, err error) {
 	preset := entity.Preset{}
-	preset.Id, err = uuid.GenID()
-	if err != nil {
-		return
-	}
+	preset.Id = ps.iSrv.GenSnowID()
+
 	preset.PresetName = req.PresetName
 	preset.PresetContent = req.PresetContent
 	preset.ModelName = tools.DefaultValue(req.ModelName, openai.GPT3Dot5Turbo).(string)

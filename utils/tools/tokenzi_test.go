@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-12 05:39:35
- * @LastEditTime: 2023-04-12 05:58:35
+ * @LastEditTime: 2023-04-13 15:28:58
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/utils/tools/tokenzi_test.go
  */
@@ -36,7 +36,7 @@ func Test_tokenzi(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tokenzi(tt.args.str); got != tt.want {
+			if got := Tokenzi(tt.args.str); got != tt.want {
 				t.Errorf("tokenzi() = %v, want %v", got, tt.want)
 			}
 		})
