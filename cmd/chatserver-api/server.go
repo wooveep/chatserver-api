@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:05:07
- * @LastEditTime: 2023-04-05 15:53:30
+ * @LastEditTime: 2023-04-16 18:35:20
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/cmd/chatserver-api/server.go
  */
@@ -71,13 +71,10 @@ func (s *HttpServer) Run(rs ...Router) {
 	}
 	// graceful shutdown
 	sgn := make(chan os.Signal, 1)
-	signal.Notify(sgn, syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGHUP,
-		syscall.SIGQUIT)
-
+	signal.Notify(sgn, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sgn
+		logger.Infof("server shutdown")
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := srv.Shutdown(ctx); err != nil {

@@ -3,10 +3,9 @@ port: :18080 #启动端口
 app-name: chatserver-api #服务名称
 url: http://localhost #服务本地地址
 max-ping-count: 10 #自检次数
-jwt-secret: 
 language: zh # 项目语言，en或者zh
 jwt:
-  secret: 
+  secret: abcdd
   ttl:  7200
   blacklistperiod: 10
 openai:
@@ -18,11 +17,11 @@ openai:
 
 # 数据库配置（posgresql）
 database:
-  dbname:   #数据库名称
-  host:   #数据库服务地址
-  port: #数据库端口 
-  username:   #用户名(实际线上不可使用root,请授权一个账户)
-  password:   #密码
+  dbname:      #数据库名称
+  host:        #数据库服务地址
+  port: 5432   #数据库端口 
+  username:    #用户名
+  password:    #密码
   maximum-pool-size: 10  #连接池最大连接数
   maximum-idle-size: 2  #连接池最大空闲数
 # 缓存redis配置
