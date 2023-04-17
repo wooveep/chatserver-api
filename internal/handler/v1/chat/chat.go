@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:43:42
- * @LastEditTime: 2023-04-13 16:05:15
+ * @LastEditTime: 2023-04-17 19:37:32
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/chat/chat.go
  */
@@ -17,6 +17,7 @@ import (
 	"chatserver-api/pkg/openai"
 	"chatserver-api/pkg/response"
 	"context"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -41,17 +42,23 @@ func (ch *ChatHandler) ChattingStreamSend() gin.HandlerFunc {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
 			return
 		}
+		chatID, err := strconv.ParseInt(req.ChatId, 10, 64)
+		if err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "会话ID不存在"), nil)
+			return
+		}
+
 		balance, err := ch.cSrv.ChatBalanceVerify(context.TODO(), userid)
 		if balance < 0 || err != nil {
 			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足"), nil)
 			return
 		}
-		if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleUser, req.Message, req.ChatId, userid); err != nil {
+		if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleUser, req.Message, chatID, userid); err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "保存失败"), nil)
 			return
 		}
 		chanStream := make(chan string)
-		openAIReq, err := ch.cSrv.ChatReqMessageProcess(ctx, req.ChatId, userid)
+		openAIReq, err := ch.cSrv.ChatReqMessageProcess(ctx, chatID, userid)
 		if err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "消息请求生成失败"), nil)
 			return
@@ -62,7 +69,7 @@ func (ch *ChatHandler) ChattingStreamSend() gin.HandlerFunc {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "消息返回失败"), nil)
 			return
 		}
-		if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleAssistant, messages, req.ChatId, userid); err != nil {
+		if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleAssistant, messages, chatID, userid); err != nil {
 			logger.Errorf("消息保存失败:%s", err)
 			return
 		}

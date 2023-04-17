@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 14:11:49
- * @LastEditTime: 2023-04-13 09:58:42
+ * @LastEditTime: 2023-04-17 19:34:08
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/chat.go
  */
@@ -23,7 +23,7 @@ type ChatCreateNewRes struct {
 }
 
 type ChatChattingReq struct {
-	ChatId  int64  `json:"chat_id" validate:"required" label:"会话ID"`
+	ChatId  string `json:"chat_id" validate:"required" label:"会话ID"`
 	Message string `json:"message" validate:"required" label:"消息"`
 }
 
