@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:37:13
- * @LastEditTime: 2023-04-13 15:52:27
+ * @LastEditTime: 2023-04-17 09:50:36
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/user.go
  */
@@ -20,6 +20,8 @@ import (
 	"chatserver-api/utils/uuid"
 	"context"
 	"errors"
+	"os"
+	"regexp"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -95,7 +97,22 @@ func (us *userService) UserGetAvatar(ctx context.Context, userid int64) (res mod
 		return res, err
 	}
 	logger.Debugf("获取用户头像UID:%d,%s", userid, user.AvatarUrl)
-	res.AvatarUrl = user.AvatarUrl
+	pattern := "^http://.*"
+	match, err := regexp.MatchString(pattern, user.AvatarUrl)
+	if err != nil {
+		logger.Error(err.Error())
+		return res, err
+	}
+	if match {
+		res.AvatarUrl = user.AvatarUrl
+
+	} else {
+		if _, err := os.Stat(user.AvatarUrl); os.IsNotExist(err) {
+			return res, err
+		}
+		res.AvatarUrl = config.AppConfig.AvatarURL + user.AvatarUrl
+
+	}
 	return res, err
 }
 
@@ -104,7 +121,19 @@ func (us *userService) UserGetInfo(ctx context.Context, userid int64) (res model
 	if err != nil {
 		return res, err
 	}
-	res.AvatarUrl = user.AvatarUrl
+	pattern := "^http://.*"
+	match, err := regexp.MatchString(pattern, user.AvatarUrl)
+	if err != nil {
+		logger.Error(err.Error())
+		return res, err
+	}
+	if match {
+		res.AvatarUrl = user.AvatarUrl
+
+	} else {
+		res.AvatarUrl = config.AppConfig.AvatarURL + user.AvatarUrl
+
+	}
 	res.Balance = user.Balance
 	res.Email = user.Email
 	res.Nickname = user.Nickname

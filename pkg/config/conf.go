@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-02-15 14:05:41
- * @LastEditTime: 2023-04-05 15:55:07
+ * @LastEditTime: 2023-04-17 09:42:56
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/config/conf.go
  */
@@ -14,12 +14,12 @@ type Config struct {
 	Url          string       `mapstructure:"url"`            // 应用地址,用于自检 eg. http://127.0.0.1
 	MaxPingCount int          `mapstructure:"max-ping-count"` // 最大自检次数，用户健康检查
 	Language     string       `mapstructure:"language"`       // 项目语言
+	AvatarURL    string       `mapstructure:"avatarurl"`
 	JwtConfig    JwtConfig    `mapstructure:"jwt"`
 	OpenAIConfig OpenAIConfig `mapstructure:"openai"`
 	DBConfig     DBConfig     `mapstructure:"database"` // 数据库信息
 	RedisConfig  RedisConfig  `mapstructure:"redis"`    // redis
 	LogConfig    LogConfig    `mapstructure:"log"`      // uber z
-
 }
 
 type JwtConfig struct {
