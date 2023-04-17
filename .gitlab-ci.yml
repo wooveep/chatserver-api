@@ -48,5 +48,9 @@ deploy-job:      # This job runs in the deploy stage.
     - export GOPATH=/nfs/code/go
     - export GOBIN=$GOPATH/bin
     - make  package
+    - rm -rf /home/cloudyi/chatserver-api/dist
     - unzip  dist/chatserver-api-app-linux-amd64.zip  -d  /home/cloudyi/chatserver-api
+    - ps aux |grep chatserver-api | grep -v grep | awk '{print $2}' |xargs kill 
+    - cp /home/cloudyi/chatserver-api/dist/linux_amd64/chatserver-api /home/cloudyi/chatserver-api/
+    - nohoup ./home/cloudyi/chatserver-api/chatserver-api >/dev/null 2>&1 &
     - echo "Application successfully deployed."
