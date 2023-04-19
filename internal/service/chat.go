@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-04-19 17:09:39
+ * @LastEditTime: 2023-04-19 21:35:00
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -39,10 +39,10 @@ var _ ChatService = (*chatService)(nil)
 
 type ChatService interface {
 	ChatStremResGenerate(req openai.ChatCompletionRequest, closeWorker <-chan bool, chanStream chan<- string)
-	ChatChattingReqProcess(ctx context.Context, chatId, userId int64, lastquestion string) (questionId int64, req openai.ChatCompletionRequest, err error)
-	ChatRegenerategReqProcess(ctx context.Context, chatId, msgid, userId int64) (answerid int64, req openai.ChatCompletionRequest, err error)
+	ChatChattingReqProcess(ctx context.Context, chatId, userId int64, lastquestion string, memoryLevel int16) (questionId int64, req openai.ChatCompletionRequest, err error)
+	ChatRegenerategReqProcess(ctx context.Context, chatId, msgid, userId int64, memoryLevel int16) (answerid int64, req openai.ChatCompletionRequest, err error)
 	ChatResProcess(ctx *gin.Context, chanStream <-chan string, questionId, answerId int64) (msgid int64, messages string)
-	ChatCreateNew(ctx context.Context, userId int64, newchatreq *model.ChatCreateNewReq) (newchatres model.ChatCreateNewRes, err error)
+	ChatCreateNew(ctx context.Context, userId, presetId int64, chatName string) (res model.ChatCreateNewRes, err error)
 	ChatGetList(ctx context.Context, userId int64) (res model.ChatListRes, err error)
 	ChatMessageSave(ctx context.Context, role, message string, msgid, chatId, userId int64) (err error)
 	ChatDetailGet(ctx context.Context, chatId, userId int64) (res model.ChatDetailRes, err error)
@@ -97,7 +97,6 @@ func (cs *chatService) ChatDetailGet(ctx context.Context, chatId, userId int64) 
 	res.MaxTokens = chatdet.MaxTokens
 	res.ModelName = chatdet.ModelName
 	res.PresetContent = chatdet.PresetContent
-	res.MemoryLevel = chatdet.MemoryLevel
 	return
 }
 
@@ -121,7 +120,7 @@ func (cs *chatService) ChatRecordGet(ctx context.Context, chatId, userId int64) 
 	return
 }
 
-func (cs *chatService) ChatRegenerategReqProcess(ctx context.Context, chatId, msgid, userId int64) (answerid int64, req openai.ChatCompletionRequest, err error) {
+func (cs *chatService) ChatRegenerategReqProcess(ctx context.Context, chatId, msgid, userId int64, memoryLevel int16) (answerid int64, req openai.ChatCompletionRequest, err error) {
 	var chatMessages []openai.ChatCompletionMessage
 	var systemPreset, historyMessage openai.ChatCompletionMessage
 	var logitbia map[string]int
@@ -141,7 +140,7 @@ func (cs *chatService) ChatRegenerategReqProcess(ctx context.Context, chatId, ms
 		logger.Errorf("序列化LogitBias失败: %v\n", err)
 		return
 	}
-	records, answerid, err := cs.cd.ChatRegenRecordGet(ctx, chatId, msgid, preset.MemoryLevel)
+	records, answerid, err := cs.cd.ChatRegenRecordGet(ctx, chatId, msgid, memoryLevel)
 	logger.Debugf("answerid:%d", answerid)
 	if err != nil {
 		logger.Errorf("获取会话消息记录失败: %v\n", err)
@@ -168,7 +167,7 @@ func (cs *chatService) ChatRegenerategReqProcess(ctx context.Context, chatId, ms
 	return
 }
 
-func (cs *chatService) ChatChattingReqProcess(ctx context.Context, chatId, userId int64, lastquestion string) (questionId int64, req openai.ChatCompletionRequest, err error) {
+func (cs *chatService) ChatChattingReqProcess(ctx context.Context, chatId, userId int64, lastquestion string, memoryLevel int16) (questionId int64, req openai.ChatCompletionRequest, err error) {
 	var chatMessages []openai.ChatCompletionMessage
 	var systemPreset, historyMessage, lastMessage openai.ChatCompletionMessage
 
@@ -189,7 +188,7 @@ func (cs *chatService) ChatChattingReqProcess(ctx context.Context, chatId, userI
 		logger.Errorf("序列化LogitBias失败: %v\n", err)
 		return
 	}
-	records, err := cs.cd.ChatRecordGet(ctx, chatId, preset.MemoryLevel)
+	records, err := cs.cd.ChatRecordGet(ctx, chatId, memoryLevel)
 	if err != nil {
 		logger.Errorf("获取会话消息记录失败: %v\n", err)
 		return
@@ -285,18 +284,17 @@ func (cs *chatService) ChatStremResGenerate(req openai.ChatCompletionRequest, cl
 	// }
 }
 
-func (cs *chatService) ChatCreateNew(ctx context.Context, userId int64, req *model.ChatCreateNewReq) (res model.ChatCreateNewRes, err error) {
+func (cs *chatService) ChatCreateNew(ctx context.Context, userId, presetId int64, chatName string) (res model.ChatCreateNewRes, err error) {
 	chat := entity.Chat{}
 	chat.Id = cs.iSrv.GenSnowID()
-	res.ChatId = chat.Id
 	chat.UserId = userId
-	chat.PresetId = req.PresetId
-	chat.ChatName = req.ChatName
-	chat.MemoryLevel = req.MemoryLevel
+	chat.PresetId = presetId
+	chat.ChatName = chatName
 	err = cs.cd.ChatCreateNew(ctx, &chat)
 	if err != nil {
 		return
 	}
+	res.ChatId = strconv.FormatInt(chat.Id, 10)
 	return
 }
 

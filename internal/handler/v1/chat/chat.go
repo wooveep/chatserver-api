@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:43:42
- * @LastEditTime: 2023-04-19 17:00:08
+ * @LastEditTime: 2023-04-19 21:36:11
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/chat/chat.go
  */
@@ -58,7 +58,7 @@ func (ch *ChatHandler) ChatRegenerateg() gin.HandlerFunc {
 			return
 		}
 		//生成请求信息；
-		answerId, openAIReq, err := ch.cSrv.ChatRegenerategReqProcess(ctx, chatId, questionId, userId)
+		answerId, openAIReq, err := ch.cSrv.ChatRegenerategReqProcess(ctx, chatId, questionId, userId, req.MemoryLevel)
 		logger.Debugf("answerid %d", answerId)
 		if err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "消息请求生成失败"), nil)
@@ -109,7 +109,7 @@ func (ch *ChatHandler) ChatChatting() gin.HandlerFunc {
 			return
 		}
 
-		questionId, openAIReq, err := ch.cSrv.ChatChattingReqProcess(ctx, chatId, userId, req.Message)
+		questionId, openAIReq, err := ch.cSrv.ChatChattingReqProcess(ctx, chatId, userId, req.Message, req.MemoryLevel)
 		if err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "消息请求生成失败"), nil)
 			return
@@ -137,15 +137,19 @@ func (ch *ChatHandler) ChatChatting() gin.HandlerFunc {
 
 func (ch *ChatHandler) ChatCreateNew() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		chatCreateNewReq := model.ChatCreateNewReq{}
+		req := model.ChatCreateNewReq{}
 		userId := ctx.GetInt64(consts.UserID)
-
-		if err := ctx.ShouldBindJSON(&chatCreateNewReq); err != nil {
+		if err := ctx.ShouldBindJSON(&req); err != nil {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
 			return
 
 		}
-		chatCreateNewRes, err := ch.cSrv.ChatCreateNew(ctx, userId, &chatCreateNewReq)
+		PresetId, err := strconv.ParseInt(req.PresetId, 10, 64)
+		if err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, "会话预设ID转换错误"), nil)
+			return
+		}
+		chatCreateNewRes, err := ch.cSrv.ChatCreateNew(ctx, userId, PresetId, req.ChatName)
 		if err != nil {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
 

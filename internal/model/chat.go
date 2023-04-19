@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 14:11:49
- * @LastEditTime: 2023-04-19 14:50:31
+ * @LastEditTime: 2023-04-19 21:30:23
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/chat.go
  */
@@ -14,22 +14,23 @@ import (
 )
 
 type ChatCreateNewReq struct {
-	ChatName    string `json:"chat_name" validate:"required" label:"会话名称"`
-	PresetId    int64  `json:"preset_id" validate:"required" label:"预设ID"`
-	MemoryLevel int16  `json:"memorylevel" validate:"required" label:"消息记忆"`
+	ChatName string `json:"chat_name" validate:"required" label:"会话名称"`
+	PresetId string `json:"preset_id" validate:"required" label:"预设ID"`
 }
 type ChatCreateNewRes struct {
-	ChatId int64 `json:"chat_id"`
+	ChatId string `json:"chat_id"`
 }
 
 type ChatChattingReq struct {
-	ChatId  string `json:"chat_id" validate:"required" label:"会话ID"`
-	Message string `json:"message" validate:"required" label:"消息"`
+	ChatId      string `json:"chat_id" validate:"required" label:"会话ID"`
+	Message     string `json:"message" validate:"required" label:"消息"`
+	MemoryLevel int16  `json:"memory_level" validate:"required" label:"消息记忆"`
 }
 
 type ChatRegenerategReq struct {
-	ChatId     string `json:"chat_id" validate:"required" label:"会话ID"`
-	QuestionId string `json:"question_id" validate:"required" label:"消息ID"`
+	ChatId      string `json:"chat_id" validate:"required" label:"会话ID"`
+	QuestionId  string `json:"question_id" validate:"required" label:"消息ID"`
+	MemoryLevel int16  `json:"memory_level" validate:"required" label:"消息记忆"`
 }
 type ChatChattingRes struct {
 }
@@ -53,7 +54,6 @@ type ChatDetail struct {
 	TopP          float64        `gorm:"column:top_p" json:"top_p"`
 	Presence      float64        `gorm:"column:presence" json:"presence"`
 	Frequency     float64        `gorm:"column:frequency" json:"frequency"`
-	MemoryLevel   int16          `gorm:"column:Chats__memory_level" json:"memorylevel"`
 }
 
 type ChatDetailReq struct {
@@ -63,7 +63,6 @@ type ChatDetailRes struct {
 	PresetContent string `json:"preset_content"`
 	ModelName     string `json:"model_name"`
 	MaxTokens     int    `json:"max_token"`
-	MemoryLevel   int16  `json:"memorylevel"`
 }
 
 type ChatDeleteReq struct {
