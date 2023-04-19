@@ -33,12 +33,12 @@ type UserService interface {
 	UserLogout(tokenstr string) error
 	UserGetByID(ctx context.Context, uid int64) (user entity.User, err error)
 	UserRegister(ctx *gin.Context, req model.UserRegisterReq) (res model.UserRegisterRes, err error)
-	UserGetAvatar(ctx context.Context, userid int64) (res model.UserGetAvatarRes, err error)
+	UserGetAvatar(ctx context.Context, userId int64) (res model.UserGetAvatarRes, err error)
 	UserLogin(ctx context.Context, username, password string) (res model.UserLoginRes, err error)
-	UserGetInfo(ctx context.Context, userid int64) (res model.UserGetInfoRes, err error)
+	UserGetInfo(ctx context.Context, userId int64) (res model.UserGetInfoRes, err error)
 	UserVerifyEmail(ctx context.Context, email string) (res model.UserVerifyEmailRes, err error)
 	UserVerifyUserName(ctx context.Context, username string) (res model.UserVerifyUserNameRes, err error)
-	UserUpdateNickName(ctx context.Context, userid int64, nickname string) (res model.UserUpdateNickNameRes, err error)
+	UserUpdateNickName(ctx context.Context, userId int64, nickname string) (res model.UserUpdateNickNameRes, err error)
 }
 
 // userService 实现UserService接口
@@ -91,12 +91,12 @@ func (us *userService) UserGetByID(ctx context.Context, uid int64) (user entity.
 	return us.ud.UserGetById(ctx, uid)
 }
 
-func (us *userService) UserGetAvatar(ctx context.Context, userid int64) (res model.UserGetAvatarRes, err error) {
-	user, err := us.ud.UserGetById(ctx, userid)
+func (us *userService) UserGetAvatar(ctx context.Context, userId int64) (res model.UserGetAvatarRes, err error) {
+	user, err := us.ud.UserGetById(ctx, userId)
 	if err != nil {
 		return res, err
 	}
-	logger.Debugf("获取用户头像UID:%d,%s", userid, user.AvatarUrl)
+	logger.Debugf("获取用户头像UID:%d,%s", userId, user.AvatarUrl)
 	pattern := "^http://.*"
 	match, err := regexp.MatchString(pattern, user.AvatarUrl)
 	if err != nil {
@@ -116,8 +116,8 @@ func (us *userService) UserGetAvatar(ctx context.Context, userid int64) (res mod
 	return res, err
 }
 
-func (us *userService) UserGetInfo(ctx context.Context, userid int64) (res model.UserGetInfoRes, err error) {
-	user, err := us.ud.UserGetById(ctx, userid)
+func (us *userService) UserGetInfo(ctx context.Context, userId int64) (res model.UserGetInfoRes, err error) {
+	user, err := us.ud.UserGetById(ctx, userId)
 	if err != nil {
 		return res, err
 	}
@@ -195,8 +195,8 @@ func (us *userService) UserVerifyUserName(ctx context.Context, username string) 
 	return
 }
 
-func (us *userService) UserUpdateNickName(ctx context.Context, userid int64, nickname string) (res model.UserUpdateNickNameRes, err error) {
-	err = us.ud.UserUpdateNickName(ctx, userid, nickname)
+func (us *userService) UserUpdateNickName(ctx context.Context, userId int64, nickname string) (res model.UserUpdateNickNameRes, err error) {
+	err = us.ud.UserUpdateNickName(ctx, userId, nickname)
 	if err != nil {
 		res.IsChanged = false
 	} else {

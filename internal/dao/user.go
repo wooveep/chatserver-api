@@ -18,5 +18,5 @@ type UserDao interface {
 	UserRegisterNew(ctx context.Context, user *entity.User) error
 	UserVerifyEmail(ctx context.Context, email string) (count int64, err error)
 	UserVerifyUserName(ctx context.Context, username string) (count int64, err error)
-	UserUpdateNickName(ctx context.Context, userid int64, nickname string) error
+	UserUpdateNickName(ctx context.Context, userId int64, nickname string) error
 }

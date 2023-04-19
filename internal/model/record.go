@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-12 13:16:26
- * @LastEditTime: 2023-04-13 13:47:08
+ * @LastEditTime: 2023-04-19 14:49:35
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/record.go
  */
@@ -17,10 +17,10 @@ type RecordOne struct {
 }
 
 type RecordHistoryReq struct {
-	Id int64 `form:"chat_id"  validate:"required"`
+	ChatId int64 `form:"chat_id"  validate:"required"`
 }
 
 type RecordHistoryRes struct {
-	Id      int64       `json:"chat_id"`
+	ChatId  int64       `json:"chat_id"`
 	Records []RecordOne ` json:"records"`
 }

@@ -35,9 +35,9 @@ func (ud *userDao) UserGetByName(ctx context.Context, username string) (entity.U
 	return user, err
 }
 
-func (ud *userDao) UserGetById(ctx context.Context, userid int64) (entity.User, error) {
+func (ud *userDao) UserGetById(ctx context.Context, userId int64) (entity.User, error) {
 	var user entity.User
-	err := ud.ds.Master().Where("id = ?", userid).Find(&user).Error
+	err := ud.ds.Master().Where("id = ?", userId).Find(&user).Error
 	return user, err
 }
 func (ud *userDao) UserGetByEmail(ctx context.Context, email string) (entity.User, error) {
@@ -55,6 +55,6 @@ func (ud *userDao) UserVerifyUserName(ctx context.Context, username string) (cou
 	return
 }
 
-func (ud *userDao) UserUpdateNickName(ctx context.Context, userid int64, nickname string) error {
-	return ud.ds.Master().Model(&entity.User{}).Where("id = ?", userid).Update("nickname", nickname).Error
+func (ud *userDao) UserUpdateNickName(ctx context.Context, userId int64, nickname string) error {
+	return ud.ds.Master().Model(&entity.User{}).Where("id = ?", userId).Update("nickname", nickname).Error
 }

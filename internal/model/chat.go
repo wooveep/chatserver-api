@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 14:11:49
- * @LastEditTime: 2023-04-17 19:34:08
+ * @LastEditTime: 2023-04-19 14:50:31
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/chat.go
  */
@@ -27,6 +27,10 @@ type ChatChattingReq struct {
 	Message string `json:"message" validate:"required" label:"消息"`
 }
 
+type ChatRegenerategReq struct {
+	ChatId     string `json:"chat_id" validate:"required" label:"会话ID"`
+	QuestionId string `json:"question_id" validate:"required" label:"消息ID"`
+}
 type ChatChattingRes struct {
 }
 
@@ -34,7 +38,7 @@ type ChatListRes struct {
 	ChatList []ChatOne `json:"chat_list"`
 }
 type ChatOne struct {
-	Id        int64          `gorm:"column:id" json:"chat_id"`
+	ChatId    int64          `gorm:"column:chat_id" json:"chat_id"`
 	ChatName  string         `gorm:"column:chat_name" json:"chat_name"`
 	CreatedAt jtime.JsonTime `gorm:"column:created_at" json:"created_at"`
 }
@@ -53,7 +57,7 @@ type ChatDetail struct {
 }
 
 type ChatDetailReq struct {
-	Id int64 `json:"id"`
+	ChatId int64 `json:"chat_id"`
 }
 type ChatDetailRes struct {
 	PresetContent string `json:"preset_content"`
@@ -63,5 +67,5 @@ type ChatDetailRes struct {
 }
 
 type ChatDeleteReq struct {
-	Id int64 `form:"chat_id"  validate:"required"`
+	ChatId int64 `form:"chat_id"  validate:"required"`
 }
