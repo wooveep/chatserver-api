@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-04-20 16:26:13
+ * @LastEditTime: 2023-04-21 01:15:27
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -252,34 +252,66 @@ func (cs *chatService) ChatResProcess(ctx *gin.Context, chanStream <-chan string
 }
 
 func (cs *chatService) ChatStremResGenerate(req openai.ChatCompletionRequest, closeWorker <-chan bool, chanStream chan<- string) {
-	defer close(chanStream)
+	var chatMessages []openai.ChatCompletionMessage
+	var lastMessage, blankMessage openai.ChatCompletionMessage
+	blankMessage.Content = ""
+	blankMessage.Role = openai.ChatMessageRoleUser
+	var resmessage string
+	var reqnew openai.ChatCompletionRequest
+
 	client, err := openai.NewClient()
 	if err != nil {
+		close(chanStream)
 		return
 	}
 	stream, err := client.CreateChatCompletionStream(req)
+	chatMessages = req.Messages
 	if err != nil {
 		logger.Errorf("ChatCompletionStream error: %v\n", err)
+		close(chanStream)
 		return
 	}
-	defer stream.Close()
 
 	for {
 		response, err := stream.Recv()
+		logger.Debug(response.ID)
+		if response.Choices[0].FinishReason == "length" {
+			logger.Debugf("length")
+			stream.Close()
+			lastMessage.Content = resmessage
+			lastMessage.Role = openai.ChatMessageRoleAssistant
+			chatMessages = append(chatMessages, lastMessage, blankMessage)
+			reqnew = req
+			reqnew.Messages = chatMessages
+			cs.ChatStremResGenerate(reqnew, closeWorker, chanStream)
+			return
+		}
+		if response.Choices[0].FinishReason != "" {
+			stream.Close()
+			close(chanStream)
+			return
+		}
 		if errors.Is(err, io.EOF) {
 			// chanStream <- "[DONE]"
 			logger.Info("Stream finished")
+			stream.Close()
+			close(chanStream)
 			return
 		}
 		if err != nil {
 			logger.Errorf("Stream error: %v\n", err)
+			stream.Close()
+			close(chanStream)
 			return
 		}
 		select {
 		case <-closeWorker:
+			stream.Close()
+			close(chanStream)
 			return
 		default:
 			chanStream <- response.Choices[0].Delta.Content
+			resmessage += response.Choices[0].Delta.Content
 			// logger.Debugf("MessageGen:%s", response.Choices[0].Delta.Content)
 		}
 	}
