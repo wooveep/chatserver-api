@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:51:00
- * @LastEditTime: 2023-04-19 15:29:33
+ * @LastEditTime: 2023-04-20 14:03:03
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/router/api_router.go
  */
@@ -59,10 +59,11 @@ func (ar *ApiRouter) Load(g *gin.Engine) {
 		cg.POST("/chatting", middleware.Stream(), ar.chatHandler.ChatChatting())
 		cg.POST("/regenerate", middleware.Stream(), ar.chatHandler.ChatRegenerateg())
 		cg.POST("/new", ar.chatHandler.ChatCreateNew())
-		cg.GET("/list", ar.chatHandler.ChatSessionGetList())
+		cg.GET("/list", ar.chatHandler.ChatListGet())
 		cg.POST("/detail", ar.chatHandler.ChatDetailGet())
 		cg.GET("/history", ar.chatHandler.ChatRecordHistory())
 		cg.DELETE("/delete", ar.chatHandler.ChatDelete())
+		cg.POST("/update", ar.chatHandler.ChatUpdate())
 	}
 	pg := g.Group("/preset", middleware.AuthToken())
 	{

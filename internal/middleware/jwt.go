@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:55:27
- * @LastEditTime: 2023-04-08 16:20:40
+ * @LastEditTime: 2023-04-20 15:05:29
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/middleware/jwt.go
  */
@@ -38,7 +38,7 @@ func AuthToken() gin.HandlerFunc {
 			return
 		}
 		if jwt.IsInBlackList(tokenstr) {
-			response.JSON(c, errors.WithCode(ecode.AuthTokenErr, "invalid token"), nil)
+			response.JSON(c, errors.WithCode(ecode.RequireAuthErr, "invalid token"), nil)
 			c.Abort()
 			return
 		}

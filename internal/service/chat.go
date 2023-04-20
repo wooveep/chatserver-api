@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-04-19 21:35:00
+ * @LastEditTime: 2023-04-20 16:26:13
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -43,11 +43,12 @@ type ChatService interface {
 	ChatRegenerategReqProcess(ctx context.Context, chatId, msgid, userId int64, memoryLevel int16) (answerid int64, req openai.ChatCompletionRequest, err error)
 	ChatResProcess(ctx *gin.Context, chanStream <-chan string, questionId, answerId int64) (msgid int64, messages string)
 	ChatCreateNew(ctx context.Context, userId, presetId int64, chatName string) (res model.ChatCreateNewRes, err error)
-	ChatGetList(ctx context.Context, userId int64) (res model.ChatListRes, err error)
+	ChatListGet(ctx context.Context, userId int64) (res model.ChatListRes, err error)
 	ChatMessageSave(ctx context.Context, role, message string, msgid, chatId, userId int64) (err error)
 	ChatDetailGet(ctx context.Context, chatId, userId int64) (res model.ChatDetailRes, err error)
 	ChatRecordGet(ctx context.Context, chatId, userId int64) (res model.RecordHistoryRes, err error)
 	ChatDelete(ctx context.Context, useid, chatId int64) (err error)
+	ChatUpdate(ctx context.Context, chatId int64, chatName string) error
 	ChatUserVerify(ctx context.Context, chatId, userId int64) (err error)
 	ChatBalanceVerify(ctx context.Context, userId int64) (balance float64, err error)
 	ChatCostCalculate(ctx context.Context, userId int64, balance float64, promptMsgs []openai.ChatCompletionMessage, genMsg string) error
@@ -110,13 +111,23 @@ func (cs *chatService) ChatUserVerify(ctx context.Context, chatId, userId int64)
 }
 
 func (cs *chatService) ChatRecordGet(ctx context.Context, chatId, userId int64) (res model.RecordHistoryRes, err error) {
+	var recordOne model.RecordOneRes
+	var recordListRes []model.RecordOneRes
 	recordlist, err := cs.cd.ChatRecordGet(ctx, chatId, -1)
 	if err != nil {
 		logger.Error(err.Error())
 		return
 	}
-	res.Records = recordlist
-	res.ChatId = chatId
+	for i := 0; i < len(recordlist); i++ {
+		recordOne.Id = strconv.FormatInt(recordlist[i].Id, 10)
+		recordOne.Message = recordlist[i].Message
+		recordOne.CreatedAt = recordlist[i].CreatedAt
+		recordOne.Sender = recordlist[i].Sender
+		recordListRes = append(recordListRes, recordOne)
+
+	}
+	res.Records = recordListRes
+	res.ChatId = strconv.FormatInt(chatId, 10)
 	return
 }
 
@@ -228,8 +239,8 @@ func (cs *chatService) ChatResProcess(ctx *gin.Context, chanStream <-chan string
 	}
 	ctx.Stream(func(w io.Writer) bool {
 		if msg, ok := <-chanStream; ok {
-			ctx.SSEvent("chatting", map[string]string{"question_id": strconv.FormatInt(questionId, 10), "msgid": strconv.FormatInt(msgid, 10), "time": msgtime, "delta": msg})
 			messages += msg
+			ctx.SSEvent("chatting", map[string]string{"question_id": strconv.FormatInt(questionId, 10), "msgid": strconv.FormatInt(msgid, 10), "time": msgtime, "delta": messages})
 			logger.Debugf("stream-event: ID:%s ,time:%s,msg:%s", ctx.GetString(consts.RequestId), msgtime, msg)
 			return true
 		}
@@ -303,22 +314,32 @@ func (cs *chatService) ChatDelete(ctx context.Context, userId, chatId int64) err
 	if chatId == -1 {
 		return cs.cd.ChatDeleteAll(ctx, userId)
 	} else {
-		count, err := cs.cd.ChatUserVerify(ctx, userId, chatId)
-		if count == 0 || err != nil {
-			err = errors.Join(errors.New("用户会话校验失败"))
-			return err
-		}
 		return cs.cd.ChatDeleteOne(ctx, userId, chatId)
 	}
 }
 
-func (cs *chatService) ChatGetList(ctx context.Context, userId int64) (res model.ChatListRes, err error) {
-	chatlist, err := cs.cd.ChatGetList(ctx, userId)
+func (cs *chatService) ChatListGet(ctx context.Context, userId int64) (res model.ChatListRes, err error) {
+	var chatOne model.ChatOneRes
+	var chatListRes []model.ChatOneRes
+	chatlist, err := cs.cd.ChatListGet(ctx, userId)
 	if err != nil {
 		return
 	}
-	res.ChatList = chatlist
+	for _, v := range chatlist {
+		chatOne.ChatId = strconv.FormatInt(v.ChatId, 10)
+		chatOne.ChatName = v.ChatName
+		chatOne.CreatedAt = v.CreatedAt
+		chatListRes = append(chatListRes, chatOne)
+	}
+	res.ChatList = chatListRes
 	return
+}
+
+func (cs *chatService) ChatUpdate(ctx context.Context, chatId int64, chatName string) error {
+	chat := entity.Chat{}
+	chat.Id = chatId
+	chat.ChatName = chatName
+	return cs.cd.ChatUpdate(ctx, &chat)
 }
 
 func (cs *chatService) ChatBalanceVerify(ctx context.Context, userId int64) (balance float64, err error) {

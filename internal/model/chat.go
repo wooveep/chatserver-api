@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 14:11:49
- * @LastEditTime: 2023-04-19 21:30:23
+ * @LastEditTime: 2023-04-20 15:35:50
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/chat.go
  */
@@ -36,10 +36,17 @@ type ChatChattingRes struct {
 }
 
 type ChatListRes struct {
-	ChatList []ChatOne `json:"chat_list"`
+	ChatList []ChatOneRes `json:"chat_list"`
 }
+
+type ChatOneRes struct {
+	ChatId    string         `json:"chat_id"`
+	ChatName  string         `json:"chat_name"`
+	CreatedAt jtime.JsonTime `json:"created_at"`
+}
+
 type ChatOne struct {
-	ChatId    int64          `gorm:"column:chat_id" json:"chat_id"`
+	ChatId    int64          `gorm:"column:id" json:"chat_id"`
 	ChatName  string         `gorm:"column:chat_name" json:"chat_name"`
 	CreatedAt jtime.JsonTime `gorm:"column:created_at" json:"created_at"`
 }
@@ -66,5 +73,9 @@ type ChatDetailRes struct {
 }
 
 type ChatDeleteReq struct {
-	ChatId int64 `form:"chat_id"  validate:"required"`
+	ChatId string `form:"chat_id"  validate:"required"`
+}
+type ChatUpdateReq struct {
+	ChatId   string `json:"chat_id"  validate:"required"`
+	ChatName string `json:"chat_name" validate:"required" label:"会话名称"`
 }

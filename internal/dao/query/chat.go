@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-05 15:37:14
- * @LastEditTime: 2023-04-19 15:19:31
+ * @LastEditTime: 2023-04-20 14:10:10
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/query/chat.go
  */
@@ -29,6 +29,10 @@ func NewChatDao(_ds db.IDataSource) *chatDao {
 
 func (cd *chatDao) ChatCreateNew(ctx context.Context, chat *entity.Chat) error {
 	return cd.ds.Master().Create(chat).Error
+}
+
+func (cd *chatDao) ChatUpdate(ctx context.Context, chat *entity.Chat) error {
+	return cd.ds.Master().Updates(chat).Error
 }
 
 func (cd *chatDao) ChatRecordSave(ctx context.Context, record *entity.Record) error {
@@ -67,12 +71,12 @@ func (cd *chatDao) ChatRegenRecordGet(ctx context.Context, chatId, msgid int64, 
 	var recordlist []model.RecordOne
 	var answerid int64
 	err := cd.ds.Master().Model(&entity.Record{}).Where("chat_id = ?", chatId).Where("id > ? ", msgid).Order("id").Limit(1).Select("id").Find(&answerid).Error
-	subQuery2 := cd.ds.Master().Model(&entity.Record{}).Where("chat_id = ?", chatId).Where("id <= ? ", msgid).Order("id desc").Limit(int(memory)).Select("*")
+	subQuery2 := cd.ds.Master().Model(&entity.Record{}).Where("chat_id = ?", chatId).Where("id <= ? ", msgid).Order("id desc").Limit(int(memory) + 1).Select("*")
 	err = cd.ds.Master().Table("(?) as a ", subQuery2).Order("id").Find(&recordlist).Error
 	return recordlist, answerid, err
 }
 
-func (cd *chatDao) ChatGetList(ctx context.Context, userId int64) ([]model.ChatOne, error) {
+func (cd *chatDao) ChatListGet(ctx context.Context, userId int64) ([]model.ChatOne, error) {
 	var chatlist []model.ChatOne
 	err := cd.ds.Master().Model(&entity.Chat{}).Where("user_id = ? ", userId).Find(&chatlist).Error
 	return chatlist, err
