@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-04-21 01:15:27
+ * @LastEditTime: 2023-04-21 12:33:13
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -254,11 +254,10 @@ func (cs *chatService) ChatResProcess(ctx *gin.Context, chanStream <-chan string
 func (cs *chatService) ChatStremResGenerate(req openai.ChatCompletionRequest, closeWorker <-chan bool, chanStream chan<- string) {
 	var chatMessages []openai.ChatCompletionMessage
 	var lastMessage, blankMessage openai.ChatCompletionMessage
-	blankMessage.Content = ""
+	blankMessage.Content = "[cmd:continue]"
 	blankMessage.Role = openai.ChatMessageRoleUser
 	var resmessage string
 	var reqnew openai.ChatCompletionRequest
-
 	client, err := openai.NewClient()
 	if err != nil {
 		close(chanStream)
@@ -273,25 +272,28 @@ func (cs *chatService) ChatStremResGenerate(req openai.ChatCompletionRequest, cl
 	}
 
 	for {
-		response, err := stream.Recv()
-		logger.Debug(response.ID)
-		if response.Choices[0].FinishReason == "length" {
-			logger.Debugf("length")
-			stream.Close()
-			lastMessage.Content = resmessage
-			lastMessage.Role = openai.ChatMessageRoleAssistant
-			chatMessages = append(chatMessages, lastMessage, blankMessage)
-			reqnew = req
-			reqnew.Messages = chatMessages
-			cs.ChatStremResGenerate(reqnew, closeWorker, chanStream)
-			return
-		}
-		if response.Choices[0].FinishReason != "" {
-			stream.Close()
+		if stream == nil {
 			close(chanStream)
 			return
 		}
+		response, err := stream.Recv()
 		if errors.Is(err, io.EOF) {
+			if response.Choices[0].FinishReason == "length" {
+				logger.Debugf("length")
+				stream.Close()
+				lastMessage.Content = resmessage
+				lastMessage.Role = openai.ChatMessageRoleAssistant
+				chatMessages = append(chatMessages, lastMessage, blankMessage)
+				reqnew = req
+				reqnew.Messages = chatMessages
+				cs.ChatStremResGenerate(reqnew, closeWorker, chanStream)
+				return
+			}
+			if response.Choices[0].FinishReason == "stop" {
+				stream.Close()
+				close(chanStream)
+				return
+			}
 			// chanStream <- "[DONE]"
 			logger.Info("Stream finished")
 			stream.Close()
