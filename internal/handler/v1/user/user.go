@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:36:21
- * @LastEditTime: 2023-04-14 22:31:37
+ * @LastEditTime: 2023-04-21 10:30:20
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/user/user.go
  */
@@ -90,6 +90,20 @@ func (uh *UserHandler) UserLogout() gin.HandlerFunc {
 			response.JSON(ctx, errors.Wrap(err, ecode.UserLoginErr, "登出失败"), nil)
 		} else {
 			response.JSON(ctx, errors.Wrap(err, ecode.Success, "登出成功"), nil)
+		}
+	}
+}
+
+func (uh *UserHandler) UserRefresh() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		userId := ctx.GetInt64(consts.UserID)
+		tokenStr := ctx.GetString(consts.TokenCtx)
+		res, err := uh.userSrv.UserRefresh(ctx, userId)
+		err = uh.userSrv.UserLogout(tokenStr)
+		if err != nil {
+			response.JSON(ctx, errors.Wrap(err, ecode.UserLoginErr, "Token刷新失败"), nil)
+		} else {
+			response.JSON(ctx, errors.Wrap(err, ecode.Success, "登录成功"), res)
 		}
 	}
 }

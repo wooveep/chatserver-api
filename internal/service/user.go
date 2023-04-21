@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:37:13
- * @LastEditTime: 2023-04-17 09:50:36
+ * @LastEditTime: 2023-04-21 10:23:50
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/user.go
  */
@@ -35,6 +35,7 @@ type UserService interface {
 	UserRegister(ctx *gin.Context, req model.UserRegisterReq) (res model.UserRegisterRes, err error)
 	UserGetAvatar(ctx context.Context, userId int64) (res model.UserGetAvatarRes, err error)
 	UserLogin(ctx context.Context, username, password string) (res model.UserLoginRes, err error)
+	UserRefresh(ctx context.Context, userId int64) (res model.UserLoginRes, err error)
 	UserGetInfo(ctx context.Context, userId int64) (res model.UserGetInfoRes, err error)
 	UserVerifyEmail(ctx context.Context, email string) (res model.UserVerifyEmailRes, err error)
 	UserVerifyUserName(ctx context.Context, username string) (res model.UserVerifyUserNameRes, err error)
@@ -78,6 +79,33 @@ func (us *userService) UserLogin(ctx context.Context, username, password string)
 	token, err := jwt.GenToken(claims, config.AppConfig.JwtConfig.Secret)
 	if err != nil {
 		logger.Infof("JWTTOKEN生成错误%s", username)
+
+		return res, err
+	}
+	res.Token = token
+	res.ExpireAt = jtime.JsonTime(expireAt)
+	return res, err
+}
+
+func (us *userService) UserRefresh(ctx context.Context, userId int64) (res model.UserLoginRes, err error) {
+	userInfo, err := us.ud.UserGetById(ctx, userId)
+	if err != nil {
+		logger.Infof("查询用户失败%s", err)
+		return res, err
+	}
+	if userInfo.IsActive != true {
+		err = errors.New("用户未激活")
+		return res, err
+	}
+	if userInfo.ExpiredAt.GetUnixTime() < time.Now().Unix() {
+		err = errors.New("用户授权过期")
+		return res, err
+	}
+	expireAt := time.Now().Add(time.Duration(config.AppConfig.JwtConfig.JwtTtl) * time.Second)
+	claims := jwt.BuildClaims(expireAt, userInfo.Id)
+	token, err := jwt.GenToken(claims, config.AppConfig.JwtConfig.Secret)
+	if err != nil {
+		logger.Infof("JWTTOKEN生成错误%s", userInfo.Username)
 
 		return res, err
 	}
