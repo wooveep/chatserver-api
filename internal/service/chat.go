@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-04-21 12:33:13
+ * @LastEditTime: 2023-04-21 12:38:44
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -277,7 +277,7 @@ func (cs *chatService) ChatStremResGenerate(req openai.ChatCompletionRequest, cl
 			return
 		}
 		response, err := stream.Recv()
-		if errors.Is(err, io.EOF) {
+		if len(response.Choices) == 1 {
 			if response.Choices[0].FinishReason == "length" {
 				logger.Debugf("length")
 				stream.Close()
@@ -294,6 +294,8 @@ func (cs *chatService) ChatStremResGenerate(req openai.ChatCompletionRequest, cl
 				close(chanStream)
 				return
 			}
+		}
+		if errors.Is(err, io.EOF) {
 			// chanStream <- "[DONE]"
 			logger.Info("Stream finished")
 			stream.Close()
