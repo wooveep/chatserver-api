@@ -1,3 +1,10 @@
+/*
+ * @Author: cloudyi.li
+ * @Date: 2023-03-29 11:34:45
+ * @LastEditTime: 2023-04-21 16:53:23
+ * @LastEditors: cloudyi.li
+ * @FilePath: /chatserver-api/pkg/validator/gin_validator.go
+ */
 // author: maxf
 // date: 2022-03-28 14:44
 // version: 基于github.com/go-playground/validator的校验
@@ -23,6 +30,7 @@ func LazyInitGinValidator(language string) {
 	// 全局一致，当struct复用时可以不用在写一遍标签
 	// v.SetTagName("validate")
 	_ = vdt.RegisterValidation("mobile", "{0}必须为11位数字", mobileValidator)
+	_ = vdt.RegisterValidation("username", "{0}不能包含admin", usernameValidator)
 }
 
 type sliceValidateError []error

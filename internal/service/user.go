@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:37:13
- * @LastEditTime: 2023-04-21 10:23:50
+ * @LastEditTime: 2023-04-21 16:26:17
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/user.go
  */
@@ -179,7 +179,8 @@ func (us *userService) UserRegister(ctx *gin.Context, req model.UserRegisterReq)
 	user.Nickname = req.Username
 	user.RegisteredIp = ctx.ClientIP()
 	user.Email = req.Email
-	user.ExpiredAt = jtime.JsonTime(time.Now().AddDate(0, 1, 0))
+	user.ExpiredAt = jtime.JsonTime(time.Now().AddDate(0, 0, 7))
+	user.Balance = 10
 	user.AvatarUrl, err = avatar.GenNewAvatar(security.Md5WithSalt(req.Username, req.Email))
 	if err != nil {
 		return res, err

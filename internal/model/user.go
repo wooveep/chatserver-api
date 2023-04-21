@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 15:44:35
- * @LastEditTime: 2023-04-13 15:38:03
+ * @LastEditTime: 2023-04-21 16:53:53
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/user.go
  */
@@ -18,7 +18,7 @@ type UserLoginRes struct {
 	ExpireAt jtime.JsonTime `json:"expire_at"`
 }
 type UserRegisterReq struct {
-	Username string `json:"username" validate:"required"  label:"用户名"`
+	Username string `json:"username" validate:"required,username"  label:"用户名"`
 	Password string `json:"password" validate:"required"  label:"密码"`
 	Email    string `json:"email" validate:"required"  label:"邮箱地址"`
 }
