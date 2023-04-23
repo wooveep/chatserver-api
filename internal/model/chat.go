@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 14:11:49
- * @LastEditTime: 2023-04-20 15:35:50
+ * @LastEditTime: 2023-04-23 15:02:51
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/chat.go
  */
@@ -64,7 +64,7 @@ type ChatDetail struct {
 }
 
 type ChatDetailReq struct {
-	ChatId int64 `json:"chat_id"`
+	ChatId string `json:"chat_id"`
 }
 type ChatDetailRes struct {
 	PresetContent string `json:"preset_content"`

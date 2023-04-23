@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-04-21 12:38:44
+ * @LastEditTime: 2023-04-23 15:29:16
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -21,8 +21,8 @@ import (
 	"chatserver-api/internal/model/entity"
 	"chatserver-api/pkg/logger"
 	"chatserver-api/pkg/openai"
+	"chatserver-api/pkg/tiktoken"
 	"chatserver-api/utils/security"
-	"chatserver-api/utils/tools"
 	"chatserver-api/utils/uuid"
 	"strconv"
 
@@ -38,20 +38,20 @@ import (
 var _ ChatService = (*chatService)(nil)
 
 type ChatService interface {
-	ChatStremResGenerate(req openai.ChatCompletionRequest, closeWorker <-chan bool, chanStream chan<- string)
-	ChatChattingReqProcess(ctx context.Context, chatId, userId int64, lastquestion string, memoryLevel int16) (questionId int64, req openai.ChatCompletionRequest, err error)
-	ChatRegenerategReqProcess(ctx context.Context, chatId, msgid, userId int64, memoryLevel int16) (answerid int64, req openai.ChatCompletionRequest, err error)
-	ChatResProcess(ctx *gin.Context, chanStream <-chan string, questionId, answerId int64) (msgid int64, messages string)
 	ChatCreateNew(ctx context.Context, userId, presetId int64, chatName string) (res model.ChatCreateNewRes, err error)
-	ChatListGet(ctx context.Context, userId int64) (res model.ChatListRes, err error)
-	ChatMessageSave(ctx context.Context, role, message string, msgid, chatId, userId int64) (err error)
-	ChatDetailGet(ctx context.Context, chatId, userId int64) (res model.ChatDetailRes, err error)
-	ChatRecordGet(ctx context.Context, chatId, userId int64) (res model.RecordHistoryRes, err error)
-	ChatDelete(ctx context.Context, useid, chatId int64) (err error)
-	ChatUpdate(ctx context.Context, chatId int64, chatName string) error
-	ChatUserVerify(ctx context.Context, chatId, userId int64) (err error)
-	ChatBalanceVerify(ctx context.Context, userId int64) (balance float64, err error)
-	ChatCostCalculate(ctx context.Context, userId int64, balance float64, promptMsgs []openai.ChatCompletionMessage, genMsg string) error
+	ChatDelete(ctx *gin.Context) error
+	ChatUpdate(ctx *gin.Context, chatName string) error
+	ChatListGet(ctx *gin.Context) (res model.ChatListRes, err error)
+	ChatBalanceVerify(ctx *gin.Context) (err error)
+	ChatBalanceUpdate(ctx *gin.Context) (err error)
+	ChatMessageSave(ctx *gin.Context, role, message string, msgid int64) (err error)
+	ChatDetailGet(ctx *gin.Context) (res model.ChatDetailRes, err error)
+	ChatUserVerify(ctx *gin.Context) (err error)
+	ChatRecordGet(ctx *gin.Context) (res model.RecordHistoryRes, err error)
+	ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, memoryLevel int16) (answerid int64, req openai.ChatCompletionRequest, err error)
+	ChatChattingReqProcess(ctx *gin.Context, lastquestion string, memoryLevel int16) (questionId int64, req openai.ChatCompletionRequest, err error)
+	ChatStremResGenerate(ctx *gin.Context, req openai.ChatCompletionRequest, chanStream chan<- string)
+	ChatResProcess(ctx *gin.Context, chanStream <-chan string, questionId, answerid int64) (msgid int64, messages string)
 }
 
 // userService 实现UserService接口
@@ -67,11 +67,12 @@ func NewChatService(_cd dao.ChatDao) *chatService {
 	}
 }
 
-func (cs *chatService) ChatMessageSave(ctx context.Context, role, message string, msgid, chatId, userId int64) (err error) {
+func (cs *chatService) ChatMessageSave(ctx *gin.Context, role, message string, msgid int64) (err error) {
 	count, err := cs.cd.ChatRecordVerify(ctx, msgid)
 	if err != nil {
 		return
 	}
+	chatId := ctx.GetInt64(consts.ChatID)
 	recocd := entity.Record{}
 	recocd.Id = msgid
 	recocd.ChatId = chatId
@@ -89,7 +90,9 @@ func (cs *chatService) ChatMessageSave(ctx context.Context, role, message string
 	}
 }
 
-func (cs *chatService) ChatDetailGet(ctx context.Context, chatId, userId int64) (res model.ChatDetailRes, err error) {
+func (cs *chatService) ChatDetailGet(ctx *gin.Context) (res model.ChatDetailRes, err error) {
+	userId := ctx.GetInt64(consts.UserID)
+	chatId := ctx.GetInt64(consts.ChatID)
 	chatdet, err := cs.cd.ChatDetailGet(ctx, userId, chatId)
 	if err != nil {
 		logger.Error(err.Error())
@@ -101,7 +104,9 @@ func (cs *chatService) ChatDetailGet(ctx context.Context, chatId, userId int64) 
 	return
 }
 
-func (cs *chatService) ChatUserVerify(ctx context.Context, chatId, userId int64) (err error) {
+func (cs *chatService) ChatUserVerify(ctx *gin.Context) (err error) {
+	userId := ctx.GetInt64(consts.UserID)
+	chatId := ctx.GetInt64(consts.ChatID)
 	count, err := cs.cd.ChatUserVerify(ctx, userId, chatId)
 	if count == 0 || err != nil {
 		err = errors.Join(errors.New("用户会话校验失败"))
@@ -110,7 +115,8 @@ func (cs *chatService) ChatUserVerify(ctx context.Context, chatId, userId int64)
 	return
 }
 
-func (cs *chatService) ChatRecordGet(ctx context.Context, chatId, userId int64) (res model.RecordHistoryRes, err error) {
+func (cs *chatService) ChatRecordGet(ctx *gin.Context) (res model.RecordHistoryRes, err error) {
+	chatId := ctx.GetInt64(consts.ChatID)
 	var recordOne model.RecordOneRes
 	var recordListRes []model.RecordOneRes
 	recordlist, err := cs.cd.ChatRecordGet(ctx, chatId, -1)
@@ -131,11 +137,12 @@ func (cs *chatService) ChatRecordGet(ctx context.Context, chatId, userId int64) 
 	return
 }
 
-func (cs *chatService) ChatRegenerategReqProcess(ctx context.Context, chatId, msgid, userId int64, memoryLevel int16) (answerid int64, req openai.ChatCompletionRequest, err error) {
+func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, memoryLevel int16) (answerid int64, req openai.ChatCompletionRequest, err error) {
 	var chatMessages []openai.ChatCompletionMessage
 	var systemPreset, historyMessage openai.ChatCompletionMessage
 	var logitbia map[string]int
-
+	userId := ctx.GetInt64(consts.UserID)
+	chatId := ctx.GetInt64(consts.ChatID)
 	preset, err := cs.cd.ChatDetailGet(ctx, userId, chatId)
 	if err != nil {
 		logger.Errorf("获取会话详情失败: %v\n", err)
@@ -178,12 +185,12 @@ func (cs *chatService) ChatRegenerategReqProcess(ctx context.Context, chatId, ms
 	return
 }
 
-func (cs *chatService) ChatChattingReqProcess(ctx context.Context, chatId, userId int64, lastquestion string, memoryLevel int16) (questionId int64, req openai.ChatCompletionRequest, err error) {
+func (cs *chatService) ChatChattingReqProcess(ctx *gin.Context, lastquestion string, memoryLevel int16) (questionId int64, req openai.ChatCompletionRequest, err error) {
 	var chatMessages []openai.ChatCompletionMessage
 	var systemPreset, historyMessage, lastMessage openai.ChatCompletionMessage
-
 	var logitbia map[string]int
-
+	userId := ctx.GetInt64(consts.UserID)
+	chatId := ctx.GetInt64(consts.ChatID)
 	preset, err := cs.cd.ChatDetailGet(ctx, userId, chatId)
 	if err != nil {
 		logger.Errorf("获取会话详情失败: %v\n", err)
@@ -226,6 +233,7 @@ func (cs *chatService) ChatChattingReqProcess(ctx context.Context, chatId, userI
 	req.PresencePenalty = float32(preset.Presence)
 	req.Messages = chatMessages
 	questionId = cs.iSrv.GenSnowID()
+
 	return
 }
 
@@ -251,26 +259,26 @@ func (cs *chatService) ChatResProcess(ctx *gin.Context, chanStream <-chan string
 	return
 }
 
-func (cs *chatService) ChatStremResGenerate(req openai.ChatCompletionRequest, closeWorker <-chan bool, chanStream chan<- string) {
+func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCompletionRequest, chanStream chan<- string) {
 	var chatMessages []openai.ChatCompletionMessage
 	var lastMessage, blankMessage openai.ChatCompletionMessage
-	blankMessage.Content = "[cmd:continue]"
-	blankMessage.Role = openai.ChatMessageRoleUser
 	var resmessage string
 	var reqnew openai.ChatCompletionRequest
+	blankMessage.Content = "[cmd:continue]"
+	blankMessage.Role = openai.ChatMessageRoleUser
+	chatMessages = req.Messages
+	cs.ChatCostCalculate(ctx, chatMessages[1:], req.Model)
 	client, err := openai.NewClient()
 	if err != nil {
 		close(chanStream)
 		return
 	}
 	stream, err := client.CreateChatCompletionStream(req)
-	chatMessages = req.Messages
 	if err != nil {
 		logger.Errorf("ChatCompletionStream error: %v\n", err)
 		close(chanStream)
 		return
 	}
-
 	for {
 		if stream == nil {
 			close(chanStream)
@@ -279,17 +287,25 @@ func (cs *chatService) ChatStremResGenerate(req openai.ChatCompletionRequest, cl
 		response, err := stream.Recv()
 		if len(response.Choices) == 1 {
 			if response.Choices[0].FinishReason == "length" {
-				logger.Debugf("length")
 				stream.Close()
 				lastMessage.Content = resmessage
 				lastMessage.Role = openai.ChatMessageRoleAssistant
+				cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
+				// chatMessages = chatMessages[:1+copy(chatMessages[1:], chatMessages[1+2:])]
 				chatMessages = append(chatMessages, lastMessage, blankMessage)
 				reqnew = req
 				reqnew.Messages = chatMessages
-				cs.ChatStremResGenerate(reqnew, closeWorker, chanStream)
+				if ctx.GetFloat64(consts.Balance) < float64(tiktoken.NumTokensFromMessages(chatMessages, req.Model)+req.MaxTokens)*consts.TokenPrice {
+					close(chanStream)
+					return
+				}
+				cs.ChatStremResGenerate(ctx, reqnew, chanStream)
 				return
 			}
 			if response.Choices[0].FinishReason == "stop" {
+				lastMessage.Content = resmessage
+				lastMessage.Role = openai.ChatMessageRoleAssistant
+				cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
 				stream.Close()
 				close(chanStream)
 				return
@@ -297,6 +313,9 @@ func (cs *chatService) ChatStremResGenerate(req openai.ChatCompletionRequest, cl
 		}
 		if errors.Is(err, io.EOF) {
 			// chanStream <- "[DONE]"
+			lastMessage.Content = resmessage
+			lastMessage.Role = openai.ChatMessageRoleAssistant
+			cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
 			logger.Info("Stream finished")
 			stream.Close()
 			close(chanStream)
@@ -304,31 +323,26 @@ func (cs *chatService) ChatStremResGenerate(req openai.ChatCompletionRequest, cl
 		}
 		if err != nil {
 			logger.Errorf("Stream error: %v\n", err)
+			lastMessage.Content = resmessage
+			lastMessage.Role = openai.ChatMessageRoleAssistant
+			cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
 			stream.Close()
 			close(chanStream)
 			return
 		}
 		select {
-		case <-closeWorker:
+		case <-ctx.Writer.CloseNotify():
+			lastMessage.Content = resmessage
+			lastMessage.Role = openai.ChatMessageRoleAssistant
+			cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
 			stream.Close()
 			close(chanStream)
 			return
 		default:
 			chanStream <- response.Choices[0].Delta.Content
 			resmessage += response.Choices[0].Delta.Content
-			// logger.Debugf("MessageGen:%s", response.Choices[0].Delta.Content)
 		}
 	}
-	// for _, v := range req.Messages[0].Content {
-	// 	time.Sleep(100 * time.Millisecond)
-	// 	select {
-	// 	case <-closeWorker:
-	// 		return
-	// 	default:
-	// 		chanStream <- string(v)
-	// 		// logger.Debugf("MessageGen:%s", response.Choices[0].Delta.Content)
-	// 	}
-	// }
 }
 
 func (cs *chatService) ChatCreateNew(ctx context.Context, userId, presetId int64, chatName string) (res model.ChatCreateNewRes, err error) {
@@ -345,8 +359,9 @@ func (cs *chatService) ChatCreateNew(ctx context.Context, userId, presetId int64
 	return
 }
 
-func (cs *chatService) ChatDelete(ctx context.Context, userId, chatId int64) error {
-
+func (cs *chatService) ChatDelete(ctx *gin.Context) error {
+	userId := ctx.GetInt64(consts.UserID)
+	chatId := ctx.GetInt64(consts.ChatID)
 	if chatId == -1 {
 		return cs.cd.ChatDeleteAll(ctx, userId)
 	} else {
@@ -354,7 +369,8 @@ func (cs *chatService) ChatDelete(ctx context.Context, userId, chatId int64) err
 	}
 }
 
-func (cs *chatService) ChatListGet(ctx context.Context, userId int64) (res model.ChatListRes, err error) {
+func (cs *chatService) ChatListGet(ctx *gin.Context) (res model.ChatListRes, err error) {
+	userId := ctx.GetInt64(consts.UserID)
 	var chatOne model.ChatOneRes
 	var chatListRes []model.ChatOneRes
 	chatlist, err := cs.cd.ChatListGet(ctx, userId)
@@ -371,30 +387,38 @@ func (cs *chatService) ChatListGet(ctx context.Context, userId int64) (res model
 	return
 }
 
-func (cs *chatService) ChatUpdate(ctx context.Context, chatId int64, chatName string) error {
+func (cs *chatService) ChatUpdate(ctx *gin.Context, chatName string) error {
+	chatId := ctx.GetInt64(consts.ChatID)
 	chat := entity.Chat{}
 	chat.Id = chatId
 	chat.ChatName = chatName
 	return cs.cd.ChatUpdate(ctx, &chat)
 }
 
-func (cs *chatService) ChatBalanceVerify(ctx context.Context, userId int64) (balance float64, err error) {
+func (cs *chatService) ChatBalanceVerify(ctx *gin.Context) (err error) {
+	userId := ctx.GetInt64(consts.UserID)
 	userbalance, err := cs.cd.ChatBalanceGet(ctx, userId)
-	return userbalance.Balance, err
+	ctx.Set(consts.Balance, userbalance.Balance)
+	if userbalance.Balance < float64(0) {
+		err = errors.New("Insufficient account balance")
+	}
+	return err
 }
 
-func (cs *chatService) ChatCostCalculate(ctx context.Context, userId int64, balance float64, promptMsgs []openai.ChatCompletionMessage, genMsg string) error {
-	var promptMsg string
-	for _, value := range promptMsgs {
-		promptMsg += value.Content
+func (cs *chatService) ChatCostCalculate(ctx *gin.Context, promptMsgs []openai.ChatCompletionMessage, model string) {
+	balance := ctx.GetFloat64(consts.Balance)
+	token := tiktoken.NumTokensFromMessages(promptMsgs, model)
+	cost := float64(token) * 0.00007
+	newBalance := balance - cost
+	logger.Debugf("Token:%d  totalCost:%f  newBalance%f", token, cost, newBalance)
+	if newBalance < float64(0) {
+		newBalance = float64(0)
 	}
-	promptToken := tools.Tokenzi(promptMsg)
-	promptCost := float64(promptToken) * 0.00025
-	genToken := tools.Tokenzi(genMsg)
-	genCost := float64(genToken) * 0.00025
-	totalCost := genCost + promptCost
-	newBalance := balance - totalCost
-	logger.Debugf("User:%d promptToken:%dpromptCost:%fgenToken:%dgenCost:%ftotalCost:%fnewBalance%f", userId, promptToken, promptCost, genToken, genCost, totalCost, newBalance)
-	err := cs.cd.ChatCostUpdate(ctx, userId, newBalance)
-	return err
+	ctx.Set(consts.Balance, newBalance)
+}
+
+func (cs *chatService) ChatBalanceUpdate(ctx *gin.Context) (err error) {
+	userId := ctx.GetInt64(consts.UserID)
+	balance := ctx.GetFloat64(consts.Balance)
+	return cs.cd.ChatCostUpdate(ctx, userId, balance)
 }
