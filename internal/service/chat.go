@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-04-23 15:29:16
+ * @LastEditTime: 2023-04-23 20:13:17
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -249,7 +249,7 @@ func (cs *chatService) ChatResProcess(ctx *gin.Context, chanStream <-chan string
 		if msg, ok := <-chanStream; ok {
 			messages += msg
 			ctx.SSEvent("chatting", map[string]string{"question_id": strconv.FormatInt(questionId, 10), "msgid": strconv.FormatInt(msgid, 10), "time": msgtime, "delta": messages})
-			logger.Debugf("stream-event: ID:%s ,time:%s,msg:%s", ctx.GetString(consts.RequestId), msgtime, msg)
+			// logger.Debugf("stream-event: ID:%s ,time:%s,msg:%s", ctx.GetString(consts.RequestId), msgtime, msg)
 			return true
 		}
 		ctx.SSEvent("chatting", map[string]string{"question_id": strconv.FormatInt(questionId, 10), "msgid": strconv.FormatInt(msgid, 10), "time": msgtime, "text": messages})
@@ -268,6 +268,9 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 	blankMessage.Role = openai.ChatMessageRoleUser
 	chatMessages = req.Messages
 	cs.ChatCostCalculate(ctx, chatMessages[1:], req.Model)
+	for _, v := range chatMessages {
+		logger.Debugf("role: %s ;content: %s ", v.Role, v.Content)
+	}
 	client, err := openai.NewClient()
 	if err != nil {
 		close(chanStream)
@@ -287,11 +290,11 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 		response, err := stream.Recv()
 		if len(response.Choices) == 1 {
 			if response.Choices[0].FinishReason == "length" {
+				logger.Debugf("chat请求ID：%s", response.ID)
 				stream.Close()
 				lastMessage.Content = resmessage
 				lastMessage.Role = openai.ChatMessageRoleAssistant
 				cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
-				// chatMessages = chatMessages[:1+copy(chatMessages[1:], chatMessages[1+2:])]
 				chatMessages = append(chatMessages, lastMessage, blankMessage)
 				reqnew = req
 				reqnew.Messages = chatMessages
@@ -303,6 +306,7 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 				return
 			}
 			if response.Choices[0].FinishReason == "stop" {
+				logger.Debugf("chat请求ID：%s", response.ID)
 				lastMessage.Content = resmessage
 				lastMessage.Role = openai.ChatMessageRoleAssistant
 				cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
@@ -312,7 +316,6 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 			}
 		}
 		if errors.Is(err, io.EOF) {
-			// chanStream <- "[DONE]"
 			lastMessage.Content = resmessage
 			lastMessage.Role = openai.ChatMessageRoleAssistant
 			cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
