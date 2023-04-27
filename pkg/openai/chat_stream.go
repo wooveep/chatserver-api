@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-30 18:16:23
- * @LastEditTime: 2023-03-31 17:04:24
+ * @LastEditTime: 2023-04-27 11:13:48
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/openai/chat_stream.go
  */
@@ -9,6 +9,7 @@ package openai
 
 import (
 	"bufio"
+	"net/http"
 )
 
 type ChatCompletionStreamChoiceDelta struct {
@@ -58,7 +59,9 @@ func (c *Client) CreateChatCompletionStream(
 	if err != nil {
 		return
 	}
-
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
+		return nil, c.handleErrorResp(resp)
+	}
 	stream = &ChatCompletionStream{
 		streamReader: &streamReader[ChatCompletionStreamResponse]{
 			emptyMessagesLimit: c.config.EmptyMessagesLimit,

@@ -2,8 +2,6 @@ package openai
 
 import (
 	"bytes"
-	"io"
-	"mime/multipart"
 	"net/http"
 	"os"
 	"strconv"
@@ -56,96 +54,104 @@ func (c *Client) CreateImage(request ImageRequest) (response ImageResponse, err 
 
 // ImageEditRequest represents the request structure for the image API.
 type ImageEditRequest struct {
-	Image  *os.File `json:"image,omitempty"`
-	Mask   *os.File `json:"mask,omitempty"`
-	Prompt string   `json:"prompt,omitempty"`
-	N      int      `json:"n,omitempty"`
-	Size   string   `json:"size,omitempty"`
+	Image          *os.File `json:"image,omitempty"`
+	Mask           *os.File `json:"mask,omitempty"`
+	Prompt         string   `json:"prompt,omitempty"`
+	N              int      `json:"n,omitempty"`
+	Size           string   `json:"size,omitempty"`
+	ResponseFormat string   `json:"response_format,omitempty"`
 }
 
 // CreateEditImage - API call to create an image. This is the main endpoint of the DALL-E API.
 func (c *Client) CreateEditImage(request ImageEditRequest) (response ImageResponse, err error) {
 	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
+	builder := c.createFormBuilder(body)
 
 	// image
-	image, err := writer.CreateFormFile("image", request.Image.Name())
-	if err != nil {
-		return
-	}
-	_, err = io.Copy(image, request.Image)
+	err = builder.createFormFile("image", request.Image)
 	if err != nil {
 		return
 	}
 
 	// mask, it is optional
 	if request.Mask != nil {
-		mask, err2 := writer.CreateFormFile("mask", request.Mask.Name())
-		if err2 != nil {
-			return
-		}
-		_, err = io.Copy(mask, request.Mask)
+		err = builder.createFormFile("mask", request.Mask)
+
 		if err != nil {
 			return
 		}
 	}
 
-	err = writer.WriteField("prompt", request.Prompt)
+	err = builder.writeField("prompt", request.Prompt)
 	if err != nil {
 		return
 	}
-	err = writer.WriteField("n", strconv.Itoa(request.N))
+	err = builder.writeField("n", strconv.Itoa(request.N))
 	if err != nil {
 		return
 	}
-	err = writer.WriteField("size", request.Size)
+	err = builder.writeField("size", request.Size)
 	if err != nil {
 		return
 	}
-	writer.Close()
+	err = builder.writeField("response_format", request.ResponseFormat)
+	if err != nil {
+		return
+	}
+	err = builder.close()
+	if err != nil {
+		return
+	}
+
 	urlSuffix := "/images/edits"
 	req, err := http.NewRequestWithContext(c.ctx, http.MethodPost, c.fullURL(urlSuffix), body)
 	if err != nil {
 		return
 	}
 
-	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("Content-Type", builder.formDataContentType())
 	err = c.sendRequest(req, &response)
 	return
 }
 
 // ImageVariRequest represents the request structure for the image API.
 type ImageVariRequest struct {
-	Image *os.File `json:"image,omitempty"`
-	N     int      `json:"n,omitempty"`
-	Size  string   `json:"size,omitempty"`
+	Image          *os.File `json:"image,omitempty"`
+	N              int      `json:"n,omitempty"`
+	Size           string   `json:"size,omitempty"`
+	ResponseFormat string   `json:"response_format,omitempty"`
 }
 
 // CreateVariImage - API call to create an image variation. This is the main endpoint of the DALL-E API.
 // Use abbreviations(vari for variation) because ci-lint has a single-line length limit ...
 func (c *Client) CreateVariImage(request ImageVariRequest) (response ImageResponse, err error) {
 	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
+	builder := c.createFormBuilder(body)
 
 	// image
-	image, err := writer.CreateFormFile("image", request.Image.Name())
+	err = builder.createFormFile("image", request.Image)
 	if err != nil {
 		return
 	}
-	_, err = io.Copy(image, request.Image)
+	err = builder.writeField("n", strconv.Itoa(request.N))
 	if err != nil {
 		return
 	}
 
-	err = writer.WriteField("n", strconv.Itoa(request.N))
+	err = builder.writeField("size", request.Size)
 	if err != nil {
 		return
 	}
-	err = writer.WriteField("size", request.Size)
+	err = builder.writeField("response_format", request.ResponseFormat)
 	if err != nil {
 		return
 	}
-	writer.Close()
+
+	err = builder.close()
+	if err != nil {
+		return
+	}
+
 	//https://platform.openai.com/docs/api-reference/images/create-variation
 	urlSuffix := "/images/variations"
 	req, err := http.NewRequestWithContext(c.ctx, http.MethodPost, c.fullURL(urlSuffix), body)
@@ -153,7 +159,7 @@ func (c *Client) CreateVariImage(request ImageVariRequest) (response ImageRespon
 		return
 	}
 
-	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("Content-Type", builder.formDataContentType())
 	err = c.sendRequest(req, &response)
 	return
 }

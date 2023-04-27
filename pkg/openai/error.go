@@ -1,20 +1,30 @@
+/*
+ * @Author: cloudyi.li
+ * @Date: 2023-03-30 18:16:24
+ * @LastEditTime: 2023-04-27 11:17:58
+ * @LastEditors: cloudyi.li
+ * @FilePath: /chatserver-api/pkg/openai/error.go
+ */
 package openai
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // APIError provides error information returned by the OpenAI API.
 type APIError struct {
-	Code       *string `json:"code,omitempty"`
-	Message    string  `json:"message"`
-	Param      *string `json:"param,omitempty"`
-	Type       string  `json:"type"`
-	StatusCode int     `json:"-"`
+	Code           any     `json:"code,omitempty"`
+	Message        string  `json:"message"`
+	Param          *string `json:"param,omitempty"`
+	Type           string  `json:"type"`
+	HTTPStatusCode int     `json:"-"`
 }
 
 // RequestError provides informations about generic request errors.
 type RequestError struct {
-	StatusCode int
-	Err        error
+	HTTPStatusCode int
+	Err            error
 }
 
 type ErrorResponse struct {
@@ -25,11 +35,52 @@ func (e *APIError) Error() string {
 	return e.Message
 }
 
+func (e *APIError) UnmarshalJSON(data []byte) (err error) {
+	var rawMap map[string]json.RawMessage
+	err = json.Unmarshal(data, &rawMap)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(rawMap["message"], &e.Message)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(rawMap["type"], &e.Type)
+	if err != nil {
+		return
+	}
+
+	// optional fields
+	if _, ok := rawMap["param"]; ok {
+		err = json.Unmarshal(rawMap["param"], &e.Param)
+		if err != nil {
+			return
+		}
+	}
+
+	if _, ok := rawMap["code"]; !ok {
+		return nil
+	}
+
+	// if the api returned a number, we need to force an integer
+	// since the json package defaults to float64
+	var intCode int
+	err = json.Unmarshal(rawMap["code"], &intCode)
+	if err == nil {
+		e.Code = intCode
+		return nil
+	}
+
+	return json.Unmarshal(rawMap["code"], &e.Code)
+}
+
 func (e *RequestError) Error() string {
 	if e.Err != nil {
 		return e.Err.Error()
 	}
-	return fmt.Sprintf("status code %d", e.StatusCode)
+	return fmt.Sprintf("status code %d", e.HTTPStatusCode)
 }
 
 func (e *RequestError) Unwrap() error {

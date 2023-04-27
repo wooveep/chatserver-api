@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-30 18:16:24
- * @LastEditTime: 2023-03-31 17:06:39
+ * @LastEditTime: 2023-04-27 11:16:37
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/openai/stream.go
  */
@@ -10,6 +10,7 @@ package openai
 import (
 	"bufio"
 	"errors"
+	"net/http"
 )
 
 var (
@@ -33,6 +34,11 @@ func (c *Client) CreateCompletionStream(
 		return
 	}
 
+	if !checkPromptType(request.Prompt) {
+		err = ErrCompletionRequestPromptTypeNotSupported
+		return
+	}
+
 	request.Stream = true
 	req, err := c.newStreamRequest("POST", urlSuffix, request)
 	if err != nil {
@@ -44,6 +50,9 @@ func (c *Client) CreateCompletionStream(
 		return
 	}
 
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
+		return nil, c.handleErrorResp(resp)
+	}
 	stream = &CompletionStream{
 		streamReader: &streamReader[CompletionResponse]{
 			emptyMessagesLimit: c.config.EmptyMessagesLimit,
