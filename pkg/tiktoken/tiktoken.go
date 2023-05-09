@@ -9,6 +9,16 @@ import (
 	"github.com/dlclark/regexp2"
 )
 
+func NumTokensSingleString(str string) (num_tokens int) {
+	tkm, err := encodingForModel("text-embedding-ada-002")
+	if err != nil {
+		err = fmt.Errorf("EncodingForModel: %v", err)
+		fmt.Println(err)
+		return
+	}
+	num_tokens = len(tkm.Encode(str, nil, nil))
+	return
+}
 func NumTokensFromMessages(messages []openai.ChatCompletionMessage, model string) (num_tokens int) {
 	tkm, err := encodingForModel(model)
 	if err != nil {

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-10 19:41:56
- * @LastEditTime: 2023-04-12 18:19:47
+ * @LastEditTime: 2023-05-06 22:41:58
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/preset.go
  */
@@ -19,17 +19,22 @@ type PresetCreateNewReq struct {
 	TopP          float64        `json:"top_p"`
 	Presence      float64        `json:"presence"`
 	Frequency     float64        `json:"frequency"`
+	WithEmbedding bool           `json:"with_embedding"`
 }
 type PresetCreateNewRes struct {
-	Id        int64 `json:"id"`
+	PresetId  int64 `json:"preset_id"`
 	IsSuccess bool  `json:"is_success"`
 }
 
 type PresetGetListRes struct {
-	PresetsList []PresetOne `json:"prests_list"`
+	PresetsList []PresetOneRes `json:"preset_list"`
+}
+type PresetOneRes struct {
+	PresetId   string `json:"preset_id"`
+	PresetName string `json:"preset_name"`
 }
 
 type PresetOne struct {
-	Id         int64  `json:"id"`
+	PresetId   int64  `gorm:"column:id" json:"preset_id"`
 	PresetName string `json:"preset_name"`
 }

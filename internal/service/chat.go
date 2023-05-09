@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-04-23 20:13:17
+ * @LastEditTime: 2023-05-09 13:40:29
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -21,10 +21,13 @@ import (
 	"chatserver-api/internal/model/entity"
 	"chatserver-api/pkg/logger"
 	"chatserver-api/pkg/openai"
+	"chatserver-api/pkg/pgvector"
 	"chatserver-api/pkg/tiktoken"
+	"chatserver-api/pkg/tokenize"
 	"chatserver-api/utils/security"
 	"chatserver-api/utils/uuid"
 	"strconv"
+	"strings"
 
 	"context"
 	"encoding/json"
@@ -40,54 +43,107 @@ var _ ChatService = (*chatService)(nil)
 type ChatService interface {
 	ChatCreateNew(ctx context.Context, userId, presetId int64, chatName string) (res model.ChatCreateNewRes, err error)
 	ChatDelete(ctx *gin.Context) error
-	ChatUpdate(ctx *gin.Context, chatName string) error
+	ChatUpdate(ctx *gin.Context, chatName string, presetId int64) error
 	ChatListGet(ctx *gin.Context) (res model.ChatListRes, err error)
+	ChatRecordGet(ctx *gin.Context) (res model.RecordHistoryRes, err error)
+	ChatRecordClear(ctx *gin.Context) (err error)
 	ChatBalanceVerify(ctx *gin.Context) (err error)
 	ChatBalanceUpdate(ctx *gin.Context) (err error)
 	ChatMessageSave(ctx *gin.Context, role, message string, msgid int64) (err error)
 	ChatDetailGet(ctx *gin.Context) (res model.ChatDetailRes, err error)
 	ChatUserVerify(ctx *gin.Context) (err error)
-	ChatRecordGet(ctx *gin.Context) (res model.RecordHistoryRes, err error)
 	ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, memoryLevel int16) (answerid int64, req openai.ChatCompletionRequest, err error)
 	ChatChattingReqProcess(ctx *gin.Context, lastquestion string, memoryLevel int16) (questionId int64, req openai.ChatCompletionRequest, err error)
 	ChatStremResGenerate(ctx *gin.Context, req openai.ChatCompletionRequest, chanStream chan<- string)
-	ChatResProcess(ctx *gin.Context, chanStream <-chan string, questionId, answerid int64) (msgid int64, messages string)
+	ChatStreamResProcess(ctx *gin.Context, chanStream <-chan string, questionId, answerid int64) (msgid int64, messages string)
+	ChatEmbeddingSave(ctx context.Context, title, body string, embeddata openai.Embedding) error
+	ChatEmbeddingGenerate(str []string) (embedVectors []openai.Embedding, err error)
+	ChatEmbeddingCompare(ctx context.Context, question string) (contextStr string, err error)
+	// ChatTest(ctx context.Context, text string) (keyword string)
 }
 
 // userService 实现UserService接口
 type chatService struct {
-	cd   dao.ChatDao
-	iSrv uuid.SnowNode
+	cd    dao.ChatDao
+	jieba tokenize.Tokenizer
+	iSrv  uuid.SnowNode
 }
 
-func NewChatService(_cd dao.ChatDao) *chatService {
+func NewChatService(_cd dao.ChatDao, _jieba tokenize.Tokenizer) *chatService {
 	return &chatService{
-		cd:   _cd,
-		iSrv: *uuid.NewNode(1),
+		cd:    _cd,
+		jieba: _jieba,
+		iSrv:  *uuid.NewNode(1),
 	}
 }
 
-func (cs *chatService) ChatMessageSave(ctx *gin.Context, role, message string, msgid int64) (err error) {
-	count, err := cs.cd.ChatRecordVerify(ctx, msgid)
+func (cs *chatService) ChatCreateNew(ctx context.Context, userId, presetId int64, chatName string) (res model.ChatCreateNewRes, err error) {
+	chat := entity.Chat{}
+	chat.Id = cs.iSrv.GenSnowID()
+	chat.UserId = userId
+	chat.PresetId = presetId
+	chat.ChatName = chatName
+	err = cs.cd.ChatCreateNew(ctx, &chat)
 	if err != nil {
 		return
 	}
+	res.ChatId = strconv.FormatInt(chat.Id, 10)
+	return
+}
+
+func (cs *chatService) ChatUpdate(ctx *gin.Context, chatName string, presetId int64) error {
 	chatId := ctx.GetInt64(consts.ChatID)
-	recocd := entity.Record{}
-	recocd.Id = msgid
-	recocd.ChatId = chatId
-	recocd.Sender = role
-	recocd.Message = message
-	recocd.MessageHash = security.Md5(message)
-	if count == 0 {
-		logger.Debugf("聊天消息记录新建")
-		err = cs.cd.ChatRecordSave(ctx, &recocd)
-		return
+	chat := entity.Chat{}
+	chat.Id = chatId
+	if presetId != 0 {
+		chat.PresetId = presetId
+	}
+	if len(chatName) != 0 {
+		chat.ChatName = chatName
+	}
+	return cs.cd.ChatUpdate(ctx, &chat)
+}
+
+func (cs *chatService) ChatDelete(ctx *gin.Context) error {
+	userId := ctx.GetInt64(consts.UserID)
+	chatId := ctx.GetInt64(consts.ChatID)
+	if chatId == -1 {
+		return cs.cd.ChatDeleteAll(ctx, userId)
 	} else {
-		logger.Debugf("聊天消息记录更新")
-		err = cs.cd.ChatRecordUpdate(ctx, &recocd)
+		return cs.cd.ChatDeleteOne(ctx, userId, chatId)
+	}
+}
+
+func (cs *chatService) ChatUserVerify(ctx *gin.Context) (err error) {
+	userId := ctx.GetInt64(consts.UserID)
+	chatId := ctx.GetInt64(consts.ChatID)
+	count, err := cs.cd.ChatUserVerify(ctx, userId, chatId)
+	if count == 0 || err != nil {
+		err = errors.Join(errors.New("用户会话校验失败"))
 		return
 	}
+	//获取Chat是否需要embedding上下文
+
+	return
+}
+
+func (cs *chatService) ChatListGet(ctx *gin.Context) (res model.ChatListRes, err error) {
+	userId := ctx.GetInt64(consts.UserID)
+	var chatOne model.ChatOneRes
+	var chatListRes []model.ChatOneRes
+	chatlist, err := cs.cd.ChatListGet(ctx, userId)
+	if err != nil {
+		return
+	}
+	for _, v := range chatlist {
+		chatOne.ChatId = strconv.FormatInt(v.ChatId, 10)
+		chatOne.PresetId = strconv.FormatInt(v.PresetId, 10)
+		chatOne.ChatName = v.ChatName
+		chatOne.CreatedAt = v.CreatedAt
+		chatListRes = append(chatListRes, chatOne)
+	}
+	res.ChatList = chatListRes
+	return
 }
 
 func (cs *chatService) ChatDetailGet(ctx *gin.Context) (res model.ChatDetailRes, err error) {
@@ -101,17 +157,6 @@ func (cs *chatService) ChatDetailGet(ctx *gin.Context) (res model.ChatDetailRes,
 	res.MaxTokens = chatdet.MaxTokens
 	res.ModelName = chatdet.ModelName
 	res.PresetContent = chatdet.PresetContent
-	return
-}
-
-func (cs *chatService) ChatUserVerify(ctx *gin.Context) (err error) {
-	userId := ctx.GetInt64(consts.UserID)
-	chatId := ctx.GetInt64(consts.ChatID)
-	count, err := cs.cd.ChatUserVerify(ctx, userId, chatId)
-	if count == 0 || err != nil {
-		err = errors.Join(errors.New("用户会话校验失败"))
-		return
-	}
 	return
 }
 
@@ -137,10 +182,68 @@ func (cs *chatService) ChatRecordGet(ctx *gin.Context) (res model.RecordHistoryR
 	return
 }
 
+func (cs *chatService) ChatRecordClear(ctx *gin.Context) (err error) {
+	chatId := ctx.GetInt64(consts.ChatID)
+	err = cs.cd.ChatRecordClear(ctx, chatId)
+	return
+}
+
+func (cs *chatService) ChatBalanceVerify(ctx *gin.Context) (err error) {
+	userId := ctx.GetInt64(consts.UserID)
+	userbalance, err := cs.cd.ChatBalanceGet(ctx, userId)
+	ctx.Set(consts.Balance, userbalance.Balance)
+	if userbalance.Balance < float64(0) {
+		err = errors.New("Insufficient account balance")
+	}
+	return err
+}
+
+func (cs *chatService) ChatCostCalculate(ctx *gin.Context, promptMsgs []openai.ChatCompletionMessage, model string) {
+	balance := ctx.GetFloat64(consts.Balance)
+	token := tiktoken.NumTokensFromMessages(promptMsgs, model)
+	cost := float64(token) * 0.00007
+	newBalance := balance - cost
+	logger.Debugf("Token:%d  totalCost:%f  newBalance%f", token, cost, newBalance)
+	if newBalance < float64(0) {
+		newBalance = float64(0)
+	}
+	ctx.Set(consts.Balance, newBalance)
+}
+
+func (cs *chatService) ChatBalanceUpdate(ctx *gin.Context) (err error) {
+	userId := ctx.GetInt64(consts.UserID)
+	balance := ctx.GetFloat64(consts.Balance)
+	return cs.cd.ChatCostUpdate(ctx, userId, balance)
+}
+
+func (cs *chatService) ChatMessageSave(ctx *gin.Context, role, message string, msgid int64) (err error) {
+	count, err := cs.cd.ChatRecordVerify(ctx, msgid)
+	if err != nil {
+		return
+	}
+	chatId := ctx.GetInt64(consts.ChatID)
+	recocd := entity.Record{}
+	recocd.Id = msgid
+	recocd.ChatId = chatId
+	recocd.Sender = role
+	recocd.Message = message
+	recocd.MessageHash = security.Md5(message)
+	if count == 0 {
+		logger.Debugf("聊天消息记录新建")
+		err = cs.cd.ChatRecordSave(ctx, &recocd)
+		return
+	} else {
+		logger.Debugf("聊天消息记录更新")
+		err = cs.cd.ChatRecordUpdate(ctx, &recocd)
+		return
+	}
+}
+
 func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, memoryLevel int16) (answerid int64, req openai.ChatCompletionRequest, err error) {
 	var chatMessages []openai.ChatCompletionMessage
 	var systemPreset, historyMessage openai.ChatCompletionMessage
 	var logitbia map[string]int
+	var emquestion, embedcontexts string
 	userId := ctx.GetInt64(consts.UserID)
 	chatId := ctx.GetInt64(consts.ChatID)
 	preset, err := cs.cd.ChatDetailGet(ctx, userId, chatId)
@@ -165,6 +268,29 @@ func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, 
 		return
 	}
 	systemPreset.Role = openai.ChatMessageRoleSystem
+	if preset.WithEmbedding {
+		if len(records) != 0 {
+			for _, v := range records {
+				if v.Sender == "user" {
+					emquestion += v.Message
+				}
+			}
+		}
+		//将用户问题进行关键词提取
+		emkeyword := cs.jieba.GetKeyword(emquestion)
+		//通过用户问题 lastquestion + records（User历史）获取Context信息
+		embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emkeyword)
+		if err != nil {
+			logger.Errorf("获取embedding上下文失败: %v\n", err)
+			return
+		}
+		//替换拼接PresetContent
+		systemPreset.Content = strings.Replace(preset.PresetContent, "{{ context }}", embedcontexts, -1)
+
+	} else {
+		systemPreset.Content = preset.PresetContent
+	}
+
 	systemPreset.Content = preset.PresetContent
 	chatMessages = append(chatMessages, systemPreset)
 	for _, record := range records {
@@ -189,6 +315,7 @@ func (cs *chatService) ChatChattingReqProcess(ctx *gin.Context, lastquestion str
 	var chatMessages []openai.ChatCompletionMessage
 	var systemPreset, historyMessage, lastMessage openai.ChatCompletionMessage
 	var logitbia map[string]int
+	var emquestion, embedcontexts string
 	userId := ctx.GetInt64(consts.UserID)
 	chatId := ctx.GetInt64(consts.ChatID)
 	preset, err := cs.cd.ChatDetailGet(ctx, userId, chatId)
@@ -212,7 +339,31 @@ func (cs *chatService) ChatChattingReqProcess(ctx *gin.Context, lastquestion str
 		return
 	}
 	systemPreset.Role = openai.ChatMessageRoleSystem
-	systemPreset.Content = preset.PresetContent
+	if preset.WithEmbedding {
+		if len(records) != 0 {
+			for _, v := range records {
+				if v.Sender == "user" {
+					emquestion += v.Message
+				}
+			}
+		}
+
+		emquestion += lastquestion
+		//将用户问题进行关键词提取
+		emkeyword := cs.jieba.GetKeyword(emquestion)
+		//通过用户问题 lastquestion + records（User历史）获取Context信息
+		embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emkeyword)
+		if err != nil {
+			logger.Errorf("获取embedding上下文失败: %v\n", err)
+			return
+		}
+		//替换拼接PresetContent
+		systemPreset.Content = strings.Replace(preset.PresetContent, "{{ context }}", embedcontexts, -1)
+
+	} else {
+		systemPreset.Content = preset.PresetContent
+	}
+
 	chatMessages = append(chatMessages, systemPreset)
 	for _, record := range records {
 		historyMessage.Role = record.Sender
@@ -237,7 +388,7 @@ func (cs *chatService) ChatChattingReqProcess(ctx *gin.Context, lastquestion str
 	return
 }
 
-func (cs *chatService) ChatResProcess(ctx *gin.Context, chanStream <-chan string, questionId, answerid int64) (msgid int64, messages string) {
+func (cs *chatService) ChatStreamResProcess(ctx *gin.Context, chanStream <-chan string, questionId, answerid int64) (msgid int64, messages string) {
 
 	msgtime := time.Now().Format(consts.TimeLayout)
 	if answerid != 0 {
@@ -348,80 +499,51 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 	}
 }
 
-func (cs *chatService) ChatCreateNew(ctx context.Context, userId, presetId int64, chatName string) (res model.ChatCreateNewRes, err error) {
-	chat := entity.Chat{}
-	chat.Id = cs.iSrv.GenSnowID()
-	chat.UserId = userId
-	chat.PresetId = presetId
-	chat.ChatName = chatName
-	err = cs.cd.ChatCreateNew(ctx, &chat)
+func (cs *chatService) ChatEmbeddingGenerate(str []string) (embedVectors []openai.Embedding, err error) {
+	var req openai.EmbeddingRequest
+	req.Model = openai.AdaEmbeddingV2
+	req.Input = str
+	client, err := openai.NewClient()
 	if err != nil {
 		return
 	}
-	res.ChatId = strconv.FormatInt(chat.Id, 10)
+	resp, err := client.CreateEmbeddings(req)
+	if err != nil {
+		logger.Errorf("Embeddings error: %v\n", err)
+		return
+	}
+	// tokens = resp.Usage.TotalTokens
+	embedVectors = resp.Data
 	return
 }
 
-func (cs *chatService) ChatDelete(ctx *gin.Context) error {
-	userId := ctx.GetInt64(consts.UserID)
-	chatId := ctx.GetInt64(consts.ChatID)
-	if chatId == -1 {
-		return cs.cd.ChatDeleteAll(ctx, userId)
-	} else {
-		return cs.cd.ChatDeleteOne(ctx, userId, chatId)
-	}
+func (cs *chatService) ChatEmbeddingSave(ctx context.Context, title, body string, embeddata openai.Embedding) error {
+	docs := entity.Documents{}
+	docs.Id = cs.iSrv.GenSnowID()
+	docs.Title = title
+	// docs.Subsection = sub
+	docs.Body = body
+	docs.Tokens = tiktoken.NumTokensSingleString(body)
+	docs.Embedding = pgvector.NewVector(embeddata.Embedding)
+	return cs.cd.DocEmbeddingSave(ctx, &docs)
 }
 
-func (cs *chatService) ChatListGet(ctx *gin.Context) (res model.ChatListRes, err error) {
-	userId := ctx.GetInt64(consts.UserID)
-	var chatOne model.ChatOneRes
-	var chatListRes []model.ChatOneRes
-	chatlist, err := cs.cd.ChatListGet(ctx, userId)
+func (cs *chatService) ChatEmbeddingCompare(ctx context.Context, question string) (contextStr string, err error) {
+	//获取question Embedding信息
+	embedvectors, err := cs.ChatEmbeddingGenerate([]string{question})
 	if err != nil {
 		return
 	}
-	for _, v := range chatlist {
-		chatOne.ChatId = strconv.FormatInt(v.ChatId, 10)
-		chatOne.ChatName = v.ChatName
-		chatOne.CreatedAt = v.CreatedAt
-		chatListRes = append(chatListRes, chatOne)
+	textbody, err := cs.cd.ChatEmbeddingCompare(ctx, pgvector.NewVector(embedvectors[0].Embedding))
+	if len(textbody) != 0 {
+		for _, v := range textbody {
+			contextStr += v.Body
+		}
+		return
 	}
-	res.ChatList = chatListRes
 	return
 }
 
-func (cs *chatService) ChatUpdate(ctx *gin.Context, chatName string) error {
-	chatId := ctx.GetInt64(consts.ChatID)
-	chat := entity.Chat{}
-	chat.Id = chatId
-	chat.ChatName = chatName
-	return cs.cd.ChatUpdate(ctx, &chat)
-}
-
-func (cs *chatService) ChatBalanceVerify(ctx *gin.Context) (err error) {
-	userId := ctx.GetInt64(consts.UserID)
-	userbalance, err := cs.cd.ChatBalanceGet(ctx, userId)
-	ctx.Set(consts.Balance, userbalance.Balance)
-	if userbalance.Balance < float64(0) {
-		err = errors.New("Insufficient account balance")
-	}
-	return err
-}
-
-func (cs *chatService) ChatCostCalculate(ctx *gin.Context, promptMsgs []openai.ChatCompletionMessage, model string) {
-	balance := ctx.GetFloat64(consts.Balance)
-	token := tiktoken.NumTokensFromMessages(promptMsgs, model)
-	cost := float64(token) * 0.00007
-	newBalance := balance - cost
-	logger.Debugf("Token:%d  totalCost:%f  newBalance%f", token, cost, newBalance)
-	if newBalance < float64(0) {
-		newBalance = float64(0)
-	}
-	ctx.Set(consts.Balance, newBalance)
-}
-
-func (cs *chatService) ChatBalanceUpdate(ctx *gin.Context) (err error) {
-	userId := ctx.GetInt64(consts.UserID)
-	balance := ctx.GetFloat64(consts.Balance)
-	return cs.cd.ChatCostUpdate(ctx, userId, balance)
-}
+// func (cs *chatService) ChatTest(ctx context.Context, text string) (keyword string) {
+// 	return cs.jieba.GetKeyword(text)
+// }

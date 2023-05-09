@@ -1,9 +1,9 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:51:00
- * @LastEditTime: 2023-04-21 10:31:24
+ * @LastEditTime: 2023-05-09 13:38:34
  * @LastEditors: cloudyi.li
- * @FilePath: /chatserver-api/internal/router/api_router.go
+ * @FilePath: /chatserver-api/internal/router/api.go
  */
 // Created on 2023/3/4.
 // @author tony
@@ -46,6 +46,7 @@ func (ar *ApiRouter) Load(g *gin.Engine) {
 	g.POST("/register", ar.userHandler.UserRegister())
 	g.POST("/checkemail", ar.userHandler.UserVerifyEmail())
 	g.POST("/checkusername", ar.userHandler.UserVerifyUserName())
+	// g.GET("/test", ar.chatHandler.TestJieba())
 	ug := g.Group("/user", middleware.AuthToken())
 	{
 		ug.GET("/avatar-url", ar.userHandler.UserGetAvatar())
@@ -64,11 +65,18 @@ func (ar *ApiRouter) Load(g *gin.Engine) {
 		cg.POST("/detail", ar.chatHandler.ChatDetailGet())
 		cg.GET("/history", ar.chatHandler.ChatRecordHistory())
 		cg.DELETE("/delete", ar.chatHandler.ChatDelete())
+		cg.DELETE("/clear", ar.chatHandler.ChatRecordClear())
 		cg.POST("/update", ar.chatHandler.ChatUpdate())
 	}
 	pg := g.Group("/preset", middleware.AuthToken())
 	{
 		pg.POST("/new", ar.presetHandler.PresetCreateNew())
 		pg.GET("/list", ar.presetHandler.PresetGetList())
+	}
+	eg := g.Group("/embedding", middleware.AuthToken())
+	{
+		eg.POST("/file", ar.chatHandler.ChatEmbeddingFile())
+		eg.POST("/string", ar.chatHandler.ChatEmbeddingString())
+
 	}
 }

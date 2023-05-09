@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 14:38:52
- * @LastEditTime: 2023-04-11 13:34:24
+ * @LastEditTime: 2023-05-08 16:19:06
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/db/db.go
  */
@@ -32,7 +32,7 @@ var slowLogger = logger.New(
 	Writer{},
 	logger.Config{
 		SlowThreshold:             200 * time.Millisecond, // Slow SQL threshold
-		LogLevel:                  logger.Warn,            // Log level
+		LogLevel:                  logger.Info,            // Log level
 		IgnoreRecordNotFoundError: true,                   // Ignore ErrRecordNotFound error for logger
 		Colorful:                  false,                  // Disable color
 	},

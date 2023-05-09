@@ -51,7 +51,8 @@ mac: prepare
 		[ -z "$$BIN_NAME" ] && continue; \
 		for GOARCH in $(GOARCHS_MAC); do \
 			mkdir -p dist/mac_$$GOARCH; \
-			GOOS=darwin GOARCH=$$GOARCH go  build -ldflags \
+			GOOS=darwin GOARCH=$$GOARCH CGO_ENABLED=1 \
+			go  build -ldflags \
 			"-X ${version_package}.CommitId=${commit_id} \
 			-X ${version_package}.BranchName=${branch_name} \
 			-X ${version_package}.BuildTime=${build_time} \

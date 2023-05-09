@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-02-15 14:05:41
- * @LastEditTime: 2023-04-17 09:42:56
+ * @LastEditTime: 2023-05-09 16:32:13
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/config/conf.go
  */
@@ -17,6 +17,7 @@ type Config struct {
 	AvatarURL    string       `mapstructure:"avatarurl"`
 	JwtConfig    JwtConfig    `mapstructure:"jwt"`
 	OpenAIConfig OpenAIConfig `mapstructure:"openai"`
+	EmailCofig   EmailCofig   `mapstructure:"email"`
 	DBConfig     DBConfig     `mapstructure:"database"` // 数据库信息
 	RedisConfig  RedisConfig  `mapstructure:"redis"`    // redis
 	LogConfig    LogConfig    `mapstructure:"log"`      // uber z
@@ -69,4 +70,15 @@ type LogConfig struct {
 	Compress   bool   `mapstructure:"compress"`
 	LocalTime  bool   `mapstructure:"local-time"`
 	Console    bool   `mapstructure:"console"`
+}
+
+type EmailCofig struct {
+	Host      string `mapstructure:"smtphost"`
+	Port      string `mapstructure:"smtpport"`
+	Username  string `mapstructure:"smtpuser"`
+	Password  string `mapstructure:"smtppassword"`
+	Sender    string `mapstructure:"smtpsender"`
+	ProxyMode string `mapstructure:"smtphost"`
+	ProxyIP   string `mapstructure:"proxyip"`
+	ProxyPort string `mapstructure:"proxyport"`
 }

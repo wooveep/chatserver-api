@@ -65,3 +65,5 @@ configs/config.yml
 logs/
 dist/
 head_photo/
+uploadfile/
+tmpfile/

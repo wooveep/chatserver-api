@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 
 	"golang.org/x/net/proxy"
 )
@@ -24,8 +25,8 @@ func NewClient() (*Client, error) {
 	c := DefaultConfig()
 	config := config.AppConfig.OpenAIConfig
 	if config.ProxyMode == "socks5" {
-		address := fmt.Sprintf("%s:%s", config.ProxyIP, config.ProxyPort)
-		dialer, err := proxy.SOCKS5("tcp", address, nil, proxy.Direct)
+		proxyadd := fmt.Sprintf("%s:%s", config.ProxyIP, config.ProxyPort)
+		dialer, err := proxy.SOCKS5("tcp", proxyadd, nil, proxy.Direct)
 		if err != nil {
 			return nil, err
 		}
@@ -36,6 +37,15 @@ func NewClient() (*Client, error) {
 			Transport: transport,
 		}
 
+	}
+	if config.ProxyMode == "http" {
+		proxyUrl, _ := url.Parse(fmt.Sprintf("http://%s:%s", config.ProxyIP, config.ProxyPort))
+		transport := &http.Transport{
+			Proxy: http.ProxyURL(proxyUrl),
+		}
+		c.HTTPClient = &http.Client{
+			Transport: transport,
+		}
 	}
 	return NewClientWithConfig(c), nil
 }

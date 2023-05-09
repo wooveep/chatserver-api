@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-05 15:37:14
- * @LastEditTime: 2023-04-20 14:10:10
+ * @LastEditTime: 2023-05-08 18:42:07
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/query/chat.go
  */
@@ -12,7 +12,10 @@ import (
 	"chatserver-api/internal/model"
 	"chatserver-api/internal/model/entity"
 	"chatserver-api/pkg/db"
+	"chatserver-api/pkg/pgvector"
 	"context"
+
+	"gorm.io/gorm/clause"
 )
 
 var _ dao.ChatDao = (*chatDao)(nil)
@@ -38,6 +41,13 @@ func (cd *chatDao) ChatUpdate(ctx context.Context, chat *entity.Chat) error {
 func (cd *chatDao) ChatRecordSave(ctx context.Context, record *entity.Record) error {
 	return cd.ds.Master().Create(record).Error
 }
+func (cd *chatDao) ChatRecordClear(ctx context.Context, chatId int64) error {
+	return cd.ds.Master().Where("chat_id = ?", chatId).Delete(&entity.Record{}).Error
+}
+func (cd *chatDao) DocEmbeddingSave(ctx context.Context, docs *entity.Documents) error {
+	return cd.ds.Master().Create(docs).Error
+}
+
 func (cd *chatDao) ChatRecordVerify(ctx context.Context, recordid int64) (int64, error) {
 	var count int64
 	err := cd.ds.Master().Model(&entity.Record{}).Where("id = ? ", recordid).Count(&count).Error
@@ -56,7 +66,8 @@ func (cd *chatDao) ChatDeleteAll(ctx context.Context, userId int64) error {
 
 func (cd *chatDao) ChatDetailGet(ctx context.Context, userId, chatId int64) (model.ChatDetail, error) {
 	var detail model.ChatDetail
-	err := cd.ds.Master().Joins("Chats", cd.ds.Master().Where(&entity.Chat{Id: chatId, UserId: userId})).Model(&entity.Preset{}).Find(&detail).Error
+	err := cd.ds.Master().InnerJoins("Chats", cd.ds.Master().Where(&entity.Chat{Id: chatId, UserId: userId})).Model(&entity.Preset{}).Find(&detail).Error
+	// err := cd.ds.Master().Joins("Chats").Model(&entity.Preset{}).Find(&detail).Error
 	return detail, err
 }
 
@@ -96,4 +107,10 @@ func (cd *chatDao) ChatBalanceGet(ctx context.Context, userId int64) (model.User
 	var userbalance model.UserBalance
 	err := cd.ds.Master().Model(&entity.User{}).Where("id  = ? ", userId).Find(&userbalance).Error
 	return userbalance, err
+}
+
+func (cd *chatDao) ChatEmbeddingCompare(ctx context.Context, question pgvector.Vector) ([]model.DocsCompare, error) {
+	var docsbody []model.DocsCompare
+	err := cd.ds.Master().Model(&entity.Documents{}).Clauses(clause.OrderBy{Expression: clause.Expr{SQL: "Embedding <=> ? ", Vars: []interface{}{question}}}).Limit(3).Find(&docsbody).Error
+	return docsbody, err
 }

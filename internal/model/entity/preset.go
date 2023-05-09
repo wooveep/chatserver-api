@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-10 19:36:20
- * @LastEditTime: 2023-04-12 20:06:45
+ * @LastEditTime: 2023-05-06 22:41:11
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/entity/preset.go
  */
@@ -24,6 +24,7 @@ type Preset struct {
 	TopP          float64        `gorm:"column:top_p" json:"top_p"`
 	Presence      float64        `gorm:"column:presence" json:"presence"`
 	Frequency     float64        `gorm:"column:frequency" json:"frequency"`
+	WithEmbedding bool           `grom:"cloumn:with_embedding" json:"with_embedding"`
 	CreatedAt     jtime.JsonTime `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt     jtime.JsonTime `gorm:"column:updated_at" json:"updated_at"`
 	Chats         []Chat         `gorm:"foreignKey:preset_id;references:id"`

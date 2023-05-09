@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:43:42
- * @LastEditTime: 2023-04-23 17:21:24
+ * @LastEditTime: 2023-05-09 13:38:45
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/chat/chat.go
  */
@@ -16,6 +16,7 @@ import (
 	"chatserver-api/pkg/logger"
 	"chatserver-api/pkg/openai"
 	"chatserver-api/pkg/response"
+	"chatserver-api/pkg/tika"
 	"chatserver-api/pkg/tiktoken"
 	"strconv"
 
@@ -78,7 +79,7 @@ func (ch *ChatHandler) ChatRegenerateg() gin.HandlerFunc {
 		go ch.cSrv.ChatStremResGenerate(ctx, openAIReq, chanStream)
 
 		//返回生成信息；
-		msgId, messages := ch.cSrv.ChatResProcess(ctx, chanStream, questionId, answerId)
+		msgId, messages := ch.cSrv.ChatStreamResProcess(ctx, chanStream, questionId, answerId)
 
 		//保存生成信息;
 		if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleAssistant, messages, msgId); err != nil {
@@ -112,6 +113,7 @@ func (ch *ChatHandler) ChatChatting() gin.HandlerFunc {
 			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "会话ID不存在"), nil)
 			return
 		}
+
 		//获取用户余额
 		err = ch.cSrv.ChatBalanceVerify(ctx)
 		if err != nil {
@@ -141,7 +143,7 @@ func (ch *ChatHandler) ChatChatting() gin.HandlerFunc {
 		//开始生成回答
 		go ch.cSrv.ChatStremResGenerate(ctx, openAIReq, chanStream)
 		//发送回答
-		msgId, messages := ch.cSrv.ChatResProcess(ctx, chanStream, questionId, 0)
+		msgId, messages := ch.cSrv.ChatStreamResProcess(ctx, chanStream, questionId, 0)
 		//保存回答消息
 		if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleAssistant, messages, msgId); err != nil {
 			logger.Errorf("生成问题消息保存失败:%s", err)
@@ -279,10 +281,10 @@ func (ch *ChatHandler) ChatDelete() gin.HandlerFunc {
 	}
 }
 
-func (ch *ChatHandler) ChatUpdate() gin.HandlerFunc {
+func (ch *ChatHandler) ChatRecordClear() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var req model.ChatUpdateReq
-		if err := ctx.ShouldBindJSON(&req); err != nil {
+		var req model.RecordClearReq
+		if err := ctx.ShouldBindQuery(&req); err != nil {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
 			return
 		}
@@ -296,7 +298,45 @@ func (ch *ChatHandler) ChatUpdate() gin.HandlerFunc {
 			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "会话ID不存在"), nil)
 			return
 		}
-		err = ch.cSrv.ChatUpdate(ctx, req.ChatName)
+		err = ch.cSrv.ChatRecordClear(ctx)
+		if err != nil {
+			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "接口调用失败"), nil)
+
+		} else {
+			response.JSON(ctx, nil, nil)
+		}
+	}
+}
+
+func (ch *ChatHandler) ChatUpdate() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var req model.ChatUpdateReq
+		if err := ctx.ShouldBindJSON(&req); err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
+			return
+		}
+		chatId, err := strconv.ParseInt(req.ChatId, 10, 64)
+		var presetId int64
+		if len(req.PresetId) > 0 {
+			presetId, err = strconv.ParseInt(req.PresetId, 10, 64)
+			if err != nil {
+				response.JSON(ctx, errors.WithCode(ecode.ValidateErr, "会话ID转换错误"), nil)
+				return
+			}
+
+		} else {
+			presetId = 0
+		}
+		if err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, "会话ID转换错误"), nil)
+			return
+		}
+		ctx.Set(consts.ChatID, chatId)
+		if err := ch.cSrv.ChatUserVerify(ctx); err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "会话ID不存在"), nil)
+			return
+		}
+		err = ch.cSrv.ChatUpdate(ctx, req.ChatName, presetId)
 		if err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "会话更新失败"), nil)
 
@@ -305,3 +345,110 @@ func (ch *ChatHandler) ChatUpdate() gin.HandlerFunc {
 		}
 	}
 }
+
+// 通过接口传入字符串构建embedding存储
+func (ch *ChatHandler) ChatEmbeddingString() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var req model.DocsBatchList
+		if err := ctx.ShouldBindJSON(&req); err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
+			return
+		}
+		textlist := req.BatchList
+		textlen := len(textlist)
+		for i := 0; i < textlen; i += 10 {
+			end := i + 10
+			if end > textlen {
+				end = textlen
+			}
+			batchlist := textlist[i:end]
+			embeddinglist, err := ch.cSrv.ChatEmbeddingGenerate(batchlist)
+			if err != nil {
+				response.JSON(ctx, nil, nil)
+				return
+			}
+			for j := 0; j < len(batchlist); j++ {
+				err = ch.cSrv.ChatEmbeddingSave(ctx, req.BatchTitle, batchlist[j], embeddinglist[j])
+				if err != nil {
+					response.JSON(ctx, nil, nil)
+					return
+				}
+			}
+		}
+		response.JSON(ctx, nil, nil)
+
+	}
+}
+
+// 上传文件并构建Embedding存储
+func (ch *ChatHandler) ChatEmbeddingFile() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		file, err := ctx.FormFile("file")
+		if err != nil {
+			response.JSON(ctx, nil, nil)
+			return
+		}
+
+		// 检查文件类型是否为PDF
+		if fileHeader := file.Header.Get("Content-Type"); fileHeader != "application/pdf" {
+			// ctx.JSON(http.StatusBadRequest, gin.H{"error": "上传文件必须是PDF格式"})
+			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, "上传文件必须是PDF格式"), nil)
+
+			return
+		}
+
+		// 保存文件到本地
+		err = ctx.SaveUploadedFile(file, "uploadfile/"+file.Filename)
+		if err != nil {
+			// ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			response.JSON(ctx, nil, nil)
+			return
+		}
+		textlist, err := tika.ReadPd3f(file.Filename)
+		if err != nil {
+			// ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			response.JSON(ctx, nil, nil)
+			return
+		}
+
+		textlen := len(textlist)
+		for i := 0; i < textlen; i += 10 {
+			end := i + 10
+			if end > textlen {
+				end = textlen
+			}
+			batchlist := textlist[i:end]
+			embeddinglist, err := ch.cSrv.ChatEmbeddingGenerate(batchlist)
+			if err != nil {
+				// ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				response.JSON(ctx, nil, nil)
+				return
+			}
+			for j := 0; j < len(batchlist); j++ {
+				err = ch.cSrv.ChatEmbeddingSave(ctx, file.Filename, batchlist[j], embeddinglist[j])
+				if err != nil {
+					// ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					response.JSON(ctx, nil, nil)
+					return
+				}
+			}
+		}
+		response.JSON(ctx, nil, nil)
+
+		// src, err := file.Open()
+		// if err != nil {
+		// 	response.JSON(ctx, nil, nil)
+		// 	return
+		// }
+		// defer src.Close()
+
+	}
+}
+
+// func (ch *ChatHandler) TestJieba() gin.HandlerFunc {
+// 	return func(ctx *gin.Context) {
+// 		text := ctx.Query("text")
+// 		a := ch.cSrv.ChatTest(ctx, text)
+// 		response.JSON(ctx, nil, a)
+// 	}
+// }

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-12 06:09:03
- * @LastEditTime: 2023-04-12 17:58:42
+ * @LastEditTime: 2023-05-06 21:29:19
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/entity/record.go
  */

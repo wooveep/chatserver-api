@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 14:11:49
- * @LastEditTime: 2023-04-23 15:02:51
+ * @LastEditTime: 2023-05-08 18:44:34
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/chat.go
  */
@@ -41,17 +41,20 @@ type ChatListRes struct {
 
 type ChatOneRes struct {
 	ChatId    string         `json:"chat_id"`
+	PresetId  string         `json:"preset_id"`
 	ChatName  string         `json:"chat_name"`
 	CreatedAt jtime.JsonTime `json:"created_at"`
 }
 
 type ChatOne struct {
 	ChatId    int64          `gorm:"column:id" json:"chat_id"`
+	PresetId  int64          `gorm:"column:preset_id" json:"preset_id"`
 	ChatName  string         `gorm:"column:chat_name" json:"chat_name"`
 	CreatedAt jtime.JsonTime `gorm:"column:created_at" json:"created_at"`
 }
 
 type ChatDetail struct {
+	ChatName      string         `gorm:"column:Chats__chat_name" json:"chat_name"`
 	PresetName    string         `gorm:"column:preset_name" json:"preset_name"`
 	PresetContent string         `gorm:"column:preset_content" json:"preset_content"`
 	ModelName     string         `gorm:"column:model_name" json:"model_name"`
@@ -61,6 +64,8 @@ type ChatDetail struct {
 	TopP          float64        `gorm:"column:top_p" json:"top_p"`
 	Presence      float64        `gorm:"column:presence" json:"presence"`
 	Frequency     float64        `gorm:"column:frequency" json:"frequency"`
+	WithEmbedding bool           `gorm:"column:with_embedding" json:"with_embedding"`
+	CreatedAt     jtime.JsonTime `gorm:"column:Chats__created_at" json:"created_at"`
 }
 
 type ChatDetailReq struct {
@@ -77,5 +82,6 @@ type ChatDeleteReq struct {
 }
 type ChatUpdateReq struct {
 	ChatId   string `json:"chat_id"  validate:"required"`
-	ChatName string `json:"chat_name" validate:"required" label:"会话名称"`
+	ChatName string `json:"chat_name" label:"会话名称"`
+	PresetId string `json:"preset_id" label:"预设ID"`
 }

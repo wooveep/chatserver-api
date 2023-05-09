@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-26 10:26:35
- * @LastEditTime: 2023-04-27 10:44:54
+ * @LastEditTime: 2023-04-28 06:44:11
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/pgvector/pgvector.go
  */
@@ -18,6 +18,13 @@ type Vector struct {
 	vec []float32
 }
 
+func NewVector(vec []float32) Vector {
+	return Vector{vec: vec}
+}
+
+func (v Vector) Slice() []float32 {
+	return v.vec
+}
 func (v Vector) String() string {
 	var buf strings.Builder
 	buf.WriteString("[")
