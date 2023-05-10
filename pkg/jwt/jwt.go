@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:57:25
- * @LastEditTime: 2023-04-08 15:59:55
+ * @LastEditTime: 2023-05-10 10:49:02
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/jwt/jwt.go
  */
@@ -61,7 +61,7 @@ func getBlackListKey(token string) string {
 	return "jwt_black_list:" + security.Md5(token)
 }
 
-func JoinBlackList(tokenstr string, secretKey string) (err error) {
+func JoinBlackList(ctx context.Context, tokenstr string, secretKey string) (err error) {
 	token, err := jwt.ParseWithClaims(tokenstr, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(secretKey), nil
 	})
@@ -71,13 +71,13 @@ func JoinBlackList(tokenstr string, secretKey string) (err error) {
 	nowUnix := time.Now().Unix()
 	timer := time.Duration(token.Claims.(*CustomClaims).ExpiresAt.Unix()-nowUnix) * time.Second
 	rc := cache.GetRedisClient()
-	err = rc.SetNX(context.TODO(), getBlackListKey(token.Raw), nowUnix, timer).Err()
+	err = rc.SetNX(ctx, getBlackListKey(token.Raw), nowUnix, timer).Err()
 	return
 }
 
-func IsInBlackList(token string) bool {
+func IsInBlackList(ctx context.Context, token string) bool {
 	rc := cache.GetRedisClient()
-	joinUnixStr, err := rc.Get(context.TODO(), getBlackListKey(token)).Result()
+	joinUnixStr, err := rc.Get(ctx, getBlackListKey(token)).Result()
 	joinUnix, err := strconv.ParseInt(joinUnixStr, 10, 64)
 	if joinUnixStr == "" || err != nil {
 		return false

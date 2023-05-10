@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-05 15:37:14
- * @LastEditTime: 2023-05-08 18:42:07
+ * @LastEditTime: 2023-05-10 15:07:36
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/query/chat.go
  */
@@ -41,9 +41,11 @@ func (cd *chatDao) ChatUpdate(ctx context.Context, chat *entity.Chat) error {
 func (cd *chatDao) ChatRecordSave(ctx context.Context, record *entity.Record) error {
 	return cd.ds.Master().Create(record).Error
 }
+
 func (cd *chatDao) ChatRecordClear(ctx context.Context, chatId int64) error {
 	return cd.ds.Master().Where("chat_id = ?", chatId).Delete(&entity.Record{}).Error
 }
+
 func (cd *chatDao) DocEmbeddingSave(ctx context.Context, docs *entity.Documents) error {
 	return cd.ds.Master().Create(docs).Error
 }
@@ -53,21 +55,36 @@ func (cd *chatDao) ChatRecordVerify(ctx context.Context, recordid int64) (int64,
 	err := cd.ds.Master().Model(&entity.Record{}).Where("id = ? ", recordid).Count(&count).Error
 	return count, err
 }
+
 func (cd *chatDao) ChatRecordUpdate(ctx context.Context, record *entity.Record) error {
 	return cd.ds.Master().Updates(record).Error
 }
+
 func (cd *chatDao) ChatDeleteOne(ctx context.Context, userId, chatId int64) error {
-	return cd.ds.Master().Where("user_id = ?", userId).Where("id = ? ", chatId).Delete(&entity.Chat{}).Error
+	return cd.ds.Master().Select("Records").Delete(&entity.Chat{Id: chatId}).Error
 }
 
 func (cd *chatDao) ChatDeleteAll(ctx context.Context, userId int64) error {
-	return cd.ds.Master().Where("user_id = ?", userId).Delete(&entity.Chat{}).Error
+	var chatIds []int64
+
+	err := cd.ds.Master().Model(&entity.Chat{}).Where("user_id = ?", userId).Select("id").Find(&chatIds).Error
+
+	if err != nil {
+		return err
+	}
+	for _, v := range chatIds {
+		err := cd.ds.Master().Select("Records").Delete(&entity.Chat{Id: v}).Error
+		if err != nil {
+			return err
+		}
+	}
+	return err
+
 }
 
 func (cd *chatDao) ChatDetailGet(ctx context.Context, userId, chatId int64) (model.ChatDetail, error) {
 	var detail model.ChatDetail
 	err := cd.ds.Master().InnerJoins("Chats", cd.ds.Master().Where(&entity.Chat{Id: chatId, UserId: userId})).Model(&entity.Preset{}).Find(&detail).Error
-	// err := cd.ds.Master().Joins("Chats").Model(&entity.Preset{}).Find(&detail).Error
 	return detail, err
 }
 

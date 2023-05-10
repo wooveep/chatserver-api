@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:36:21
- * @LastEditTime: 2023-04-21 10:30:20
+ * @LastEditTime: 2023-05-10 16:58:10
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/user/user.go
  */
@@ -13,6 +13,7 @@ import (
 	"chatserver-api/internal/service"
 	"chatserver-api/pkg/errors"
 	"chatserver-api/pkg/errors/ecode"
+	"chatserver-api/pkg/logger"
 	"chatserver-api/pkg/response"
 
 	"github.com/gin-gonic/gin"
@@ -60,10 +61,19 @@ func (uh *UserHandler) UserRegister() gin.HandlerFunc {
 		}
 		res, err := uh.userSrv.UserRegister(ctx, req)
 		if err != nil {
+			uh.userSrv.UserDelete(ctx)
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "未知错误注册失败"), res)
-		} else {
-			response.JSON(ctx, errors.Wrap(err, ecode.Success, "注册成功"), res)
+			logger.Error(err.Error())
+			return
 		}
+		err = uh.userSrv.UserActiveGen(ctx)
+		if err != nil {
+			uh.userSrv.UserDelete(ctx)
+			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "未知错误注册失败"), res)
+			logger.Error(err.Error())
+			return
+		}
+		response.JSON(ctx, errors.Wrapf(err, ecode.Success, "注册成功,激活链接已发送到您的邮箱 %s 。", req.Email), res)
 	}
 }
 func (uh *UserHandler) UserLogin() gin.HandlerFunc {
@@ -85,7 +95,7 @@ func (uh *UserHandler) UserLogin() gin.HandlerFunc {
 func (uh *UserHandler) UserLogout() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		tokenstr := ctx.GetString(consts.TokenCtx)
-		err := uh.userSrv.UserLogout(tokenstr)
+		err := uh.userSrv.UserLogout(ctx, tokenstr)
 		if err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.UserLoginErr, "登出失败"), nil)
 		} else {
@@ -96,14 +106,11 @@ func (uh *UserHandler) UserLogout() gin.HandlerFunc {
 
 func (uh *UserHandler) UserRefresh() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		userId := ctx.GetInt64(consts.UserID)
-		tokenStr := ctx.GetString(consts.TokenCtx)
-		res, err := uh.userSrv.UserRefresh(ctx, userId)
-		err = uh.userSrv.UserLogout(tokenStr)
+		res, err := uh.userSrv.UserRefresh(ctx)
 		if err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.UserLoginErr, "Token刷新失败"), nil)
 		} else {
-			response.JSON(ctx, errors.Wrap(err, ecode.Success, "登录成功"), res)
+			response.JSON(ctx, errors.Wrap(err, ecode.Success, "Token刷新成功"), res)
 		}
 	}
 }
@@ -154,5 +161,16 @@ func (uh *UserHandler) UserUpdateNickName() gin.HandlerFunc {
 		} else {
 			response.JSON(ctx, nil, res)
 		}
+	}
+}
+
+func (uh *UserHandler) UserActive() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		codebase := ctx.Query("active_code")
+		if err := uh.userSrv.UserActiveVerify(ctx, codebase); err != nil {
+			response.JSON(ctx, errors.Wrap(err, ecode.ActiveErr, "用户激活失败"), nil)
+			return
+		}
+		response.JSON(ctx, nil, nil)
 	}
 }

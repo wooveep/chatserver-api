@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 19:47:43
- * @LastEditTime: 2023-04-13 16:27:22
+ * @LastEditTime: 2023-05-10 16:35:13
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/query/user.go
  */
@@ -26,8 +26,14 @@ func NewUserDao(_ds db.IDataSource) *userDao {
 	}
 }
 
-func (ud *userDao) UserRegisterNew(ctx context.Context, user *entity.User) error {
+func (ud *userDao) UserCreate(ctx context.Context, user *entity.User) error {
 	return ud.ds.Master().Create(user).Error
+}
+func (ud *userDao) UserUpdate(ctx context.Context, user *entity.User) error {
+	return ud.ds.Master().Updates(user).Error
+}
+func (ud *userDao) UserDelete(ctx context.Context, userId int64) error {
+	return ud.ds.Master().Delete(&entity.User{Id: userId}).Error
 }
 func (ud *userDao) UserGetByName(ctx context.Context, username string) (entity.User, error) {
 	var user entity.User

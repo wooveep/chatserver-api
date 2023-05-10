@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:51:00
- * @LastEditTime: 2023-05-09 13:38:34
+ * @LastEditTime: 2023-05-10 16:58:26
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/router/api.go
  */
@@ -46,6 +46,7 @@ func (ar *ApiRouter) Load(g *gin.Engine) {
 	g.POST("/register", ar.userHandler.UserRegister())
 	g.POST("/checkemail", ar.userHandler.UserVerifyEmail())
 	g.POST("/checkusername", ar.userHandler.UserVerifyUserName())
+	g.GET("/active", ar.userHandler.UserActive())
 	// g.GET("/test", ar.chatHandler.TestJieba())
 	ug := g.Group("/user", middleware.AuthToken())
 	{

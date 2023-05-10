@@ -1,3 +1,10 @@
+/*
+ * @Author: cloudyi.li
+ * @Date: 2023-03-29 11:57:20
+ * @LastEditTime: 2023-05-10 15:39:14
+ * @LastEditors: cloudyi.li
+ * @FilePath: /chatserver-api/pkg/errors/ecode/code.go
+ */
 package ecode
 
 // 自定义错误码，通常错误由错误码和错误信息两部分组成，便于跟踪和维护错误信息
@@ -38,6 +45,9 @@ const (
 
 	// RecordCreateErr 创建记录，数据持久化失败
 	RecordCreateErr
+
+	//ActiveErr 用户激活失败
+	ActiveErr
 )
 
 const (

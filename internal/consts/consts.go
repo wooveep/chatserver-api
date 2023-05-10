@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:51:03
- * @LastEditTime: 2023-05-06 23:04:29
+ * @LastEditTime: 2023-05-10 12:18:43
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/consts/consts.go
  */
@@ -15,6 +15,7 @@ const (
 	ChatID   = "chat_id"
 	Balance  = "balance_ctx"
 	TokenCtx = "token_ctx"
+	CBCKEY   = "ABCDABCDABCDABCD"
 	// EmbedCtx = "with_emebedding_ctx"
 	// TimeLayout 时间格式
 	TimeLayout                     = "2006-01-02 15:04:05"
