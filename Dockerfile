@@ -14,6 +14,7 @@ RUN make linux
 FROM alpine
 RUN apk --no-cache add tzdata ca-certificates libc6-compat libgcc libstdc++
 COPY --from=builder  /code/src/dist/linux_amd64/chatserver-api  /app/chatserver-api/chatserver-api
+COPY --from=builder  /code/src/dict  /app/chatserver-api/dict
 
 WORKDIR /app/chatserver-api
 EXPOSE 18080
