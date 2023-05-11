@@ -1,7 +1,7 @@
 <!--
  * @Author: cloudyi.li
  * @Date: 2023-05-10 09:15:49
- * @LastEditTime: 2023-05-11 14:50:34
+ * @LastEditTime: 2023-05-11 14:55:06
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/README.md
 -->
@@ -79,7 +79,7 @@
 - [ ] 本地文档向量化操作页面
 - [ ] 语音问答
 
-## 感谢
+## 引用的社区仓库代码
 
 OpenAI API SDK：  [sashabaranov](https://github.com/sashabaranov)/**[go-openai](https://github.com/sashabaranov/go-openai)**
 
