@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-10 19:41:56
- * @LastEditTime: 2023-05-06 22:41:58
+ * @LastEditTime: 2023-05-10 21:24:35
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/preset.go
  */
@@ -20,6 +20,7 @@ type PresetCreateNewReq struct {
 	Presence      float64        `json:"presence"`
 	Frequency     float64        `json:"frequency"`
 	WithEmbedding bool           `json:"with_embedding"`
+	Classify      string         `json:"classify"`
 }
 type PresetCreateNewRes struct {
 	PresetId  int64 `json:"preset_id"`

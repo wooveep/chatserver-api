@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-11 10:22:31
- * @LastEditTime: 2023-05-06 22:44:28
+ * @LastEditTime: 2023-05-10 21:29:58
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/preset.go
  */
@@ -54,6 +54,7 @@ func (ps *presetService) PresetCreateNew(ctx context.Context, req *model.PresetC
 	preset.Frequency = tools.DefaultValue(req.Frequency, 0.1).(float64)
 	preset.Presence = tools.DefaultValue(req.Presence, 0.2).(float64)
 	preset.WithEmbedding = tools.DefaultValue(req.WithEmbedding, false).(bool)
+	preset.Classify = tools.DefaultValue(req.Classify, "").(string)
 	err = ps.pd.PresetCreateNew(ctx, &preset)
 	if err != nil {
 		res.IsSuccess = false

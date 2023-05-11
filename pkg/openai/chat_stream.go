@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-30 18:16:23
- * @LastEditTime: 2023-04-27 11:13:48
+ * @LastEditTime: 2023-05-11 10:50:48
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/openai/chat_stream.go
  */
@@ -13,7 +13,8 @@ import (
 )
 
 type ChatCompletionStreamChoiceDelta struct {
-	Content string `json:"content"`
+	Content string `json:"content,omitempty"`
+	Role    string `json:"role,omitempty"`
 }
 
 type ChatCompletionStreamChoice struct {

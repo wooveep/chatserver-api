@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 14:11:49
- * @LastEditTime: 2023-05-08 18:44:34
+ * @LastEditTime: 2023-05-11 09:19:41
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/chat.go
  */
@@ -65,6 +65,7 @@ type ChatDetail struct {
 	Presence      float64        `gorm:"column:presence" json:"presence"`
 	Frequency     float64        `gorm:"column:frequency" json:"frequency"`
 	WithEmbedding bool           `gorm:"column:with_embedding" json:"with_embedding"`
+	Classify      string         `gorm:"column:classify" json:"classify"`
 	CreatedAt     jtime.JsonTime `gorm:"column:Chats__created_at" json:"created_at"`
 }
 

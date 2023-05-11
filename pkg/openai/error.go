@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-30 18:16:24
- * @LastEditTime: 2023-04-27 11:17:58
+ * @LastEditTime: 2023-05-11 10:53:07
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/openai/error.go
  */
@@ -32,6 +32,10 @@ type ErrorResponse struct {
 }
 
 func (e *APIError) Error() string {
+	if e.HTTPStatusCode > 0 {
+		return fmt.Sprintf("error, status code: %d, message: %s", e.HTTPStatusCode, e.Message)
+	}
+
 	return e.Message
 }
 
@@ -80,7 +84,7 @@ func (e *RequestError) Error() string {
 	if e.Err != nil {
 		return e.Err.Error()
 	}
-	return fmt.Sprintf("status code %d", e.HTTPStatusCode)
+	return fmt.Sprintf("error, status code: %d, message: %s", e.HTTPStatusCode, e.Err)
 }
 
 func (e *RequestError) Unwrap() error {

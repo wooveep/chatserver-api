@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-05-09 13:40:29
+ * @LastEditTime: 2023-05-11 09:23:06
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -58,7 +58,7 @@ type ChatService interface {
 	ChatStreamResProcess(ctx *gin.Context, chanStream <-chan string, questionId, answerid int64) (msgid int64, messages string)
 	ChatEmbeddingSave(ctx context.Context, title, body string, embeddata openai.Embedding) error
 	ChatEmbeddingGenerate(str []string) (embedVectors []openai.Embedding, err error)
-	ChatEmbeddingCompare(ctx context.Context, question string) (contextStr string, err error)
+	ChatEmbeddingCompare(ctx context.Context, question, classify string) (contextStr string, err error)
 	// ChatTest(ctx context.Context, text string) (keyword string)
 }
 
@@ -279,7 +279,7 @@ func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, 
 		//将用户问题进行关键词提取
 		emkeyword := cs.jieba.GetKeyword(emquestion)
 		//通过用户问题 lastquestion + records（User历史）获取Context信息
-		embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emkeyword)
+		embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emkeyword, preset.Classify)
 		if err != nil {
 			logger.Errorf("获取embedding上下文失败: %v\n", err)
 			return
@@ -352,7 +352,7 @@ func (cs *chatService) ChatChattingReqProcess(ctx *gin.Context, lastquestion str
 		//将用户问题进行关键词提取
 		emkeyword := cs.jieba.GetKeyword(emquestion)
 		//通过用户问题 lastquestion + records（User历史）获取Context信息
-		embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emkeyword)
+		embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emkeyword, preset.Classify)
 		if err != nil {
 			logger.Errorf("获取embedding上下文失败: %v\n", err)
 			return
@@ -528,13 +528,13 @@ func (cs *chatService) ChatEmbeddingSave(ctx context.Context, title, body string
 	return cs.cd.DocEmbeddingSave(ctx, &docs)
 }
 
-func (cs *chatService) ChatEmbeddingCompare(ctx context.Context, question string) (contextStr string, err error) {
+func (cs *chatService) ChatEmbeddingCompare(ctx context.Context, question, classify string) (contextStr string, err error) {
 	//获取question Embedding信息
 	embedvectors, err := cs.ChatEmbeddingGenerate([]string{question})
 	if err != nil {
 		return
 	}
-	textbody, err := cs.cd.ChatEmbeddingCompare(ctx, pgvector.NewVector(embedvectors[0].Embedding))
+	textbody, err := cs.cd.ChatEmbeddingCompare(ctx, pgvector.NewVector(embedvectors[0].Embedding), classify)
 	if len(textbody) != 0 {
 		for _, v := range textbody {
 			contextStr += v.Body

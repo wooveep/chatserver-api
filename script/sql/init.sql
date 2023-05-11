@@ -1,8 +1,3 @@
--- DROP SCHEMA public;
-
-CREATE SCHEMA public AUTHORIZATION postgres;
-
-COMMENT ON SCHEMA public IS 'standard public schema';
 -- public.preset definition
 
 -- Drop table
@@ -22,6 +17,10 @@ CREATE TABLE public.preset (
 	frequency float8 NULL, -- 频率标记
 	created_at timestamptz NULL DEFAULT now(), -- 记录的创建时间，默认为当前时间
 	updated_at timestamptz NULL DEFAULT now(), -- 记录的更新时间，默认为当前时间
+	with_embedding bool NOT NULL DEFAULT false, -- 是否采用embedding数据
+	deleted_at timestamptz NULL, -- 删除时间
+	is_del int4 NULL DEFAULT 0, -- 删除标志
+	classify varchar NULL, -- embedding分类
 	CONSTRAINT preset_frequency_check CHECK (((frequency >= ('-2'::integer)::double precision) AND (frequency <= (2)::double precision))),
 	CONSTRAINT preset_pkey PRIMARY KEY (id),
 	CONSTRAINT preset_presence_check CHECK (((presence >= ('-2'::integer)::double precision) AND (presence <= (2)::double precision))),
@@ -43,11 +42,11 @@ COMMENT ON COLUMN public.preset.presence IS '惩罚标记';
 COMMENT ON COLUMN public.preset.frequency IS '频率标记';
 COMMENT ON COLUMN public.preset.created_at IS '记录的创建时间，默认为当前时间';
 COMMENT ON COLUMN public.preset.updated_at IS '记录的更新时间，默认为当前时间';
+COMMENT ON COLUMN public.preset.with_embedding IS '是否采用embedding数据';
+COMMENT ON COLUMN public.preset.deleted_at IS '删除时间';
+COMMENT ON COLUMN public.preset.is_del IS '删除标志';
+COMMENT ON COLUMN public.preset.classify IS 'embedding分类';
 
--- Permissions
-
-ALTER TABLE public.preset OWNER TO whatserver;
-GRANT ALL ON TABLE public.preset TO whatserver;
 
 
 -- public."user" definition
@@ -70,9 +69,9 @@ CREATE TABLE public."user" (
 	balance numeric(10, 5) NULL DEFAULT 0, -- 用户的余额，默认为0
 	created_at timestamptz NULL DEFAULT now(), -- 记录的创建时间，默认为当前时间
 	updated_at timestamptz NULL DEFAULT now(), -- 记录的更新时间，默认为当前时间
-	CONSTRAINT user_email_key UNIQUE (email),
-	CONSTRAINT user_pkey PRIMARY KEY (id),
-	CONSTRAINT user_username_key UNIQUE (username)
+	deleted_at timestamptz NULL, -- 删除时间
+	is_del int4 NULL DEFAULT 0, -- 删除标志
+	CONSTRAINT user_pkey PRIMARY KEY (id)
 );
 COMMENT ON TABLE public."user" IS '用户信息表';
 
@@ -91,45 +90,8 @@ COMMENT ON COLUMN public."user".is_active IS '用户是否已激活';
 COMMENT ON COLUMN public."user".balance IS '用户的余额，默认为0';
 COMMENT ON COLUMN public."user".created_at IS '记录的创建时间，默认为当前时间';
 COMMENT ON COLUMN public."user".updated_at IS '记录的更新时间，默认为当前时间';
-
--- Permissions
-
-ALTER TABLE public."user" OWNER TO whatserver;
-GRANT ALL ON TABLE public."user" TO whatserver;
-
-
--- public.activecode definition
-
--- Drop table
-
--- DROP TABLE public.activecode;
-
-CREATE TABLE public.activecode (
-	id int8 NOT NULL, -- 激活代码ID
-	user_id int8 NULL, -- 用户主键ID
-	active_code text NOT NULL, -- 激活代码
-	expire_date timestamptz NULL, -- 过期日期
-	created_at timestamptz NULL DEFAULT now(), -- 记录的创建时间，默认为当前时间
-	updated_at timestamptz NULL DEFAULT now(), -- 记录的更新时间，默认为当前时间
-	CONSTRAINT activecode_pkey PRIMARY KEY (id),
-	CONSTRAINT activecode_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id),
-	CONSTRAINT activecode_user_id_fkey1 FOREIGN KEY (user_id) REFERENCES public."user"(id) ON DELETE CASCADE
-);
-COMMENT ON TABLE public.activecode IS '用户激活代码表';
-
--- Column comments
-
-COMMENT ON COLUMN public.activecode.id IS '激活代码ID';
-COMMENT ON COLUMN public.activecode.user_id IS '用户主键ID';
-COMMENT ON COLUMN public.activecode.active_code IS '激活代码';
-COMMENT ON COLUMN public.activecode.expire_date IS '过期日期';
-COMMENT ON COLUMN public.activecode.created_at IS '记录的创建时间，默认为当前时间';
-COMMENT ON COLUMN public.activecode.updated_at IS '记录的更新时间，默认为当前时间';
-
--- Permissions
-
-ALTER TABLE public.activecode OWNER TO whatserver;
-GRANT ALL ON TABLE public.activecode TO whatserver;
+COMMENT ON COLUMN public."user".deleted_at IS '删除时间';
+COMMENT ON COLUMN public."user".is_del IS '删除标志';
 
 
 -- public.chat definition
@@ -145,6 +107,8 @@ CREATE TABLE public.chat (
 	chat_name text NOT NULL, -- 会话名称
 	created_at timestamptz NULL DEFAULT now(), -- 记录创建时间
 	updated_at timestamptz NULL DEFAULT now(), -- 记录更新时间
+	deleted_at timestamptz NULL, -- 删除时间
+	is_del int4 NULL DEFAULT 0, -- 删除标志
 	CONSTRAINT chat_pkey PRIMARY KEY (id),
 	CONSTRAINT chat_preset_id_fkey FOREIGN KEY (preset_id) REFERENCES public.preset(id),
 	CONSTRAINT chat_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id) ON DELETE CASCADE
@@ -159,11 +123,9 @@ COMMENT ON COLUMN public.chat.preset_id IS '预设表主键ID';
 COMMENT ON COLUMN public.chat.chat_name IS '会话名称';
 COMMENT ON COLUMN public.chat.created_at IS '记录创建时间';
 COMMENT ON COLUMN public.chat.updated_at IS '记录更新时间';
+COMMENT ON COLUMN public.chat.deleted_at IS '删除时间';
+COMMENT ON COLUMN public.chat.is_del IS '删除标志';
 
--- Permissions
-
-ALTER TABLE public.chat OWNER TO whatserver;
-GRANT ALL ON TABLE public.chat TO whatserver;
 
 
 -- public.record definition
@@ -180,6 +142,8 @@ CREATE TABLE public.record (
 	message_hash text NOT NULL, -- 消息记录hash
 	created_at timestamptz NULL DEFAULT now(), -- 记录创建时间
 	updated_at timestamptz NULL DEFAULT now(), -- 记录更新时间
+	deleted_at timestamptz NULL, -- 删除时间
+	is_del int4 NULL DEFAULT 0, -- 删除标志
 	CONSTRAINT record_pkey PRIMARY KEY (id),
 	CONSTRAINT record_chat_id_fkey FOREIGN KEY (chat_id) REFERENCES public.chat(id) ON DELETE CASCADE
 );
@@ -194,51 +158,53 @@ COMMENT ON COLUMN public.record.message IS '消息记录';
 COMMENT ON COLUMN public.record.message_hash IS '消息记录hash';
 COMMENT ON COLUMN public.record.created_at IS '记录创建时间';
 COMMENT ON COLUMN public.record.updated_at IS '记录更新时间';
-
--- Permissions
-
-ALTER TABLE public.record OWNER TO whatserver;
-GRANT ALL ON TABLE public.record TO whatserver;
+COMMENT ON COLUMN public.record.deleted_at IS '删除时间';
+COMMENT ON COLUMN public.record.is_del IS '删除标志';
 
 
--- public.settings definition
+-- DROP SCHEMA embed;
+
+CREATE SCHEMA embed AUTHORIZATION whatserver;
+-- embed.documents definition
 
 -- Drop table
 
--- DROP TABLE public.settings;
+-- DROP TABLE embed.documents;
 
-CREATE TABLE public.settings (
-	id int8 NOT NULL, -- 唯一标识符
-	user_id int8 NULL, -- 用户主键ID
-	api_key text NULL, -- API密钥
-	created_at timestamptz NULL DEFAULT now(), -- 记录创建时间
-	updated_at timestamptz NULL DEFAULT now(), -- 记录更新时间
-	CONSTRAINT settings_pkey PRIMARY KEY (id),
-	CONSTRAINT settings_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id) ON DELETE CASCADE
+CREATE TABLE embed.documents (
+	id int8 NOT NULL,
+	title text NOT NULL,
+	body text NOT NULL,
+	tokens int4 NOT NULL,
+	embedding vector NULL,
+	created_at timestamptz NULL DEFAULT now(),
+	updated_at timestamptz NULL DEFAULT now(),
+	classify varchar NULL, -- Embedding分类
+	CONSTRAINT documents_pkey PRIMARY KEY (id)
 );
-COMMENT ON TABLE public.settings IS '用户设置信息';
 
 -- Column comments
 
-COMMENT ON COLUMN public.settings.id IS '唯一标识符';
-COMMENT ON COLUMN public.settings.user_id IS '用户主键ID';
-COMMENT ON COLUMN public.settings.api_key IS 'API密钥';
-COMMENT ON COLUMN public.settings.created_at IS '记录创建时间';
-COMMENT ON COLUMN public.settings.updated_at IS '记录更新时间';
-
--- Permissions
-
-ALTER TABLE public.settings OWNER TO whatserver;
-GRANT ALL ON TABLE public.settings TO whatserver;
+COMMENT ON COLUMN embed.documents.classify IS 'Embedding分类';
 
 
-
-
--- Permissions
-
-GRANT ALL ON SCHEMA public TO postgres;
-GRANT ALL ON SCHEMA public TO public;
-
-
-INSERT INTO public.preset (id,preset_name,preset_content,max_token,model_name,logit_bias,temperature,top_p,presence,frequency,created_at,updated_at) VALUES
-	 (1646361709138419712,'人工智能AI助手','You are ChatGPT, a large language model trained by OpenAI. Follow the user''s instructions carefully. Respond using markdown.If you do not know the answer to a question that is based on common sense, truthfulness or has specific information, please answer "I don''t know" instead of providing uncertain or potentially incorrect information.',400,'gpt-3.5-turbo',NULL,0.3,1.0,0.1,0.1,'2023-04-13 11:56:34.05797+08','2023-04-13 11:56:34.05797+08');
+INSERT INTO public.preset (id,preset_name,preset_content,max_token,model_name,logit_bias,temperature,top_p,presence,frequency,created_at,updated_at,with_embedding,deleted_at,is_del,classify) VALUES
+	 (1656475437246717952,'XXXXAI客服','You are a customer service representative for XXXX, responsible for answering questions related to  XXXX  products. When answering customer questions, you are required to follow the following rules.
+Rules: ``` 
+1.You can only answer user questions based on the content in the Context section. If you are unsure of the answer, please respond with \"I don''t know\".
+2.When you receive the instruction ''[cmd:continue]'', please continue answering questions directly from where you left off in the previous response. You do not need to explain the interruption in your response.
+3.All answers are to be provided in Markdown format.
+```
+Context: ```
+{{ context }}
+```',200,'gpt-3.5-turbo',NULL,0.1,1.0,0.1,0.1,'2023-05-11 09:44:54.734119+08','2023-05-11 09:44:54.734119+08',true,'0001-01-01 08:05:43+08:05:43',0,'XXXX产品'),
+	 (1646361709138419712,'人工智能AI助手','You are ChatGPT, a large language model trained by OpenAI. Please strictly follow the rules below when answering the user''s questions.
+Rules:```
+1.All answers are to be provided in Markdown format.
+2.If the question asked by the user involves historical, cultural, natural, or scientific knowledge, please carefully check the accuracy and truthfulness of the answer and preferably provide the source of the information used in the answer.
+3.When receiving an instruction, create a content framework first. For the uncertain parts due to insufficient information, ask questions and generate content step by step to ensure that the generated content meets expectations.
+4.When referencing literature, book titles, data, or historical events, it is important to ensure that the information actually exists.
+5.When the user''s question involves public figures, only information from Wikipedia can be used to generate the answer, and it is necessary to carefully check the accuracy and truthfulness of the answer. When it comes to personal privacy information such as family relationships (parents, children, spouse, siblings), personal life details, hobbies, etc., please do not answer with ''I don''t know''.
+6.When you receive the instruction ''[cmd:continue]'', please continue answering questions directly from where you left off in the previous response. You do not need to explain the interruption in your response.
+7. If the user''s language is Chinese, please answer the user''s questions in Chinese.
+```',300,'gpt-3.5-turbo',NULL,0.0,0.2,0.0,0.0,'2023-04-13 11:56:34.05797+08','2023-04-13 11:56:34.05797+08',false,NULL,0,NULL),
