@@ -40,7 +40,8 @@ linux: prepare
 			mkdir -p dist/linux_$$GOARCH; \
 			GOOS=linux GOARCH=$$GOARCH  CGO_ENABLED=1 \
 			go  build -ldflags \
-			"-X ${version_package}.CommitId=${commit_id} \
+			"-linkmode external -extldflags -static \
+			-X ${version_package}.CommitId=${commit_id} \
 			-X ${version_package}.BranchName=${branch_name} \
 			-X ${version_package}.BuildTime=${build_time} \
 			-X ${version_package}.AppVersion=${app_version}"  \

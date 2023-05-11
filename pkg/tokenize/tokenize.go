@@ -1,13 +1,17 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-08 14:04:14
- * @LastEditTime: 2023-05-11 20:31:33
+ * @LastEditTime: 2023-05-11 23:38:58
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/tokenize/tokenize.go
  */
 package tokenize
 
-import "github.com/yanyiwu/gojieba"
+import (
+	"path"
+
+	"github.com/yanyiwu/gojieba"
+)
 
 var _ Tokenizer = (*tokenizer)(nil)
 
@@ -20,7 +24,13 @@ type tokenizer struct {
 }
 
 func NewTokenizer() *tokenizer {
-	tokenzier := gojieba.NewJieba()
+	dictDir := "./dict"
+	jiebaPath := path.Join(dictDir, "jieba.dict.utf8")
+	hmmPath := path.Join(dictDir, "hmm_model.utf8")
+	userPath := path.Join(dictDir, "user.dict.utf8")
+	idfPath := path.Join(dictDir, "idf.utf8")
+	stopPath := path.Join(dictDir, "stop_words.utf8")
+	tokenzier := gojieba.NewJieba(jiebaPath, hmmPath, userPath, idfPath, stopPath)
 
 	return &tokenizer{
 		jieba: tokenzier,
