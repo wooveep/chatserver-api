@@ -23,7 +23,8 @@ windows: prepare
 		[ -z "$$BIN_NAME" ] && continue; \
 		for GOARCH in $(GOARCHS); do \
 			mkdir -p dist/windows_$$GOARCH; \
-			OOSG=windows GOARCH=$$GOARCH go build -ldflags \
+			OOSG=windows GOARCH=$$GOARCH   CGO_ENABLED=1 \
+			go build -ldflags \
 			"-X ${version_package}.CommitId=${commit_id} \
 			-X ${version_package}.BranchName=${branch_name} \
 			-X ${version_package}.BuildTime=${build_time} \
@@ -37,7 +38,8 @@ linux: prepare
 		[ -z "$$BIN_NAME" ] && continue; \
 		for GOARCH in $(GOARCHS); do \
 			mkdir -p dist/linux_$$GOARCH; \
-			GOOS=linux GOARCH=$$GOARCH go  build -ldflags \
+			GOOS=linux GOARCH=$$GOARCH  CGO_ENABLED=1 \
+			go  build -ldflags \
 			"-X ${version_package}.CommitId=${commit_id} \
 			-X ${version_package}.BranchName=${branch_name} \
 			-X ${version_package}.BuildTime=${build_time} \
