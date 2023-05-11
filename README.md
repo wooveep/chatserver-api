@@ -1,7 +1,7 @@
 <!--
  * @Author: cloudyi.li
  * @Date: 2023-05-10 09:15:49
- * @LastEditTime: 2023-05-11 15:26:12
+ * @LastEditTime: 2023-05-11 19:22:04
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/README.md
 -->
@@ -14,7 +14,7 @@
 
 ## 系统演示
 
-![操作演示](https://imgur.com/yjoIbsb)
+![操作演示](docs/操作演示.gif)
 ## 项目截图
 
 #### 用户登录

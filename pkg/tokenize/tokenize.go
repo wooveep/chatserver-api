@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-08 14:04:14
- * @LastEditTime: 2023-05-09 13:45:23
+ * @LastEditTime: 2023-05-11 20:31:33
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/tokenize/tokenize.go
  */
@@ -29,7 +29,7 @@ func NewTokenizer() *tokenizer {
 
 func (t *tokenizer) GetKeyword(s string) (keyword string) {
 	// tokenzier.Free()
-	words := t.jieba.Extract(s, 10)
+	words := t.jieba.Extract(s, 35)
 	for _, v := range words {
 		keyword += v + " "
 	}

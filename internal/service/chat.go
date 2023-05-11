@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-05-11 09:23:06
+ * @LastEditTime: 2023-05-11 19:38:40
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -56,7 +56,7 @@ type ChatService interface {
 	ChatChattingReqProcess(ctx *gin.Context, lastquestion string, memoryLevel int16) (questionId int64, req openai.ChatCompletionRequest, err error)
 	ChatStremResGenerate(ctx *gin.Context, req openai.ChatCompletionRequest, chanStream chan<- string)
 	ChatStreamResProcess(ctx *gin.Context, chanStream <-chan string, questionId, answerid int64) (msgid int64, messages string)
-	ChatEmbeddingSave(ctx context.Context, title, body string, embeddata openai.Embedding) error
+	ChatEmbeddingSave(ctx context.Context, title, body, classify string, embeddata openai.Embedding) error
 	ChatEmbeddingGenerate(str []string) (embedVectors []openai.Embedding, err error)
 	ChatEmbeddingCompare(ctx context.Context, question, classify string) (contextStr string, err error)
 	// ChatTest(ctx context.Context, text string) (keyword string)
@@ -517,10 +517,11 @@ func (cs *chatService) ChatEmbeddingGenerate(str []string) (embedVectors []opena
 	return
 }
 
-func (cs *chatService) ChatEmbeddingSave(ctx context.Context, title, body string, embeddata openai.Embedding) error {
+func (cs *chatService) ChatEmbeddingSave(ctx context.Context, title, body, classify string, embeddata openai.Embedding) error {
 	docs := entity.Documents{}
 	docs.Id = cs.iSrv.GenSnowID()
 	docs.Title = title
+	docs.Classify = classify
 	// docs.Subsection = sub
 	docs.Body = body
 	docs.Tokens = tiktoken.NumTokensSingleString(body)

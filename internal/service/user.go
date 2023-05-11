@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:37:13
- * @LastEditTime: 2023-05-10 16:54:26
+ * @LastEditTime: 2023-05-11 16:54:18
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/user.go
  */
@@ -53,12 +53,14 @@ type UserService interface {
 // userService 实现UserService接口
 type userService struct {
 	ud   dao.UserDao
+	kd   dao.CDkeyDao
 	iSrv uuid.SnowNode
 }
 
-func NewUserService(_ud dao.UserDao) *userService {
+func NewUserService(_ud dao.UserDao, _kd dao.CDkeyDao) *userService {
 	return &userService{
 		ud:   _ud,
+		kd:   _kd,
 		iSrv: *uuid.NewNode(3),
 	}
 }
@@ -300,4 +302,8 @@ func (us *userService) UserActiveVerify(ctx *gin.Context, codeBase string) error
 	user.IsActive = true
 	err = us.ud.UserUpdate(ctx, &user)
 	return err
+}
+
+func (us *userService) UserCDkeyPay(ctx *gin.Context, codekey string) {
+
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:43:42
- * @LastEditTime: 2023-05-09 13:38:45
+ * @LastEditTime: 2023-05-11 19:47:31
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/chat/chat.go
  */
@@ -368,7 +368,7 @@ func (ch *ChatHandler) ChatEmbeddingString() gin.HandlerFunc {
 				return
 			}
 			for j := 0; j < len(batchlist); j++ {
-				err = ch.cSrv.ChatEmbeddingSave(ctx, req.BatchTitle, batchlist[j], embeddinglist[j])
+				err = ch.cSrv.ChatEmbeddingSave(ctx, req.BatchTitle, batchlist[j], req.Classify, embeddinglist[j])
 				if err != nil {
 					response.JSON(ctx, nil, nil)
 					return
@@ -388,7 +388,6 @@ func (ch *ChatHandler) ChatEmbeddingFile() gin.HandlerFunc {
 			response.JSON(ctx, nil, nil)
 			return
 		}
-
 		// 检查文件类型是否为PDF
 		if fileHeader := file.Header.Get("Content-Type"); fileHeader != "application/pdf" {
 			// ctx.JSON(http.StatusBadRequest, gin.H{"error": "上传文件必须是PDF格式"})
@@ -396,7 +395,14 @@ func (ch *ChatHandler) ChatEmbeddingFile() gin.HandlerFunc {
 
 			return
 		}
+		// 获取文件名
+		title := ctx.PostForm("title")
+		if title == "" {
+			title = file.Filename
+		}
 
+		// 获取类别参数
+		classify := ctx.PostForm("classify")
 		// 保存文件到本地
 		err = ctx.SaveUploadedFile(file, "uploadfile/"+file.Filename)
 		if err != nil {
@@ -425,7 +431,7 @@ func (ch *ChatHandler) ChatEmbeddingFile() gin.HandlerFunc {
 				return
 			}
 			for j := 0; j < len(batchlist); j++ {
-				err = ch.cSrv.ChatEmbeddingSave(ctx, file.Filename, batchlist[j], embeddinglist[j])
+				err = ch.cSrv.ChatEmbeddingSave(ctx, title, batchlist[j], classify, embeddinglist[j])
 				if err != nil {
 					// ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					response.JSON(ctx, nil, nil)
