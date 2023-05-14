@@ -1,11 +1,10 @@
 <!--
  * @Author: cloudyi.li
  * @Date: 2023-05-10 09:15:49
- * @LastEditTime: 2023-05-11 19:22:04
+ * @LastEditTime: 2023-05-14 19:02:31
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/README.md
 -->
-
 
 # 基于OPENAI的ChatGPT API开发的AI助手服务
 
@@ -31,10 +30,18 @@
 - 保险行业：结合保险条款内容，解答客户关于保险相关信息，推荐客户更合适保险产品。
 - 教育行业：结合常见题库、文本，作为私人家教。
 
+## 目标群体
+
+- 个人部署
+- 商业部署
+- 企业部署
+- 团队部署
+
 ## 系统演示
 
 ![操作演示](docs/操作演示.gif)
-## 项目截图
+
+### 项目截图
 
 #### 用户登录
 
@@ -61,13 +68,6 @@
 ![InceptorSQL调优](docs/inceptor调优.png)
 
 ![设备配置咨询](docs/设备配置咨询.png)
-
-## 目标群体
-
-- 个人部署
-- 商业部署
-- 企业部署
-- 团队部署
 
 ## 待实现列表
 
@@ -138,7 +138,7 @@ for BIN_NAME in chatserver-api; do \
 
 #### 自构建docker镜像
 
-```
+```shell
 git clone https://github.com/wooveep/chatserver-api.git
 #根据不同平台使用不同命令
 cd chatserver-api
@@ -147,7 +147,7 @@ docker build -t chatserver-api .
 
 #### 直接拉取仓库镜像
 
-```
+```shell
 docker pull wooveep/chatserver-api:latest
 ```
 
@@ -157,15 +157,13 @@ docker pull wooveep/chatserver-api:latest
 
 #### 启动docker镜像
 
-```
+```shell
  sudo  docker run  --restart=always  -d   --name chatserver-api  -p 18080:18080 \ 
  -v /本地路径/configs:/app/chatserver-api/configs  \
  -v /本地路径/logs:/app/chatserver-api/logs \
  -v /本地路径/head_photo:/app/chatserver-api/head_photo \
  chatserver-api  
 ```
-
-
 
 ## 引用的社区仓库代码
 
