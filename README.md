@@ -1,7 +1,7 @@
 <!--
  * @Author: cloudyi.li
  * @Date: 2023-05-10 09:15:49
- * @LastEditTime: 2023-05-14 20:55:30
+ * @LastEditTime: 2023-05-14 22:30:10
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/README.md
 -->
@@ -48,6 +48,8 @@
 - [x] 长回复功能实现 <!--API返回消息因为TOKEN长度中断时自动处理-->
 - [x] 支持结合本地知识库问答
 - [x] 多会话储存和上下文逻辑
+- [x]  支持流式回复打字机效果
+- [x]  支持按照Token计费
 
 ## 应用场景
 
