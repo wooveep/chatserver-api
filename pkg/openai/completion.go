@@ -151,7 +151,7 @@ func (c *Client) CreateCompletion(
 		err = ErrCompletionRequestPromptTypeNotSupported
 		return
 	}
-	req, err := c.requestBuilder.build(c.ctx, http.MethodPost, c.fullURL(urlSuffix), request)
+	req, err := c.requestBuilder.build(c.ctx, http.MethodPost, c.fullURL(urlSuffix, request.Model), request)
 	if err != nil {
 		return
 	}

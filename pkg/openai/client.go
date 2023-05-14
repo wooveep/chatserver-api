@@ -1,6 +1,7 @@
 package openai
 
 import (
+	"chatserver-api/internal/consts"
 	"chatserver-api/pkg/config"
 	"context"
 	"encoding/json"
@@ -8,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"golang.org/x/net/proxy"
 )
@@ -70,10 +72,14 @@ func NewOrgClient() *Client {
 	return NewClientWithConfig(config)
 }
 
-func (c *Client) sendRequest(req *http.Request, v interface{}) error {
+func (c *Client) sendRequest(req *http.Request, v any) error {
 	req.Header.Set("Accept", "application/json; charset=utf-8")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.authToken))
-
+	if c.config.APIType == consts.APITypeAzure {
+		req.Header.Set(consts.AzureAPIKeyHeader, c.config.authToken)
+	} else {
+		// OpenAI or Azure AD authentication
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.authToken))
+	}
 	// Check whether Content-Type is already set, Upload Files API requires
 	// Content-Type == multipart/form-data
 	contentType := req.Header.Get("Content-Type")
@@ -96,36 +102,83 @@ func (c *Client) sendRequest(req *http.Request, v interface{}) error {
 		return c.handleErrorResp(res)
 	}
 
-	if v != nil {
-		if err = json.NewDecoder(res.Body).Decode(v); err != nil {
-			return err
-		}
+	return decodeResponse(res.Body, v)
+}
+
+func decodeResponse(body io.Reader, v any) error {
+	if v == nil {
+		return nil
 	}
 
+	if result, ok := v.(*string); ok {
+		return decodeString(body, result)
+	}
+	return json.NewDecoder(body).Decode(v)
+}
+
+func decodeString(body io.Reader, output *string) error {
+	b, err := io.ReadAll(body)
+	if err != nil {
+		return err
+	}
+	*output = string(b)
 	return nil
 }
 
-func (c *Client) fullURL(suffix string) string {
+// fullURL returns full URL for request.
+// args[0] is model name, if API type is Azure, model name is required to get deployment name.
+func (c *Client) fullURL(suffix string, args ...any) string {
+	// /openai/deployments/{model}/chat/completions?api-version={api_version}
+	if c.config.APIType == consts.APITypeAzure || c.config.APIType == consts.APITypeAzureAD {
+		baseURL := c.config.BaseURL
+		baseURL = strings.TrimRight(baseURL, "/")
+		// if suffix is /models change to {endpoint}/openai/models?api-version=2022-12-01
+		// https://learn.microsoft.com/en-us/rest/api/cognitiveservices/azureopenaistable/models/list?tabs=HTTP
+		if strings.Contains(suffix, "/models") {
+			return fmt.Sprintf("%s/%s%s?api-version=%s", baseURL, consts.AzureAPIPrefix, suffix, c.config.APIVersion)
+		}
+		azureDeploymentName := "UNKNOWN"
+		if len(args) > 0 {
+			model, ok := args[0].(string)
+			if ok {
+				azureDeploymentName = c.config.GetAzureDeploymentByModel(model)
+			}
+		}
+		return fmt.Sprintf("%s/%s/%s/%s%s?api-version=%s",
+			baseURL, consts.AzureAPIPrefix, consts.AzureDeploymentsPrefix,
+			azureDeploymentName, suffix, c.config.APIVersion,
+		)
+	}
+
+	// c.config.APIType == APITypeOpenAI || c.config.APIType == ""
 	return fmt.Sprintf("%s%s", c.config.BaseURL, suffix)
 }
 
 func (c *Client) newStreamRequest(
 	method string,
 	urlSuffix string,
-	body any) (*http.Request, error) {
-	req, err := c.requestBuilder.build(c.ctx, method, c.fullURL(urlSuffix), body)
+	body any,
+	model string) (*http.Request, error) {
+	req, err := c.requestBuilder.build(c.ctx, method, c.fullURL(urlSuffix, model), body)
 	if err != nil {
 		return nil, err
 	}
-	if len(c.config.OrgID) > 0 {
-		req.Header.Set("OpenAI-Organization", c.config.OrgID)
-	}
+
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("Cache-Control", "no-cache")
 	req.Header.Set("Connection", "keep-alive")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.authToken))
-
+	// https://learn.microsoft.com/en-us/azure/cognitive-services/openai/reference#authentication
+	// Azure API Key authentication
+	if c.config.APIType == consts.APITypeAzure {
+		req.Header.Set(consts.AzureAPIKeyHeader, c.config.authToken)
+	} else {
+		// OpenAI or Azure AD authentication
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.authToken))
+	}
+	if c.config.OrgID != "" {
+		req.Header.Set("OpenAI-Organization", c.config.OrgID)
+	}
 	return req, nil
 }
 func (c *Client) handleErrorResp(resp *http.Response) error {
@@ -135,6 +188,9 @@ func (c *Client) handleErrorResp(resp *http.Response) error {
 		reqErr := &RequestError{
 			HTTPStatusCode: resp.StatusCode,
 			Err:            err,
+		}
+		if errRes.Error != nil {
+			reqErr.Err = errRes.Error
 		}
 		return reqErr
 	}

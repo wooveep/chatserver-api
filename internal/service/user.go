@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:37:13
- * @LastEditTime: 2023-05-11 16:54:18
+ * @LastEditTime: 2023-05-12 16:51:28
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/user.go
  */
@@ -42,12 +42,17 @@ type UserService interface {
 	UserLogin(ctx context.Context, username, password string) (res model.UserLoginRes, err error)
 	UserRefresh(ctx *gin.Context) (res model.UserLoginRes, err error)
 	UserGetInfo(ctx context.Context, userId int64) (res model.UserGetInfoRes, err error)
-	UserVerifyEmail(ctx context.Context, email string) (res model.UserVerifyEmailRes, err error)
+	UserVerifyEmail(ctx *gin.Context, email string) (res model.UserVerifyEmailRes, err error)
 	UserVerifyUserName(ctx context.Context, username string) (res model.UserVerifyUserNameRes, err error)
 	UserUpdateNickName(ctx context.Context, userId int64, nickname string) (res model.UserUpdateNickNameRes, err error)
 	UserActiveGen(ctx *gin.Context) (err error)
-	UserActiveVerify(ctx *gin.Context, codeBase string) error
+	UserActiveChange(ctx *gin.Context) (err error)
 	UserDelete(ctx *gin.Context) error
+	UserPasswordVerify(ctx *gin.Context, password string) (Isvalid bool)
+	UserPasswordModify(ctx *gin.Context, password string) (err error)
+	UserPasswordForget(ctx *gin.Context) (err error)
+	UserTempCodeVerify(ctx *gin.Context, tempcode string) (Isvalid bool)
+	UserTempCodeGen(ctx *gin.Context) (tempcode string, email string, nickname string, err error)
 }
 
 // userService 实现UserService接口
@@ -217,16 +222,53 @@ func (us *userService) UserRegister(ctx *gin.Context, req model.UserRegisterReq)
 	return
 }
 
-func (us *userService) UserVerifyEmail(ctx context.Context, email string) (res model.UserVerifyEmailRes, err error) {
-	count, err := us.ud.UserVerifyEmail(ctx, email)
+func (us *userService) UserPasswordVerify(ctx *gin.Context, password string) (Isvalid bool) {
+	userId := ctx.GetInt64(consts.UserID)
+	Isvalid = false
+	userInfo, err := us.ud.UserGetById(ctx, userId)
+	if err != nil {
+		logger.Infof("查询用户失败%s", err)
+		return
+	}
+	if !security.ValidatePassword(security.PasswordDecryption(password, consts.CBCKEY), userInfo.Password) {
+		// err = errors.New("Password Error")
+		logger.Infof("密码错误%s", userInfo.Username)
+		return
+	}
+	return true
+}
+
+func (us *userService) UserPasswordModify(ctx *gin.Context, password string) (err error) {
+	user := entity.User{}
+	userId := ctx.GetInt64(consts.UserID)
+	user.Id = userId
+	user.Password, err = security.Encrypt(security.PasswordDecryption(password, consts.CBCKEY))
+	if err != nil {
+		return err
+	}
+	err = us.ud.UserUpdate(ctx, &user)
+	return err
+}
+
+func (us *userService) UserPasswordForget(ctx *gin.Context) (err error) {
+	tempcode, email, nikcname, err := us.UserTempCodeGen(ctx)
+	//19+16 35
+	err = mail.SendForgetCode(email, nikcname, tempcode)
+	return
+}
+
+func (us *userService) UserVerifyEmail(ctx *gin.Context, email string) (res model.UserVerifyEmailRes, err error) {
+	UserId, err := us.ud.UserVerifyEmail(ctx, email)
 	if err != nil {
 		return
 	}
-	if count != 0 {
+	if UserId != 0 {
 		res.Isvalid = false
+		ctx.Set(consts.UserID, UserId)
 	} else {
 		res.Isvalid = true
 	}
+	logger.Debugf("邮箱校验信息：%d", UserId)
 	return
 }
 
@@ -257,48 +299,63 @@ func (us *userService) UserLogout(ctx context.Context, tokenstr string) error {
 	return jwt.JoinBlackList(ctx, tokenstr, config.AppConfig.JwtConfig.Secret)
 }
 
-func (us *userService) UserActiveGen(ctx *gin.Context) (err error) {
-	userId := ctx.GetInt64(consts.UserID)
-	userInfo, err := us.ud.UserGetById(ctx, userId)
-
-	code, err := active.ActiveCodeGen(ctx, userId)
-	if err != nil {
-		return err
-
-	}
-	//19+16 35
-	err = mail.SendActiceCode(userInfo.Email, userInfo.Nickname, base64.StdEncoding.EncodeToString([]byte(code+"|"+userInfo.Username)))
-	return
-}
-
 func (us *userService) UserDelete(ctx *gin.Context) error {
 	userId := ctx.GetInt64(consts.UserID)
 	return us.ud.UserDelete(ctx, userId)
 }
-func (us *userService) UserActiveVerify(ctx *gin.Context, codeBase string) error {
-	codeStr, err := base64.StdEncoding.DecodeString(codeBase)
-	if err != nil {
-		return err
 
+func (us *userService) UserTempCodeGen(ctx *gin.Context) (tempcode string, email string, nickname string, err error) {
+	userId := ctx.GetInt64(consts.UserID)
+	userInfo, err := us.ud.UserGetById(ctx, userId)
+	code, err := active.ActiveCodeGen(ctx, userId)
+	if err != nil {
+		return
+
+	}
+	email = userInfo.Email
+	nickname = userInfo.Nickname
+	tempcode = base64.StdEncoding.EncodeToString([]byte(code + "|" + userInfo.Username))
+	return
+}
+
+func (us *userService) UserTempCodeVerify(ctx *gin.Context, tempcode string) (Isvalid bool) {
+	Isvalid = false
+	codeStr, err := base64.StdEncoding.DecodeString(tempcode)
+	if err != nil {
+		return
 	}
 	codelist := strings.Split(string(codeStr), "|")
 	if len(codelist) < 2 {
-		return errors.New("Active Failed")
+		// err = errors.New("Active Failed")
+		return
 	}
 	code := codelist[0]
 	username := codelist[1]
 	userInfo, err := us.ud.UserGetByName(ctx, username)
 	if err != nil {
-		return err
-
+		return
 	}
 	ctx.Set(consts.UserID, userInfo.Id)
 	active := active.ActiveCodeCompare(ctx, code, userInfo.Id)
 	if !active {
-		return errors.New("Active Failed")
+		Isvalid = false
+	} else {
+		Isvalid = true
 	}
+	return
+}
+
+func (us *userService) UserActiveGen(ctx *gin.Context) (err error) {
+	tempcode, email, nikcname, err := us.UserTempCodeGen(ctx)
+	//19+16 35
+	err = mail.SendActiceCode(email, nikcname, tempcode)
+	return
+}
+
+func (us *userService) UserActiveChange(ctx *gin.Context) (err error) {
+	userId := ctx.GetInt64(consts.UserID)
 	user := entity.User{}
-	user.Id = userInfo.Id
+	user.Id = userId
 	user.IsActive = true
 	err = us.ud.UserUpdate(ctx, &user)
 	return err

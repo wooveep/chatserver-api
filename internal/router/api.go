@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:51:00
- * @LastEditTime: 2023-05-10 16:58:26
+ * @LastEditTime: 2023-05-12 16:42:00
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/router/api.go
  */
@@ -47,6 +47,8 @@ func (ar *ApiRouter) Load(g *gin.Engine) {
 	g.POST("/checkemail", ar.userHandler.UserVerifyEmail())
 	g.POST("/checkusername", ar.userHandler.UserVerifyUserName())
 	g.GET("/active", ar.userHandler.UserActive())
+	g.POST("/forget", ar.userHandler.UserPasswordForget())
+	g.POST("/resetpassword", ar.userHandler.UserPasswordReset())
 	// g.GET("/test", ar.chatHandler.TestJieba())
 	ug := g.Group("/user", middleware.AuthToken())
 	{
@@ -55,6 +57,7 @@ func (ar *ApiRouter) Load(g *gin.Engine) {
 		ug.GET("/logout", ar.userHandler.UserLogout())
 		ug.POST("/changenickname", ar.userHandler.UserUpdateNickName())
 		ug.GET("/refresh", ar.userHandler.UserRefresh())
+		ug.POST("/updatepassword", ar.userHandler.UserPasswordModify())
 
 	}
 	cg := g.Group("/chat", middleware.AuthToken())
@@ -78,6 +81,5 @@ func (ar *ApiRouter) Load(g *gin.Engine) {
 	{
 		eg.POST("/file", ar.chatHandler.ChatEmbeddingFile())
 		eg.POST("/string", ar.chatHandler.ChatEmbeddingString())
-
 	}
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:57:20
- * @LastEditTime: 2023-05-10 15:39:14
+ * @LastEditTime: 2023-05-12 15:23:54
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/errors/ecode/code.go
  */
@@ -48,6 +48,9 @@ const (
 
 	//ActiveErr 用户激活失败
 	ActiveErr
+
+	//
+	PasswordErr
 )
 
 const (

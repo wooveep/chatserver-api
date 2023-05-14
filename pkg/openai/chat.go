@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-30 18:16:23
- * @LastEditTime: 2023-03-31 17:04:35
+ * @LastEditTime: 2023-05-12 23:19:49
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/openai/chat.go
  */
@@ -82,7 +82,7 @@ func (c *Client) CreateChatCompletion(
 		return
 	}
 
-	req, err := c.requestBuilder.build(c.ctx, http.MethodPost, c.fullURL(urlSuffix), request)
+	req, err := c.requestBuilder.build(c.ctx, http.MethodPost, c.fullURL(urlSuffix, request.Model), request)
 	if err != nil {
 		return
 	}

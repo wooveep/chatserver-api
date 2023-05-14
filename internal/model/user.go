@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 15:44:35
- * @LastEditTime: 2023-04-21 16:53:53
+ * @LastEditTime: 2023-05-12 16:56:08
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/user.go
  */
@@ -66,4 +66,18 @@ type UserUpdateNickNameRes struct {
 
 type UserBalance struct {
 	Balance float64 `json:"balance"`
+}
+
+type UserPasswordModifyReq struct {
+	OldPassword string `json:"old_password" validate:"required"`
+	NewPassword string `json:"new_password" validate:"required"`
+}
+
+type UserPasswordResetReq struct {
+	TempCode    string `json:"temp_code" validate:"required"`
+	NewPassword string `json:"new_password" validate:"required"`
+}
+
+type UserForgetReq struct {
+	Email string `json:"email"`
 }

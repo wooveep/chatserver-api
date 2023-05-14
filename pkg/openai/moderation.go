@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-30 18:16:24
- * @LastEditTime: 2023-04-27 11:20:20
+ * @LastEditTime: 2023-05-12 23:18:49
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/openai/moderation.go
  */
@@ -69,7 +69,7 @@ type ModerationResponse struct {
 // Moderations — perform a moderation api call over a string.
 // Input can be an array or slice but a string will reduce the complexity.
 func (c *Client) Moderations(request ModerationRequest) (response ModerationResponse, err error) {
-	req, err := c.requestBuilder.build(c.ctx, http.MethodPost, c.fullURL("/moderations"), request)
+	req, err := c.requestBuilder.build(c.ctx, http.MethodPost, c.fullURL("/moderations", request.Model), request)
 	if err != nil {
 		return
 	}

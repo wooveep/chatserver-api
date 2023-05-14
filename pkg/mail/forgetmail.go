@@ -1,10 +1,3 @@
-/*
- * @Author: cloudyi.li
- * @Date: 2023-05-09 18:46:24
- * @LastEditTime: 2023-05-12 16:54:31
- * @LastEditors: cloudyi.li
- * @FilePath: /chatserver-api/pkg/mail/activemail.go
- */
 package mail
 
 import (
@@ -13,9 +6,9 @@ import (
 	"text/template"
 )
 
-func SendActiceCode(email string, nickname string, activeCode string) error {
+func SendForgetCode(email string, nickname string, activeCode string) error {
 	// 发送用户激活链接邮件
-	var activeTemplate = `
+	var forgetTemplate = `
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
     <head>
         <meta charset="UTF-8">
@@ -83,11 +76,11 @@ func SendActiceCode(email string, nickname string, activeCode string) error {
     <body>
         <div class="container">
             <div class="header">
-                <h2>欢迎使用ChatServer AI助手</h2>
+                <h2>ChatServer密码重置</h2>
             </div>
             <div class="content">
                 <h2>亲爱的{{ .NickName }}: 您好!</h2>
-                <p>请点击链接激活<b><a href="{{ .CodeLinK }}">{{ .CodeLinK }}<a></b></p>
+                <p>请点击链接重置您的密码：<b><a href="{{ .CodeLinK }}">{{ .CodeLinK }}<a></b></p>
                 <p><strong>如果链接无法点击，请复制链接到浏览器打开</strong></p>
                 <p>在使用前请查看使用说明：</p>
                 <p>如果后续使用有任何问题可以联系管理员，Email: <b>cloudyi@wooveep.net</b></p>
@@ -103,14 +96,14 @@ func SendActiceCode(email string, nickname string, activeCode string) error {
 </html> 
 `
 	var bodyBytes bytes.Buffer
-	CodeLink := config.AppConfig.ExternalURL + "#/active/" + activeCode
-	tpl := template.Must(template.New("").Parse(activeTemplate))
+	CodeLink := config.AppConfig.ExternalURL + "#/resetpassword/" + activeCode
+	tpl := template.Must(template.New("").Parse(forgetTemplate))
 	err := tpl.Execute(&bodyBytes, map[string]interface{}{"CodeLinK": CodeLink, "NickName": nickname})
 	if err != nil {
 		return err
 	}
 	body := bodyBytes.String()
-	err = send([]string{email}, "Chatserver用户激活邮件", body)
+	err = send([]string{email}, "Chatserver用户密码重置", body)
 	if err != nil {
 		return err
 	}

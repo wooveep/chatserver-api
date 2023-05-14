@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-10 14:06:46
- * @LastEditTime: 2023-05-10 15:19:28
+ * @LastEditTime: 2023-05-12 17:00:06
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/active/active.go
  */
@@ -37,6 +37,7 @@ func ActiveCodeCompare(ctx context.Context, code string, userId int64) bool {
 	if id != userId || err != nil {
 		return false
 	}
+	rc.Del(ctx, getActiveCodeKey(code))
 	return true
 }
 

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-30 18:16:24
- * @LastEditTime: 2023-04-27 11:16:37
+ * @LastEditTime: 2023-05-12 23:17:58
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/openai/stream.go
  */
@@ -40,7 +40,7 @@ func (c *Client) CreateCompletionStream(
 	}
 
 	request.Stream = true
-	req, err := c.newStreamRequest("POST", urlSuffix, request)
+	req, err := c.newStreamRequest("POST", urlSuffix, request, request.Model)
 	if err != nil {
 		return
 	}

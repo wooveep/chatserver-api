@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 19:47:43
- * @LastEditTime: 2023-05-11 16:54:14
+ * @LastEditTime: 2023-05-12 16:15:51
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/query/user.go
  */
@@ -52,8 +52,9 @@ func (ud *userDao) UserGetByEmail(ctx context.Context, email string) (entity.Use
 	return user, err
 }
 
-func (ud *userDao) UserVerifyEmail(ctx context.Context, email string) (count int64, err error) {
-	err = ud.ds.Master().Model(&entity.User{}).Where("email = ?", email).Count(&count).Error
+func (ud *userDao) UserVerifyEmail(ctx context.Context, email string) (userId int64, err error) {
+
+	err = ud.ds.Master().Model(&entity.User{}).Where("email = ?", email).Select("id").Find(&userId).Error
 	return
 }
 func (ud *userDao) UserVerifyUserName(ctx context.Context, username string) (count int64, err error) {
