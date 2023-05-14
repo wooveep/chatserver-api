@@ -1,7 +1,7 @@
 <!--
  * @Author: cloudyi.li
  * @Date: 2023-05-10 09:15:49
- * @LastEditTime: 2023-05-14 19:08:08
+ * @LastEditTime: 2023-05-14 20:55:30
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/README.md
 -->
@@ -25,6 +25,8 @@
   - [待实现列表](#待实现列表)
   - [安装部署](#安装部署)
     - [前置条件](#前置条件)
+      - [部署安装带有pgvector插件的postgresql](#部署安装带有pgvector插件的postgresql)
+        - [加载项目所需的库表](#加载项目所需的库表)
     - [编译项目方式运行](#编译项目方式运行)
       - [编译项目](#编译项目)
       - [配置config文件](#配置config文件)
@@ -36,7 +38,6 @@
       - [启动docker镜像](#启动docker镜像)
   - [引用的社区仓库代码](#引用的社区仓库代码)
   - [License](#license)
-
 
 ## 实现功能
 
@@ -111,7 +112,14 @@
 ### 前置条件
 
 1. 部署redis服务
-2. 部署安装带有pgvector插件的postgresql
+
+#### 部署安装带有pgvector插件的postgresql
+
+可以参考 <https://github.com/pgvector/pgvector#installation-notes> 部分内容
+
+##### 加载项目所需的库表
+
+位于项目 目录 script/sql目录下的 init.sql 文件
 
 ### 编译项目方式运行
 
