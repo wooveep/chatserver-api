@@ -24,7 +24,7 @@ windows: prepare
 		for GOARCH in $(GOARCHS); do \
 			mkdir -p dist/windows_$$GOARCH; \
 			OOSG=windows GOARCH=$$GOARCH   CGO_ENABLED=1 \
-			go build -ldflags \
+					go  build -ldflags \
 			"-X ${version_package}.CommitId=${commit_id} \
 			-X ${version_package}.BranchName=${branch_name} \
 			-X ${version_package}.BuildTime=${build_time} \

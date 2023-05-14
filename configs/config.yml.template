@@ -2,34 +2,42 @@ mode: debug #启动模式 debug, release, test
 port: :18080 #启动端口
 app-name: chatserver-api #服务名称
 url: http://localhost #服务本地地址
+externalurl: http://localhost:1002/ #最终用户访问的地址
 max-ping-count: 10 #自检次数
-externalurl: 
 language: zh # 项目语言，en或者zh
 jwt:
-  secret: abcdd
-  ttl:  7200
+  secret: ABCDFTGSEDE
+  ttl: 3600
   blacklistperiod: 10
 openai:
-  authtoken: 
-  orgid: 
-  proxymode: socks5 
-  proxyip:  127.0.0.1
-  proxyport: 1080
-
-# 数据库配置（posgresql）
+  authtoken:   
+  orgid:   
+  proxymode: socks5      #如果为空则不使用代理
+  proxyip:  
+  proxyport:  
+email:
+  smtphost:  
+  smtpport:  
+  smtpuser:  
+  smtppassword:  
+  smtpsender:             #邮件发件人姓名
+  proxymode:  socks5      #如果为空则不使用代理
+  proxyip:  
+  proxyport:  
+# 数据库配置（mysql）
 database:
-  dbname:      #数据库名称
-  host:        #数据库服务地址
-  port: 5432   #数据库端口 
-  username:    #用户名
-  password:    #密码
+  dbname:   #数据库名称
+  host:  #数据库服务地址
+  port:     #数据库端口 
+  username:   #用户名(实际线上不可使用root,请授权一个账户)
+  password:   #密码
   maximum-pool-size: 10  #连接池最大连接数
   maximum-idle-size: 2  #连接池最大空闲数
 # 缓存redis配置
 redis:
-  address:  127.0.0.1:6379 #redis server地址
-  password: #redis auth 密码，可选，默认无密码
-  db: 1 #数据库，可选，默认0
+  address:  #redis server地址
+  password:  #redis auth 密码，可选，默认无密码
+  db:     #数据库，可选，默认0
   pool-size: 10 #同一时刻池中最大连接数
   min-idle-conns: 1 #建立连接时维持的最小空闲连接数量，避免新建连接速度慢
   idle-timeout: 3000 #最大空闲时长，单位是秒s

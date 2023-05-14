@@ -164,7 +164,7 @@ COMMENT ON COLUMN public.record.is_del IS '删除标志';
 
 -- DROP SCHEMA embed;
 
-CREATE SCHEMA embed AUTHORIZATION whatserver;
+CREATE SCHEMA embed ;
 -- embed.documents definition
 
 -- Drop table

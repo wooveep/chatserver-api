@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-02-15 11:26:59
- * @LastEditTime: 2023-05-11 16:56:07
+ * @LastEditTime: 2023-05-14 18:38:40
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/cmd/main.go
  */
@@ -13,6 +13,7 @@ import (
 	"chatserver-api/pkg/config"
 	"chatserver-api/pkg/db"
 	"chatserver-api/pkg/logger"
+	"chatserver-api/utils/tools"
 
 	"chatserver-api/internal/middleware"
 )
@@ -22,6 +23,7 @@ func main() {
 	args = chatserverapi.LoadArgsValid()
 	c := config.Load(args.Config)
 	logger.InitLogger(&c.LogConfig, c.AppName)
+	tools.CreatePath("head_photo", "uploadfile")
 	ds := db.NewDefaultPostGre(c.DBConfig)
 	cache.InitRedis(c.RedisConfig)
 	srv := chatserverapi.NewHttpServer(config.AppConfig)
