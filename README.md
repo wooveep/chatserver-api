@@ -1,7 +1,7 @@
 <!--
  * @Author: cloudyi.li
  * @Date: 2023-05-10 09:15:49
- * @LastEditTime: 2023-05-14 19:02:31
+ * @LastEditTime: 2023-05-14 19:08:08
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/README.md
 -->
@@ -10,7 +10,33 @@
 
 本仓库为后端API服务，依赖的前端仓库为[wooveep](https://github.com/wooveep)/[chatserver-web](https://github.com/wooveep/chatserver-web)
 
-[TOC]
+- [基于OPENAI的ChatGPT API开发的AI助手服务](#基于openai的chatgpt-api开发的ai助手服务)
+  - [实现功能](#实现功能)
+  - [应用场景](#应用场景)
+  - [目标群体](#目标群体)
+  - [系统演示](#系统演示)
+    - [项目截图](#项目截图)
+      - [用户登录](#用户登录)
+      - [用户注册](#用户注册)
+      - [用户信息展示](#用户信息展示)
+      - [会话上下文设置](#会话上下文设置)
+      - [会话角色控制](#会话角色控制)
+      - [基于本地知识库的问答](#基于本地知识库的问答)
+  - [待实现列表](#待实现列表)
+  - [安装部署](#安装部署)
+    - [前置条件](#前置条件)
+    - [编译项目方式运行](#编译项目方式运行)
+      - [编译项目](#编译项目)
+      - [配置config文件](#配置config文件)
+      - [启动项目](#启动项目)
+    - [使用Docker方式运行](#使用docker方式运行)
+      - [自构建docker镜像](#自构建docker镜像)
+      - [直接拉取仓库镜像](#直接拉取仓库镜像)
+      - [编辑配置文件](#编辑配置文件)
+      - [启动docker镜像](#启动docker镜像)
+  - [引用的社区仓库代码](#引用的社区仓库代码)
+  - [License](#license)
+
 
 ## 实现功能
 
