@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:51:00
- * @LastEditTime: 2023-05-12 16:42:00
+ * @LastEditTime: 2023-05-15 16:34:55
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/router/api.go
  */
@@ -13,6 +13,7 @@
 package router
 
 import (
+	"chatserver-api/internal/handler/v1/admin"
 	"chatserver-api/internal/handler/v1/chat"
 	"chatserver-api/internal/handler/v1/preset"
 	"chatserver-api/internal/handler/v1/user"
@@ -25,17 +26,20 @@ type ApiRouter struct {
 	userHandler   *user.UserHandler
 	chatHandler   *chat.ChatHandler
 	presetHandler *preset.PresetHandler
+	adminHandler  *admin.AdminHandler
 }
 
 func NewApiRouter(
 	userHandler *user.UserHandler,
 	chatHandler *chat.ChatHandler,
 	presetHandler *preset.PresetHandler,
+	adminHandler *admin.AdminHandler,
 ) *ApiRouter {
 	return &ApiRouter{
 		userHandler:   userHandler,
 		chatHandler:   chatHandler,
 		presetHandler: presetHandler,
+		adminHandler:  adminHandler,
 	}
 }
 
@@ -81,5 +85,9 @@ func (ar *ApiRouter) Load(g *gin.Engine) {
 	{
 		eg.POST("/file", ar.chatHandler.ChatEmbeddingFile())
 		eg.POST("/string", ar.chatHandler.ChatEmbeddingString())
+	}
+	ag := g.Group("/admin", middleware.AuthToken())
+	{
+		ag.POST("/cdkeygen", ar.adminHandler.AdminGenNewCDkey())
 	}
 }

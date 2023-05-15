@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:57:20
- * @LastEditTime: 2023-05-12 15:23:54
+ * @LastEditTime: 2023-05-15 16:31:59
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/errors/ecode/code.go
  */
@@ -49,8 +49,11 @@ const (
 	//ActiveErr 用户激活失败
 	ActiveErr
 
-	//
+	//PasswordErr
 	PasswordErr
+
+	//permission denied
+	PermissionErr
 )
 
 const (
@@ -58,4 +61,6 @@ const (
 	TransactionErr = iota + 60000
 	// DuplicateErr 记录存在重复
 	DuplicateErr
+	// CreateErr
+	CreatErr
 )

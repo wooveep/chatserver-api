@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:37:13
- * @LastEditTime: 2023-05-12 16:51:28
+ * @LastEditTime: 2023-05-15 13:27:53
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/user.go
  */
@@ -86,10 +86,10 @@ func (us *userService) UserLogin(ctx context.Context, username, password string)
 		logger.Infof("密码错误%s", username)
 		return res, err
 	}
-	if userInfo.ExpiredAt.GetUnixTime() < time.Now().Unix() {
-		err = errors.New("用户授权过期")
-		return res, err
-	}
+	// if userInfo.ExpiredAt.GetUnixTime() < time.Now().Unix() {
+	// 	err = errors.New("用户授权过期")
+	// 	return res, err
+	// }
 	expireAt := time.Now().Add(time.Duration(config.AppConfig.JwtConfig.JwtTtl) * time.Second)
 	claims := jwt.BuildClaims(expireAt, userInfo.Id)
 	token, err := jwt.GenToken(claims, config.AppConfig.JwtConfig.Secret)
@@ -115,10 +115,10 @@ func (us *userService) UserRefresh(ctx *gin.Context) (res model.UserLoginRes, er
 		err = errors.New("用户未激活")
 		return res, err
 	}
-	if userInfo.ExpiredAt.GetUnixTime() < time.Now().Unix() {
-		err = errors.New("用户授权过期")
-		return res, err
-	}
+	// if userInfo.ExpiredAt.GetUnixTime() < time.Now().Unix() {
+	// 	err = errors.New("用户授权过期")
+	// 	return res, err
+	// }
 	expireAt := time.Now().Add(time.Duration(config.AppConfig.JwtConfig.JwtTtl) * time.Second)
 	claims := jwt.BuildClaims(expireAt, userInfo.Id)
 	token, err := jwt.GenToken(claims, config.AppConfig.JwtConfig.Secret)
@@ -189,7 +189,8 @@ func (us *userService) UserGetInfo(ctx context.Context, userId int64) (res model
 	res.Nickname = user.Nickname
 	res.Username = user.Username
 	res.Phone = user.Phone
-	res.ExpiredAt = jtime.JsonTime(user.ExpiredAt)
+	res.Role = consts.RoleToString[user.Role]
+	// res.ExpiredAt = jtime.JsonTime(user.ExpiredAt)
 	return res, err
 }
 
@@ -202,7 +203,8 @@ func (us *userService) UserRegister(ctx *gin.Context, req model.UserRegisterReq)
 	user.Nickname = req.Username
 	user.RegisteredIp = ctx.ClientIP()
 	user.Email = req.Email
-	user.ExpiredAt = jtime.JsonTime(time.Now().AddDate(0, 0, 7))
+	user.Role = consts.StandardUser
+	// user.ExpiredAt = jtime.JsonTime(time.Now().AddDate(0, 0, 7))
 	user.Balance = 10
 	user.IsActive = false
 	user.AvatarUrl, err = avatar.GenNewAvatar(security.Md5WithSalt(req.Username, req.Email))
