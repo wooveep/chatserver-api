@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-09 14:27:26
- * @LastEditTime: 2023-05-09 19:14:54
+ * @LastEditTime: 2023-05-16 17:01:46
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/mail/send.go
  */
@@ -47,7 +47,7 @@ func send(mailTo []string, subject, body string) error {
 			return dialer.Dial("tcp", d.Host+":"+strconv.Itoa(d.Port))
 		}
 	}
+	d.Timeout = 1000 * time.Second
 	err := d.DialAndSend(m)
 	return err
-
 }

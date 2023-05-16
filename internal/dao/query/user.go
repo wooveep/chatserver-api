@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 19:47:43
- * @LastEditTime: 2023-05-15 13:37:07
+ * @LastEditTime: 2023-05-15 16:53:33
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/query/user.go
  */
@@ -37,7 +37,7 @@ func (ud *userDao) UserDelete(ctx context.Context, userId int64) error {
 }
 func (ud *userDao) UserGetRole(ctx context.Context, userId int64) (int, error) {
 	var role int
-	err := ud.ds.Master().Model(&entity.User{}).Select("role").Find(&role).Error
+	err := ud.ds.Master().Model(&entity.User{}).Where("id = ?", userId).Select("role").Find(&role).Error
 	return role, err
 }
 

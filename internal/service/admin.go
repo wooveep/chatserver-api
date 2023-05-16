@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-15 13:30:31
- * @LastEditTime: 2023-05-15 16:14:20
+ * @LastEditTime: 2023-05-15 16:57:29
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/admin.go
  */
@@ -59,8 +59,8 @@ func (as *adminService) CdKeyGenerate(ctx *gin.Context, number, amount int) (res
 		cdkey.Id = keyId
 		cdkey.CodeKey = code
 		cdkey.Amount = amount
-		cdkeylist[i] = cdkey
-		codekey[i] = code
+		cdkeylist = append(cdkeylist, cdkey)
+		codekey = append(codekey, code)
 	}
 	err = as.kd.CdKeyGenerate(ctx, cdkeylist)
 	res.CodeKey = codekey

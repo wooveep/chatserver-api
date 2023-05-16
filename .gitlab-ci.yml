@@ -34,23 +34,23 @@ build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
     - echo "Compiling the code..."
-    - export PATH=$PATH:/usr/local/go/bin
-    - export GOPATH=/nfs/code/go
-    - export GOBIN=$GOPATH/bin
-    - make linux 
+    - sudo docker build -t wooveep/chatserver-api:latest .
+    - sudo docker push wooveep/chatserver-api:latest
     - echo "Compile complete."
 
 deploy-job:      # This job runs in the deploy stage.
   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
   script:
-    - echo "Deploying application..."
-    - export PATH=$PATH:/usr/local/go/bin
-    - export GOPATH=/nfs/code/go
-    - export GOBIN=$GOPATH/bin
-    - make linux 
-    - rm -rf /home/cloudyi/chatserver-api/dist
-    - cp dist/linux_amd64/chatserver-api /home/cloudyi/chatserver-api/
-    # - unzip  dist/chatserver-api-app-linux-amd64.zip  -d  /home/cloudyi/chatserver-api
-    # - cp /home/cloudyi/chatserver-api/dist/linux_amd64/chatserver-api /home/cloudyi/chatserver-api/
-    # - nohoup ./home/cloudyi/chatserver-api/chatserver-api >/dev/null 2>&1 &
-    - echo "Application successfully deployed."
+    -> echo "Deploying application..." 
+    
+    'sudo docker  stop chatserver-api'
+  
+    'sudo docker rm chatserver-api'
+
+    'sudo  docker run  -d   --name chatserver-api  -p 18080:18080 
+       -v /home/cloudyi/chatserver-api/configs:/app/chatserver-api/configs 
+       -v /home/cloudyi/chatserver-api/logs:/app/chatserver-api/logs  
+       -v /home/cloudyi/chatserver-api/head_photo:/app/chatserver-api/head_photo 
+       wooveep/chatserver-api:latest' 
+
+     echo "Application successfully deployed."
