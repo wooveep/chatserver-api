@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 19:40:39
- * @LastEditTime: 2023-05-15 12:58:44
+ * @LastEditTime: 2023-05-18 13:06:52
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/entity/user.go
  */
@@ -32,6 +32,7 @@ type User struct {
 	Chats        []Chat                `gorm:"foreignKey:user_id;references:id"`
 	Invites      []Invite              `gorm:"foreignKey:user_id;references:id"`
 	Bills        []Bill                `gorm:"foreignKey:user_id;references:id"`
+	UserLogs     []UserLog             `gorm:"foreignKey:user_id;references:id"`
 }
 
 func (User) TableName() string {

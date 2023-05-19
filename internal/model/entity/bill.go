@@ -1,3 +1,10 @@
+/*
+ * @Author: cloudyi.li
+ * @Date: 2023-05-15 12:00:04
+ * @LastEditTime: 2023-05-18 11:28:20
+ * @LastEditors: cloudyi.li
+ * @FilePath: /chatserver-api/internal/model/entity/bill.go
+ */
 package entity
 
 import (
@@ -5,13 +12,13 @@ import (
 )
 
 type Bill struct {
-	Id        int64          `gorm:"column:id;primary_key;" json:"id"`
-	UserId    int64          `gorm:"column:user_id" json:"user_id"`
-	Cost      int            `gorm:"column:cost" json:"cost"`
-	Amount    int            `gorm:"column:amount" json:"amount"`
-	Comment   string         `gorm:"column:comment" json:"comment"`
-	CreatedAt jtime.JsonTime `gorm:"column:created_at" json:"created_at"`
-	UpdatedAt jtime.JsonTime `gorm:"column:updated_at" json:"updated_at"`
+	Id          int64          `gorm:"column:id;primary_key;" json:"id"`
+	UserId      int64          `gorm:"column:user_id" json:"user_id"`
+	CostChange  float64        `gorm:"column:cost_change" json:"cost_change"`
+	Amount      float64        `gorm:"column:amount" json:"amount"`
+	CostComment string         `gorm:"column:cost_comment" json:"cost_comment"`
+	CreatedAt   jtime.JsonTime `gorm:"column:created_at" json:"created_at"`
+	UpdatedAt   jtime.JsonTime `gorm:"column:updated_at" json:"updated_at"`
 }
 
 func (Bill) TableName() string {

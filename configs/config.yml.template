@@ -10,16 +10,16 @@ jwt:
   ttl: 3600
   blacklistperiod: 10
 openai:
-  authtoken:   
-  orgid:   
+  authtoken:             #OPEANI的APIKEY 
+  orgid:                 #OPENAI页面的组织ID 
   proxymode: socks5      #如果为空则不使用代理
-  proxyip:  
-  proxyport:  
+  proxyip:                
+  proxyport:             
 email:
-  smtphost:  
-  smtpport:  
-  smtpuser:  
-  smtppassword:  
+  smtphost:               #smtp邮箱地址
+  smtpport:               #邮箱端口
+  smtpuser:               #邮箱登录u用户名
+  smtppassword:           #邮箱登录密码
   smtpsender:             #邮件发件人姓名
   proxymode:  socks5      #如果为空则不使用代理
   proxyip:  

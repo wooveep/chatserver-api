@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:37:13
- * @LastEditTime: 2023-05-15 13:27:53
+ * @LastEditTime: 2023-05-19 13:46:32
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/user.go
  */
@@ -14,6 +14,7 @@ import (
 	"chatserver-api/internal/model/entity"
 	"chatserver-api/pkg/active"
 	"chatserver-api/pkg/avatar"
+	"chatserver-api/pkg/cache"
 	"chatserver-api/pkg/config"
 	"chatserver-api/pkg/jtime"
 	"chatserver-api/pkg/jwt"
@@ -26,6 +27,7 @@ import (
 	"errors"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -53,6 +55,12 @@ type UserService interface {
 	UserPasswordForget(ctx *gin.Context) (err error)
 	UserTempCodeVerify(ctx *gin.Context, tempcode string) (Isvalid bool)
 	UserTempCodeGen(ctx *gin.Context) (tempcode string, email string, nickname string, err error)
+	UserBalanceChange(ctx *gin.Context, userId int64, amount float64) error
+	UserCDkeyPay(ctx *gin.Context, codekey string) error
+	UserInviteLinkGet(ctx *gin.Context) (res model.UserInviteLinkRes, err error)
+	UserInviteGen(ctx *gin.Context) (string, error)
+	UserInviteReward(ctx *gin.Context)
+	UserInviteVerify(ctx *gin.Context, code string)
 }
 
 // userService 实现UserService接口
@@ -312,7 +320,6 @@ func (us *userService) UserTempCodeGen(ctx *gin.Context) (tempcode string, email
 	code, err := active.ActiveCodeGen(ctx, userId)
 	if err != nil {
 		return
-
 	}
 	email = userInfo.Email
 	nickname = userInfo.Nickname
@@ -360,9 +367,143 @@ func (us *userService) UserActiveChange(ctx *gin.Context) (err error) {
 	user.Id = userId
 	user.IsActive = true
 	err = us.ud.UserUpdate(ctx, &user)
-	return err
+	if err != nil {
+		return err
+	}
+	us.UserInviteReward(ctx)
+
+	for i := 1; i <= 3; i++ {
+		_, err = us.UserInviteGen(ctx)
+		if err == nil {
+			break
+		}
+		if i == 3 {
+			break
+		}
+		time.Sleep(1)
+	}
+
+	return nil
 }
 
-func (us *userService) UserCDkeyPay(ctx *gin.Context, codekey string) {
+func (us *userService) UserBalanceChange(ctx *gin.Context, userId int64, amount float64) error {
+	oldbalance, err := us.ud.UserGetBalance(ctx, userId)
+	if err != nil {
+		return err
+	}
+	newbalance := oldbalance + amount
+	user := entity.User{}
+	user.Id = userId
+	user.Balance = newbalance
 
+	err = us.ud.UserUpdate(ctx, &user)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (us *userService) UserCDkeyPay(ctx *gin.Context, key string) error {
+	userId := ctx.GetInt64(consts.UserID)
+	keyId := uuid.CodeToId(key)
+	if keyId == 0 {
+		return errors.New("CDKEY ERROR")
+	}
+	codeKey, amount, err := us.kd.CdKeyQuery(ctx, keyId)
+	if err != nil {
+		return err
+	}
+	if codeKey != key {
+		return errors.New("CDKEY ERROR")
+	}
+	err = us.UserBalanceChange(ctx, userId, amount)
+	if err != nil {
+		return err
+	}
+	err = us.kd.CdKeyDelete(ctx, keyId)
+	if err != nil {
+		logger.Errorf("CDKEY删除异常：%v", err)
+	}
+	return nil
+}
+func (us *userService) UserInviteGen(ctx *gin.Context) (string, error) {
+	codeId := us.iSrv.GenSnowID()
+	userId := ctx.GetInt64(consts.UserID)
+	invite := &entity.Invite{}
+	invite.Id = codeId
+	invite.UserId = userId
+	invite.InviteCode = uuid.GetInvCodeByUID(codeId)
+	return invite.InviteCode, us.ud.UserInviteGen(ctx, invite)
+}
+
+func (us *userService) UserInviteLinkGet(ctx *gin.Context) (res model.UserInviteLinkRes, err error) {
+	userId := ctx.GetInt64(consts.UserID)
+	invite, err := us.ud.UserInviteGetByUser(ctx, userId)
+	if err != nil {
+		return
+	}
+	code := invite.InviteCode
+	if code == "" {
+		for i := 1; i <= 3; i++ {
+			code, err = us.UserInviteGen(ctx)
+			if err == nil {
+				break
+			}
+			if i == 3 {
+				break
+			}
+			time.Sleep(1)
+		}
+	}
+	res.InviteLink = config.AppConfig.ExternalURL + "#/register/" + code
+	return
+}
+
+func (us *userService) UserInviteReward(ctx *gin.Context) {
+	current_userId := ctx.GetInt64(consts.UserID)
+	rc := cache.GetRedisClient()
+	invite_str, err := rc.Get(ctx, consts.UserInvitePrefix+strconv.FormatInt(current_userId, 10)).Result()
+	if invite_str == "" {
+		// logger.Errorf("UserID：%v",)
+		return
+	}
+	invite_userId, err := strconv.ParseInt(invite_str, 10, 64)
+	err = us.UserBalanceChange(ctx, invite_userId, consts.InviteReward)
+	if err != nil {
+		logger.Errorf("UserID：%v 获取奖励失败", invite_userId)
+		return
+	}
+	err = us.UserBalanceChange(ctx, current_userId, consts.InviteReward)
+	if err != nil {
+		logger.Errorf("current_userId:%v 获取奖励失败", current_userId)
+		return
+	}
+	invite, err := us.ud.UserInviteGetByUser(ctx, invite_userId)
+	if err != nil {
+		logger.Errorf("UserID：%v 获取Invite信息失败", invite_userId)
+		return
+	}
+	invite.InviteNumber += 1
+	err = us.ud.UserInviteUpdate(ctx, &entity.Invite{Id: invite.Id, InviteNumber: invite.InviteNumber})
+	if err != nil {
+		logger.Errorf("UserID：%v 更新邀请次数失败", invite_userId)
+		return
+	}
+	return
+}
+
+func (us *userService) UserInviteVerify(ctx *gin.Context, code string) {
+	current_userId := ctx.GetInt64(consts.UserID)
+	invite, err := us.ud.UserInviteGetByCode(ctx, code)
+	if err != nil {
+		logger.Errorf("current_userId:%v 邀请码错误", current_userId)
+		return
+	}
+	invite_userId := invite.UserId
+	rc := cache.GetRedisClient()
+	timer := 172800 * time.Second
+	err = rc.SetNX(ctx, consts.UserInvitePrefix+strconv.FormatInt(current_userId, 10), invite_userId, timer).Err()
+	if err != nil {
+		return
+	}
 }

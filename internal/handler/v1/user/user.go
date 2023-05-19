@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:36:21
- * @LastEditTime: 2023-05-12 16:56:14
+ * @LastEditTime: 2023-05-19 13:55:46
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/user/user.go
  */
@@ -73,6 +73,7 @@ func (uh *UserHandler) UserRegister() gin.HandlerFunc {
 			logger.Error(err.Error())
 			return
 		}
+		uh.userSrv.UserInviteVerify(ctx, req.InviteCode)
 		response.JSON(ctx, errors.Wrapf(err, ecode.Success, "注册成功,激活链接已发送到您的邮箱 %s 。", req.Email), res)
 	}
 }
@@ -167,8 +168,13 @@ func (uh *UserHandler) UserUpdateNickName() gin.HandlerFunc {
 
 func (uh *UserHandler) UserActive() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		tempcode := ctx.Query("active_code")
-		if !uh.userSrv.UserTempCodeVerify(ctx, tempcode) {
+		var req model.UserActiveReq
+		if err := ctx.ShouldBindQuery(&req); err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
+			return
+		}
+
+		if !uh.userSrv.UserTempCodeVerify(ctx, req.ActiveCode) {
 			response.JSON(ctx, errors.WithCode(ecode.ActiveErr, "用户激活失败"), nil)
 			return
 		}
@@ -234,5 +240,30 @@ func (uh *UserHandler) UserPasswordReset() gin.HandlerFunc {
 			return
 		}
 		response.JSON(ctx, nil, nil)
+	}
+}
+
+func (uh *UserHandler) UserCDkeyPay() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var req model.CdkeyPayReq
+		if err := ctx.ShouldBindJSON(&req); err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
+			return
+		}
+		if err := uh.userSrv.UserCDkeyPay(ctx, req.CodKey); err != nil {
+			response.JSON(ctx, errors.Wrap(err, ecode.CdKeyErr, "卡密错误"), nil)
+			return
+		}
+		response.JSON(ctx, nil, nil)
+	}
+}
+func (uh *UserHandler) UserInviteLinkGet() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		res, err := uh.userSrv.UserInviteLinkGet(ctx)
+		if err != nil {
+			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "邀请链接获取失败"), nil)
+			return
+		}
+		response.JSON(ctx, nil, res)
 	}
 }

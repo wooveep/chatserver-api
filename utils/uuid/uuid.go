@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:30:37
- * @LastEditTime: 2023-05-15 16:10:42
+ * @LastEditTime: 2023-05-19 11:42:49
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/utils/uuid/uuid.go
  */
@@ -9,10 +9,10 @@ package uuid
 
 import (
 	"chatserver-api/internal/consts"
+	"container/list"
 	"fmt"
-	"math/rand"
+	"regexp"
 	"strings"
-	"time"
 
 	"github.com/bwmarrin/snowflake"
 	"github.com/google/uuid"
@@ -33,6 +33,7 @@ func GenUUID16() string {
 	uuidStr = strings.ReplaceAll(uuidStr, "-", "")
 	return uuidStr[0:16]
 }
+
 func NewNode(i int64) *SnowNode {
 	node, err := snowflake.NewNode(i)
 	if err != nil {
@@ -53,187 +54,106 @@ func (sn *SnowNode) GenSnowStr() string {
 	return id
 }
 
-func GenID() (id int64, err error) {
-	node, err := snowflake.NewNode(1)
-	id = node.Generate().Int64()
-	return
+// GetInvCodeByUIDUniqueNew 获取指定长度的邀请码
+func GetInvCodeByUID(uid int64) string {
+	// 放大 + 加盐
+	uid = uid*3 + 22521358345
+	AlphanumericSet := []rune(consts.InviteBase)
+	var code []rune
+	slIdx := make([]byte, 8)
+	// 扩散
+	for i := 0; i < 8; i++ {
+		slIdx[i] = byte(uid % int64(len(AlphanumericSet)))                    // 获取 62 进制的每一位值
+		slIdx[i] = (slIdx[i] + byte(i)*slIdx[0]) % byte(len(AlphanumericSet)) // 其他位与个位加和再取余（让个位的变化影响到所有位）
+		uid = uid / int64(len(AlphanumericSet))                               // 相当于右移一位（62进制）
+	}
+	// 混淆
+	for i := 0; i < 8; i++ {
+		idx := (byte(i) * 5) % byte(8)
+		code = append(code, AlphanumericSet[slIdx[idx]])
+	}
+	return string(code)
 }
 
-func GenKey(uuid int64) {
-
+func IdToCode(uid int64) string {
+	byteCode := Base34(uint64(uid))
+	crc := strings.ReplaceAll(ChecksumKey(byteCode), "0", "V")
+	pattern := `([A-Z0-9]{4})`
+	re := regexp.MustCompile(pattern)
+	codekey := string(byteCode) + crc
+	shufflekey := shuffleString(codekey)
+	formatted := re.ReplaceAllString(shufflekey, "$1-")
+	// formatted = formatted[:len(formatted)-1] // 去除末尾的破折号
+	return formatted
 }
 
-// CB7B 8L5N TZBW NF
-
-func IdToCode(id int64, codelen int, bitlen int64) string {
-	mod := int64(0)
-	res := ""
-	for id != 0 {
-		mod = id % bitlen
-		id = id / bitlen
-		res += string(consts.CodeBase[mod])
+func CodeToId(code string) int64 {
+	formatted := strings.ReplaceAll(code, "-", "")
+	unshuffled := unshuffleString(formatted)
+	codelen := len(unshuffled)
+	codekey := unshuffled[:codelen-4]
+	byteCode := []byte(codekey)
+	crccode := unshuffled[codelen-4:]
+	crc := strings.ReplaceAll(ChecksumKey(byteCode), "0", "V")
+	if crc != crccode {
+		return 0
 	}
-	resLen := len(res)
-	if resLen < codelen {
-		res += consts.CodePad
-		for i := 0; i < 6-resLen-1; i++ {
-			rand.Seed(time.Now().UnixNano())
-			res += string(consts.CodeBase[rand.Intn(int(bitlen))])
-		}
-	}
-	crc := strings.ReplaceAll(ChecksumKey([]byte(res))[2:], "0", "V")
-
-	return res + crc
+	uid := Base34ToNum(byteCode)
+	return int64(uid)
 }
 
-// code转id
-func CodeToId(code string, bitlen int64) int64 {
-	res := int64(0)
-	lenCode := len(code)
-	//var baseArr [] byte = []byte(c.base)
-	baseArr := []byte(consts.CodeBase) // 字符串进制转换为byte数组
-	baseRev := make(map[byte]int)      // 进制数据键值转换为map
-	for k, v := range baseArr {
-		baseRev[v] = k
+func Base34(n uint64) []byte {
+	var base []byte = []byte(consts.CDKEYBASE)
+	quotient := n
+	mod := uint64(0)
+	l := list.New()
+	for quotient != 0 {
+		mod = quotient % 32
+		quotient = quotient / 32
+		l.PushFront(base[int(mod)])
 	}
+	listLen := l.Len()
+	if listLen >= 6 {
+		res := make([]byte, 0, listLen)
+		for i := l.Front(); i != nil; i = i.Next() {
+			res = append(res, i.Value.(byte))
+		}
+		return res
+	} else {
+		res := make([]byte, 0, 6)
+		for i := 0; i < 6; i++ {
+			if i < 6-listLen {
+				res = append(res, base[0])
+			} else {
+				res = append(res, l.Front().Value.(byte))
+				l.Remove(l.Front())
+			}
 
-	// 查找补位字符的位置
-	isPad := strings.Index(code, consts.CodePad)
-	if isPad != -1 {
-		lenCode = isPad
+		}
+		return res
 	}
+}
 
-	r := 0
-	for i := 0; i < lenCode; i++ {
-		// 补充字符直接跳过
-		if string(code[i]) == consts.CodePad {
-			continue
+func Base34ToNum(str []byte) uint64 {
+	baseMap := make(map[byte]int)
+	var base []byte = []byte(consts.CDKEYBASE)
+	for i, v := range base {
+		baseMap[v] = i
+	}
+	var res uint64 = 0
+	var r uint64 = 0
+	for i := len(str) - 1; i >= 0; i-- {
+		v, ok := baseMap[str[i]]
+		if !ok {
+			fmt.Printf("")
+			return 0
 		}
-		index := baseRev[code[i]]
-		b := int64(1)
-		for j := 0; j < r; j++ {
-			b *= bitlen
+		var b uint64 = 1
+		for j := uint64(0); j < r; j++ {
+			b *= 32
 		}
-		// pow 类型为 float64 , 类型转换太麻烦, 所以自己循环实现pow的功能
-		//res += float64(index) * math.Pow(float64(32), float64(2))
-		res += int64(index) * b
+		res += b * uint64(v)
 		r++
 	}
 	return res
 }
-
-var KEYTable = makeTable(0x80e2)
-
-// Table is a 256-word table representing the polynomial for efficient processing.
-type Table struct {
-	entries  [256]uint16
-	reversed bool
-	noXOR    bool
-}
-
-func MakeTable(poly uint16) *Table {
-	return makeTable(poly)
-}
-
-// MakeBitsReversedTable returns the Table constructed from the specified polynomial.
-func MakeBitsReversedTable(poly uint16) *Table {
-	return makeBitsReversedTable(poly)
-}
-
-// MakeTableNoXOR returns the Table constructed from the specified polynomial.
-// Updates happen without XOR in and XOR out.
-func MakeTableNoXOR(poly uint16) *Table {
-	tab := makeTable(poly)
-	tab.noXOR = true
-	return tab
-}
-
-// makeTable returns the Table constructed from the specified polynomial.
-func makeBitsReversedTable(poly uint16) *Table {
-	t := &Table{
-		reversed: true,
-	}
-	width := uint16(16)
-	for i := uint16(0); i < 256; i++ {
-		crc := i << (width - 8)
-		for j := 0; j < 8; j++ {
-			if crc&(1<<(width-1)) != 0 {
-				crc = (crc << 1) ^ poly
-			} else {
-				crc <<= 1
-			}
-		}
-		t.entries[i] = crc
-	}
-	return t
-}
-
-func makeTable(poly uint16) *Table {
-	t := &Table{
-		reversed: false,
-	}
-	for i := 0; i < 256; i++ {
-		crc := uint16(i)
-		for j := 0; j < 8; j++ {
-			if crc&1 == 1 {
-				crc = (crc >> 1) ^ poly
-			} else {
-				crc >>= 1
-			}
-		}
-		t.entries[i] = crc
-	}
-	return t
-}
-
-func updateBitsReversed(crc uint16, tab *Table, p []byte) uint16 {
-	for _, v := range p {
-		crc = tab.entries[byte(crc>>8)^v] ^ (crc << 8)
-	}
-	return crc
-}
-
-func update(crc uint16, tab *Table, p []byte) uint16 {
-	crc = ^crc
-
-	for _, v := range p {
-		crc = tab.entries[byte(crc)^v] ^ (crc >> 8)
-	}
-
-	return ^crc
-}
-
-func updateNoXOR(crc uint16, tab *Table, p []byte) uint16 {
-	for _, v := range p {
-		crc = tab.entries[byte(crc)^v] ^ (crc >> 8)
-	}
-
-	return crc
-}
-
-func Update(crc uint16, tab *Table, p []byte) uint16 {
-	if tab.reversed {
-		return updateBitsReversed(crc, tab, p)
-	} else if tab.noXOR {
-		return updateNoXOR(crc, tab, p)
-	} else {
-		return update(crc, tab, p)
-	}
-}
-
-func ChecksumKey(data []byte) string {
-
-	return fmt.Sprintf("%04X", Update(0, KEYTable, data))
-
-}
-
-// func Checksum(data []byte, tab *Table) uint16 { return Update(0, tab, data) }
-
-// ParseUUIDFromStr 从指定的字符串生成uuid
-// func ParseUUIDFromStr(str string) (string, error) {
-// 	u, err := ParseUUIDFromStr(str)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	return u, nil
-// }

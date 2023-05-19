@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-15 13:30:31
- * @LastEditTime: 2023-05-15 16:57:29
+ * @LastEditTime: 2023-05-19 10:26:39
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/admin.go
  */
@@ -21,7 +21,7 @@ var _ AdminService = (*adminService)(nil)
 
 type AdminService interface {
 	AdminVerify(ctx *gin.Context) bool
-	CdKeyGenerate(ctx *gin.Context, number, amount int) (res model.CdKeyGenerateRes, err error)
+	CdKeyGenerate(ctx *gin.Context, number int, amount float64) (res model.CdKeyGenerateRes, err error)
 }
 
 // userService 实现UserService接口
@@ -49,13 +49,13 @@ func (as *adminService) AdminVerify(ctx *gin.Context) bool {
 	}
 }
 
-func (as *adminService) CdKeyGenerate(ctx *gin.Context, number, amount int) (res model.CdKeyGenerateRes, err error) {
+func (as *adminService) CdKeyGenerate(ctx *gin.Context, number int, amount float64) (res model.CdKeyGenerateRes, err error) {
 	var cdkey entity.CdKey
 	var cdkeylist []entity.CdKey
 	var codekey []string
 	for i := 0; i < number; i++ {
 		keyId := as.aSrv.GenSnowID()
-		code := uuid.IdToCode(keyId, 16, 32)
+		code := uuid.IdToCode(keyId)
 		cdkey.Id = keyId
 		cdkey.CodeKey = code
 		cdkey.Amount = amount

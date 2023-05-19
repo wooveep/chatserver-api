@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:57:20
- * @LastEditTime: 2023-05-15 16:31:59
+ * @LastEditTime: 2023-05-19 09:10:39
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/errors/ecode/code.go
  */
@@ -54,6 +54,9 @@ const (
 
 	//permission denied
 	PermissionErr
+
+	//CDKEY err
+	CdKeyErr
 )
 
 const (

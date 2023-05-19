@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 15:44:35
- * @LastEditTime: 2023-05-15 11:45:35
+ * @LastEditTime: 2023-05-19 13:54:09
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/user.go
  */
@@ -58,6 +58,10 @@ type UserGetInfoRes struct {
 	Balance   float64 `json:"balance"`
 }
 
+type UserActiveReq struct {
+	ActiveCode string `form:"active_code"  validate:"required"`
+}
+
 type UserUpdateNickNameReq struct {
 	Nickname string `json:"nickname" validate:"required"  label:"用户昵称"`
 }
@@ -81,4 +85,8 @@ type UserPasswordResetReq struct {
 
 type UserForgetReq struct {
 	Email string `json:"email"`
+}
+
+type UserInviteLinkRes struct {
+	InviteLink string `json:"invite_link"`
 }

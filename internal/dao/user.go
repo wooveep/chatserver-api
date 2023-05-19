@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 19:43:52
- * @LastEditTime: 2023-05-15 13:37:58
+ * @LastEditTime: 2023-05-19 13:32:08
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/user.go
  */
@@ -22,4 +22,9 @@ type UserDao interface {
 	UserDelete(ctx context.Context, userId int64) error
 	UserUpdate(ctx context.Context, user *entity.User) error
 	UserGetRole(ctx context.Context, userId int64) (int, error)
+	UserGetBalance(ctx context.Context, userId int64) (float64, error)
+	UserInviteGen(ctx context.Context, invite *entity.Invite) error
+	UserInviteGetByUser(ctx context.Context, userId int64) (entity.Invite, error)
+	UserInviteGetByCode(ctx context.Context, code string) (entity.Invite, error)
+	UserInviteUpdate(ctx context.Context, invite *entity.Invite) error
 }

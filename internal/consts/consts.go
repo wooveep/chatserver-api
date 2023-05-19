@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:51:03
- * @LastEditTime: 2023-05-15 15:48:12
+ * @LastEditTime: 2023-05-19 11:31:15
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/consts/consts.go
  */
@@ -13,13 +13,14 @@ const (
 	// RequestId 请求id名称
 	RequestId = "request_id"
 	// UserID 用户id key
-	UserID   = "user_id"
-	ChatID   = "chat_id"
-	Balance  = "balance_ctx"
-	TokenCtx = "token_ctx"
-	CBCKEY   = "ABCDABCDABCDABCD"
-	CodeBase = "BN2DGH3LTC4YU5WEK6MZ7XRJ8PAS9QVO"
-	CodePad  = "F"
+	UserID       = "user_id"
+	ChatID       = "chat_id"
+	Balance      = "balance_ctx"
+	TokenCtx     = "token_ctx"
+	InviteReward = 5
+	CBCKEY       = "ABCDABCDABCDABCD"
+	CDKEYBASE    = "E8S2DZX9WYLTN6BQA7CP5IK3MJUFR4HV"
+	InviteBase   = "E8uvS2pqDZXbcde9WYfiLTNrs6BxQA7CPmn5IyzK3MwJUktFghR4HVaj"
 	// EmbedCtx = "with_emebedding_ctx"
 	// TimeLayout 时间格式
 	TimeLayout                     = "2006-01-02 15:04:05"
@@ -36,6 +37,7 @@ const (
 	APITypeAzureAD APIType = "AZURE_AD"
 
 	AzureAPIKeyHeader = "api-key"
+	UserInvitePrefix  = "User_Invite_relation_list:"
 )
 
 const (

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-05-11 19:38:40
+ * @LastEditTime: 2023-05-19 13:58:59
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -23,7 +23,6 @@ import (
 	"chatserver-api/pkg/openai"
 	"chatserver-api/pkg/pgvector"
 	"chatserver-api/pkg/tiktoken"
-	"chatserver-api/pkg/tokenize"
 	"chatserver-api/utils/security"
 	"chatserver-api/utils/uuid"
 	"strconv"
@@ -64,16 +63,16 @@ type ChatService interface {
 
 // userService 实现UserService接口
 type chatService struct {
-	cd    dao.ChatDao
-	jieba tokenize.Tokenizer
-	iSrv  uuid.SnowNode
+	cd dao.ChatDao
+	// jieba tokenize.Tokenizer
+	iSrv uuid.SnowNode
 }
 
-func NewChatService(_cd dao.ChatDao, _jieba tokenize.Tokenizer) *chatService {
+func NewChatService(_cd dao.ChatDao) *chatService {
 	return &chatService{
-		cd:    _cd,
-		jieba: _jieba,
-		iSrv:  *uuid.NewNode(1),
+		cd: _cd,
+		// jieba: _jieba,
+		iSrv: *uuid.NewNode(1),
 	}
 }
 
@@ -277,9 +276,9 @@ func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, 
 			}
 		}
 		//将用户问题进行关键词提取
-		emkeyword := cs.jieba.GetKeyword(emquestion)
+		// emkeyword := cs.jieba.GetKeyword(emquestion)
 		//通过用户问题 lastquestion + records（User历史）获取Context信息
-		embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emkeyword, preset.Classify)
+		embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emquestion, preset.Classify)
 		if err != nil {
 			logger.Errorf("获取embedding上下文失败: %v\n", err)
 			return
@@ -350,9 +349,9 @@ func (cs *chatService) ChatChattingReqProcess(ctx *gin.Context, lastquestion str
 
 		emquestion += lastquestion
 		//将用户问题进行关键词提取
-		emkeyword := cs.jieba.GetKeyword(emquestion)
+		// emkeyword := cs.jieba.GetKeyword(emquestion)
 		//通过用户问题 lastquestion + records（User历史）获取Context信息
-		embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emkeyword, preset.Classify)
+		embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emquestion, preset.Classify)
 		if err != nil {
 			logger.Errorf("获取embedding上下文失败: %v\n", err)
 			return

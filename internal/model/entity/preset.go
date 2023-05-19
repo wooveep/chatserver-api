@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-10 19:36:20
- * @LastEditTime: 2023-05-10 10:47:26
+ * @LastEditTime: 2023-05-18 13:03:42
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/entity/preset.go
  */
@@ -27,6 +27,7 @@ type Preset struct {
 	Frequency     float64               `gorm:"column:frequency" json:"frequency"`
 	WithEmbedding bool                  `grom:"cloumn:with_embedding" json:"with_embedding"`
 	Classify      string                `gorm:"column:classify" json:"classify"`
+	Privilege     int                   `gorm:"column:privilege" json:"privilege"`
 	CreatedAt     jtime.JsonTime        `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt     jtime.JsonTime        `gorm:"column:updated_at" json:"updated_at"`
 	DeletedAt     jtime.JsonTime        `gorm:"column:deleted_at" json:"deleted_at" `

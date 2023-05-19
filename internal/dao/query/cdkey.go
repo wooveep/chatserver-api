@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-11 16:51:24
- * @LastEditTime: 2023-05-15 13:28:58
+ * @LastEditTime: 2023-05-18 13:01:24
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/query/cdkey.go
  */
@@ -29,13 +29,13 @@ func (cd *cdkeyDao) CdKeyDelete(ctx context.Context, cdkeyId int64) (err error) 
 	return cd.ds.Master().Delete(&entity.CdKey{Id: cdkeyId}).Error
 }
 
-func (cd *cdkeyDao) CdKeyVerify(ctx context.Context, codekey string) (cdkeyId int64, cdkeyAmout int, err error) {
+func (cd *cdkeyDao) CdKeyQuery(ctx context.Context, keyId int64) (codeKey string, cdkeyAmout float64, err error) {
 	var cdkey entity.CdKey
-	err = cd.ds.Master().Where("codekey = ?", codekey).Select("id,amount").Find(&cdkey).Error
+	err = cd.ds.Master().Where("id = ?", keyId).Select("code_key,amount").Find(&cdkey).Error
 	if err != nil {
 		return
 	}
-	cdkeyId = cdkey.Id
+	codeKey = cdkey.CodeKey
 	cdkeyAmout = cdkey.Amount
 	return
 }

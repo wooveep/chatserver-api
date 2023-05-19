@@ -6,7 +6,7 @@ go_version = $(shell go version)
 commit_id = $(shell git rev-parse HEAD)
 branch_name = $(shell git name-rev --name-only HEAD)
 build_time = $(shell date -u '+%Y-%m-%d_%H:%M:%S')
-app_version = 0.0.1-beta
+app_version = 0.0.1-alpha
 version_package = chatserver-api/utils/version
 
 dev: mac
