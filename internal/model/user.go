@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 15:44:35
- * @LastEditTime: 2023-05-19 13:54:09
+ * @LastEditTime: 2023-05-21 20:51:47
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/user.go
  */
@@ -49,15 +49,18 @@ type UserGetAvatarRes struct {
 }
 
 type UserGetInfoRes struct {
-	Username  string  `json:"username"`
-	Nickname  string  `json:"nickname"`
-	Email     string  `json:"email"`
-	Phone     string  `json:"phone"`
-	AvatarUrl string  `json:"avatar_url"`
-	Role      string  `json:"role"`
-	Balance   float64 `json:"balance"`
+	Username string `json:"username"`
+	Nickname string `json:"nickname"`
+	Email    string `json:"email"`
+	Phone    string `json:"phone"`
+	// AvatarUrl string  `json:"avatar_url"`
+	Role    string  `json:"role"`
+	Balance float64 `json:"balance"`
 }
 
+type UserAvatarRes struct {
+	Avatar string `json:"avatar"`
+}
 type UserActiveReq struct {
 	ActiveCode string `form:"active_code"  validate:"required"`
 }
@@ -88,5 +91,7 @@ type UserForgetReq struct {
 }
 
 type UserInviteLinkRes struct {
-	InviteLink string `json:"invite_link"`
+	InviteLink   string  `json:"invite_link"`
+	InviteNumber int     `json:"invite_number"`
+	InviteReward float64 `json:"invite_reward"`
 }

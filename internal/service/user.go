@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:37:13
- * @LastEditTime: 2023-05-19 13:46:32
+ * @LastEditTime: 2023-05-21 21:33:06
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/user.go
  */
@@ -26,7 +26,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -40,10 +39,10 @@ type UserService interface {
 	UserLogout(ctx context.Context, tokenstr string) error
 	UserGetByID(ctx context.Context, uid int64) (user entity.User, err error)
 	UserRegister(ctx *gin.Context, req model.UserRegisterReq) (res model.UserRegisterRes, err error)
-	UserGetAvatar(ctx context.Context, userId int64) (res model.UserGetAvatarRes, err error)
 	UserLogin(ctx context.Context, username, password string) (res model.UserLoginRes, err error)
 	UserRefresh(ctx *gin.Context) (res model.UserLoginRes, err error)
 	UserGetInfo(ctx context.Context, userId int64) (res model.UserGetInfoRes, err error)
+	UserGetAvatar(ctx *gin.Context) (res model.UserAvatarRes, err error)
 	UserVerifyEmail(ctx *gin.Context, email string) (res model.UserVerifyEmailRes, err error)
 	UserVerifyUserName(ctx context.Context, username string) (res model.UserVerifyUserNameRes, err error)
 	UserUpdateNickName(ctx context.Context, userId int64, nickname string) (res model.UserUpdateNickNameRes, err error)
@@ -61,6 +60,7 @@ type UserService interface {
 	UserInviteGen(ctx *gin.Context) (string, error)
 	UserInviteReward(ctx *gin.Context)
 	UserInviteVerify(ctx *gin.Context, code string)
+	UserGiftCardListGet(ctx *gin.Context) (res model.GiftCardListRes, err error)
 }
 
 // userService 实现UserService接口
@@ -149,48 +149,32 @@ func (us *userService) UserGetByID(ctx context.Context, uid int64) (user entity.
 	return us.ud.UserGetById(ctx, uid)
 }
 
-func (us *userService) UserGetAvatar(ctx context.Context, userId int64) (res model.UserGetAvatarRes, err error) {
-	user, err := us.ud.UserGetById(ctx, userId)
-	if err != nil {
-		return res, err
-	}
-	logger.Debugf("获取用户头像UID:%d,%s", userId, user.AvatarUrl)
-	pattern := "^(http://|https://)"
-	match, err := regexp.MatchString(pattern, user.AvatarUrl)
-	if err != nil {
-		logger.Error(err.Error())
-		return res, err
-	}
-	if match {
-		res.AvatarUrl = user.AvatarUrl
-
-	} else {
-		if _, err := os.Stat(user.AvatarUrl); os.IsNotExist(err) {
-			return res, err
+func (us *userService) UserGetAvatar(ctx *gin.Context) (res model.UserAvatarRes, err error) {
+	userId := ctx.GetInt64(consts.UserID)
+	rc := cache.GetRedisClient()
+	avatar_url, err := rc.Get(ctx, consts.UserAvatarPrefix+strconv.FormatInt(userId, 10)).Result()
+	if avatar_url == "" || err != nil {
+		avatar_url, err = us.ud.UserGetAvatar(ctx, userId)
+		if err != nil {
+			return
 		}
-		res.AvatarUrl = config.AppConfig.ExternalURL + user.AvatarUrl
-
+		err = rc.SetNX(ctx, consts.UserAvatarPrefix+strconv.FormatInt(userId, 10), avatar_url, -1).Err()
+		if err != nil {
+			return
+		}
 	}
-	return res, err
+	data, err := os.ReadFile(avatar_url)
+	if err != nil {
+		return
+	}
+	res.Avatar = base64.StdEncoding.EncodeToString(data)
+	return
 }
 
 func (us *userService) UserGetInfo(ctx context.Context, userId int64) (res model.UserGetInfoRes, err error) {
 	user, err := us.ud.UserGetById(ctx, userId)
 	if err != nil {
 		return res, err
-	}
-	pattern := "^(http://|https://)"
-	match, err := regexp.MatchString(pattern, user.AvatarUrl)
-	if err != nil {
-		logger.Error(err.Error())
-		return res, err
-	}
-	if match {
-		res.AvatarUrl = user.AvatarUrl
-
-	} else {
-		res.AvatarUrl = config.AppConfig.ExternalURL + user.AvatarUrl
-
 	}
 	res.Balance = user.Balance
 	res.Email = user.Email
@@ -226,7 +210,6 @@ func (us *userService) UserRegister(ctx *gin.Context, req model.UserRegisterReq)
 	err = us.ud.UserCreate(ctx, &user)
 	if err != nil {
 		return res, err
-
 	}
 	res.IsSuccess = true
 	return
@@ -409,14 +392,14 @@ func (us *userService) UserCDkeyPay(ctx *gin.Context, key string) error {
 	if keyId == 0 {
 		return errors.New("CDKEY ERROR")
 	}
-	codeKey, amount, err := us.kd.CdKeyQuery(ctx, keyId)
+	keyAmount, err := us.kd.CdKeyQuery(ctx, keyId)
 	if err != nil {
 		return err
 	}
-	if codeKey != key {
+	if keyAmount.CodeKey != key {
 		return errors.New("CDKEY ERROR")
 	}
-	err = us.UserBalanceChange(ctx, userId, amount)
+	err = us.UserBalanceChange(ctx, userId, keyAmount.CardAmount)
 	if err != nil {
 		return err
 	}
@@ -456,6 +439,8 @@ func (us *userService) UserInviteLinkGet(ctx *gin.Context) (res model.UserInvite
 		}
 	}
 	res.InviteLink = config.AppConfig.ExternalURL + "#/register/" + code
+	res.InviteNumber = invite.InviteNumber
+	res.InviteReward = float64(invite.InviteNumber * consts.InviteReward)
 	return
 }
 
@@ -506,4 +491,24 @@ func (us *userService) UserInviteVerify(ctx *gin.Context, code string) {
 	if err != nil {
 		return
 	}
+}
+
+func (us *userService) UserGiftCardListGet(ctx *gin.Context) (res model.GiftCardListRes, err error) {
+	var giftcardOne model.GiftCardOneRes
+	var giftcardlistRes []model.GiftCardOneRes
+	giftcardlist, err := us.kd.GiftCardListGet(ctx)
+	if err != nil {
+		return
+	}
+	for _, v := range giftcardlist {
+		giftcardOne.CardId = strconv.FormatInt(v.CardId, 10)
+		giftcardOne.CardName = v.CardName
+		giftcardOne.CardAmount = v.CardAmount
+		giftcardOne.CardComment = v.CardComment
+		giftcardOne.CardDiscount = v.CardDiscount
+		giftcardOne.CardLink = v.CardLink
+		giftcardlistRes = append(giftcardlistRes, giftcardOne)
+	}
+	res.GiftCardList = giftcardlistRes
+	return
 }

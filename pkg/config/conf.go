@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-02-15 14:05:41
- * @LastEditTime: 2023-05-09 19:22:08
+ * @LastEditTime: 2023-05-23 10:11:46
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/config/conf.go
  */
@@ -30,11 +30,14 @@ type JwtConfig struct {
 }
 
 type OpenAIConfig struct {
-	AuthToken string `mapstructure:"authtoken"`
-	OrgID     string `mapstructure:"orgid"`
-	ProxyMode string `mapstructure:"proxymode"`
-	ProxyIP   string `mapstructure:"proxyip"`
-	ProxyPort string `mapstructure:"proxyport"`
+	APIType    string `mapstructure:"apitype"`
+	APIURL     string `mapstructure:"apiurl"`
+	APIVersion string `mapstructure:"apiversion"`
+	AuthToken  string `mapstructure:"authtoken"`
+	OrgID      string `mapstructure:"orgid"`
+	ProxyMode  string `mapstructure:"proxymode"`
+	ProxyIP    string `mapstructure:"proxyip"`
+	ProxyPort  string `mapstructure:"proxyport"`
 }
 
 // DBConfig is used to configure mysql database

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-15 13:30:31
- * @LastEditTime: 2023-05-19 10:26:39
+ * @LastEditTime: 2023-05-21 19:38:30
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/admin.go
  */
@@ -13,6 +13,7 @@ import (
 	"chatserver-api/internal/model"
 	"chatserver-api/internal/model/entity"
 	"chatserver-api/utils/uuid"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,7 +22,9 @@ var _ AdminService = (*adminService)(nil)
 
 type AdminService interface {
 	AdminVerify(ctx *gin.Context) bool
-	CdKeyGenerate(ctx *gin.Context, number int, amount float64) (res model.CdKeyGenerateRes, err error)
+	CdKeyGenerate(ctx *gin.Context, number int, CardId int64) (res model.CdKeyGenerateRes, err error)
+	GiftCardUpdate(ctx *gin.Context, req model.GiftCardUpdate) error
+	GiftCardCreate(ctx *gin.Context, req model.GiftCardCreate) error
 }
 
 // userService 实现UserService接口
@@ -49,7 +52,7 @@ func (as *adminService) AdminVerify(ctx *gin.Context) bool {
 	}
 }
 
-func (as *adminService) CdKeyGenerate(ctx *gin.Context, number int, amount float64) (res model.CdKeyGenerateRes, err error) {
+func (as *adminService) CdKeyGenerate(ctx *gin.Context, number int, CardId int64) (res model.CdKeyGenerateRes, err error) {
 	var cdkey entity.CdKey
 	var cdkeylist []entity.CdKey
 	var codekey []string
@@ -58,7 +61,7 @@ func (as *adminService) CdKeyGenerate(ctx *gin.Context, number int, amount float
 		code := uuid.IdToCode(keyId)
 		cdkey.Id = keyId
 		cdkey.CodeKey = code
-		cdkey.Amount = amount
+		cdkey.GiftCardId = CardId
 		cdkeylist = append(cdkeylist, cdkey)
 		codekey = append(codekey, code)
 	}
@@ -66,3 +69,43 @@ func (as *adminService) CdKeyGenerate(ctx *gin.Context, number int, amount float
 	res.CodeKey = codekey
 	return
 }
+
+func (as *adminService) GiftCardCreate(ctx *gin.Context, req model.GiftCardCreate) error {
+	var giftcard entity.GiftCard
+	giftcard.Id = as.aSrv.GenSnowID()
+	giftcard.CardAmount = req.CardAmount
+	giftcard.CardDiscount = req.CardDiscount
+	giftcard.CardName = req.CardName
+	giftcard.CardBuyLink = req.CardLink
+	giftcard.CardComment = req.CardComment
+	return as.kd.GiftCardCreate(ctx, &giftcard)
+}
+
+func (as *adminService) GiftCardUpdate(ctx *gin.Context, req model.GiftCardUpdate) error {
+	var giftcard entity.GiftCard
+	cardId, err := strconv.ParseInt(req.CardId, 10, 64)
+	if err != nil {
+		return err
+	}
+	giftcard.Id = cardId
+	if req.CardAmount != 0 {
+		giftcard.CardAmount = req.CardAmount
+	}
+	if req.CardDiscount != 0 {
+		giftcard.CardDiscount = req.CardDiscount
+	}
+	if req.CardName != "" {
+		giftcard.CardName = req.CardName
+	}
+	if req.CardLink != "" {
+		giftcard.CardBuyLink = req.CardLink
+	}
+	if req.CardComment != "" {
+		giftcard.CardComment = req.CardComment
+	}
+	return as.kd.GiftCardUpdate(ctx, &giftcard)
+}
+
+// func (as *adminService) GiftCardListGet(ctx *gin.Context){
+
+// }

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-30 18:16:24
- * @LastEditTime: 2023-05-12 23:16:17
+ * @LastEditTime: 2023-05-23 10:48:47
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/openai/config.go
  */
@@ -11,7 +11,6 @@ import (
 	"chatserver-api/internal/consts"
 	"chatserver-api/pkg/config"
 	"net/http"
-	"regexp"
 )
 
 // ClientConfig is a configuration of a client.
@@ -28,26 +27,26 @@ type ClientConfig struct {
 	EmptyMessagesLimit uint
 }
 
-func DefaultConfig() ClientConfig {
+func DefaultConfig(config config.OpenAIConfig) ClientConfig {
 	return ClientConfig{
 		HTTPClient: &http.Client{},
 		BaseURL:    consts.OpenaiAPIURLv1,
-		OrgID:      config.AppConfig.OpenAIConfig.OrgID,
-		authToken:  config.AppConfig.OpenAIConfig.AuthToken,
+		OrgID:      config.OrgID,
+		authToken:  config.AuthToken,
 		APIType:    consts.APITypeOpenAI,
 
 		EmptyMessagesLimit: consts.DefaultEmptyMessagesLimit,
 	}
 }
-func DefaultAzureConfig(apiKey, baseURL string) ClientConfig {
+func DefaultAzureConfig(config config.OpenAIConfig) ClientConfig {
 	return ClientConfig{
-		authToken:  config.AppConfig.OpenAIConfig.AuthToken,
-		BaseURL:    baseURL,
+		authToken:  config.AuthToken,
+		BaseURL:    config.APIURL,
 		OrgID:      "",
 		APIType:    consts.APITypeAzure,
-		APIVersion: "2023-03-15-preview",
+		APIVersion: config.APIVersion,
 		AzureModelMapperFunc: func(model string) string {
-			return regexp.MustCompile(`[.:]`).ReplaceAllString(model, "")
+			return consts.AzureToModel[model]
 		},
 
 		HTTPClient: &http.Client{},

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:51:03
- * @LastEditTime: 2023-05-19 11:31:15
+ * @LastEditTime: 2023-05-23 10:45:41
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/consts/consts.go
  */
@@ -38,7 +38,14 @@ const (
 
 	AzureAPIKeyHeader = "api-key"
 	UserInvitePrefix  = "User_Invite_relation_list:"
+	UserAvatarPrefix  = "User_Avatar_url_list:"
 )
+
+var AzureToModel = map[string]string{
+	"gpt-3.5-turbo":          "gpt3",
+	"text-davinci-003":       "davinci",
+	"text-embedding-ada-002": "embedding",
+}
 
 const (
 	StandardUser = iota + 1

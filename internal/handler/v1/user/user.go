@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:36:21
- * @LastEditTime: 2023-05-19 13:55:46
+ * @LastEditTime: 2023-05-21 20:53:24
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/user/user.go
  */
@@ -31,15 +31,15 @@ func NewUserHandler(_userSrv service.UserService) *UserHandler {
 
 func (uh *UserHandler) UserGetAvatar() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		id := ctx.GetInt64(consts.UserID)
-		useravatar, err := uh.userSrv.UserGetAvatar(ctx, id)
+		res, err := uh.userSrv.UserGetAvatar(ctx)
 		if err != nil {
-			response.JSON(ctx, errors.Wrap(err, ecode.NotFoundErr, "未找到头像"), nil)
-		} else {
-			response.JSON(ctx, nil, useravatar)
+			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, err.Error()), nil)
+			return
 		}
+		response.JSON(ctx, nil, res)
 	}
 }
+
 func (uh *UserHandler) UserGetInfo() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		id := ctx.GetInt64(consts.UserID)
@@ -250,13 +250,27 @@ func (uh *UserHandler) UserCDkeyPay() gin.HandlerFunc {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
 			return
 		}
-		if err := uh.userSrv.UserCDkeyPay(ctx, req.CodKey); err != nil {
+		if err := uh.userSrv.UserCDkeyPay(ctx, req.CodeKey); err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.CdKeyErr, "卡密错误"), nil)
 			return
 		}
 		response.JSON(ctx, nil, nil)
 	}
 }
+
+func (uh *UserHandler) UserGiftCardListGet() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		res, err := uh.userSrv.UserGiftCardListGet(ctx)
+		if err != nil {
+			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "接口调用失败"), nil)
+
+		} else {
+			response.JSON(ctx, nil, res)
+
+		}
+	}
+}
+
 func (uh *UserHandler) UserInviteLinkGet() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		res, err := uh.userSrv.UserInviteLinkGet(ctx)

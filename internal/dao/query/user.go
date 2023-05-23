@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 19:47:43
- * @LastEditTime: 2023-05-19 13:31:25
+ * @LastEditTime: 2023-05-21 20:59:01
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/query/user.go
  */
@@ -36,6 +36,10 @@ func (ud *userDao) UserUpdate(ctx context.Context, user *entity.User) error {
 
 func (ud *userDao) UserDelete(ctx context.Context, userId int64) error {
 	return ud.ds.Master().Delete(&entity.User{Id: userId}).Error
+}
+
+func (ud *userDao) UserBillCreate(ctx context.Context, bill *entity.Bill) error {
+	return ud.ds.Master().Create(bill).Error
 }
 
 func (ud *userDao) UserGetRole(ctx context.Context, userId int64) (int, error) {
@@ -80,6 +84,11 @@ func (ud *userDao) UserGetById(ctx context.Context, userId int64) (entity.User, 
 	var user entity.User
 	err := ud.ds.Master().Where("id = ?", userId).Find(&user).Error
 	return user, err
+}
+func (ud *userDao) UserGetAvatar(ctx context.Context, userId int64) (string, error) {
+	var avatar string
+	err := ud.ds.Master().Model(&entity.User{}).Where("id = ?", userId).Select("avatar_url").Find(&avatar).Error
+	return avatar, err
 }
 
 func (ud *userDao) UserGetByEmail(ctx context.Context, email string) (entity.User, error) {

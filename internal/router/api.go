@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:51:00
- * @LastEditTime: 2023-05-19 12:38:39
+ * @LastEditTime: 2023-05-22 10:30:23
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/router/api.go
  */
@@ -56,13 +56,14 @@ func (ar *ApiRouter) Load(g *gin.Engine) {
 	// g.GET("/test", ar.chatHandler.TestJieba())
 	ug := g.Group("/user", middleware.AuthToken())
 	{
-		ug.GET("/avatar-url", ar.userHandler.UserGetAvatar())
+		ug.GET("/avatar", ar.userHandler.UserGetAvatar())
 		ug.GET("/info", ar.userHandler.UserGetInfo())
 		ug.GET("/logout", ar.userHandler.UserLogout())
 		ug.POST("/changenickname", ar.userHandler.UserUpdateNickName())
 		ug.GET("/refresh", ar.userHandler.UserRefresh())
 		ug.POST("/updatepassword", ar.userHandler.UserPasswordModify())
 		ug.POST("/cdkeypay", ar.userHandler.UserCDkeyPay())
+		ug.GET("/giftcard", ar.userHandler.UserGiftCardListGet())
 		ug.GET("/invitelink", ar.userHandler.UserInviteLinkGet())
 
 	}
@@ -91,5 +92,7 @@ func (ar *ApiRouter) Load(g *gin.Engine) {
 	ag := g.Group("/admin", middleware.AuthToken())
 	{
 		ag.POST("/cdkeygen", ar.adminHandler.AdminGenNewCDkey())
+		ag.POST("/cardcreate", ar.adminHandler.AdminCreateGiftCard())
+		ag.POST("/cardupdate", ar.adminHandler.AdminUpdateGiftCard())
 	}
 }

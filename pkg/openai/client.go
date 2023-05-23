@@ -24,8 +24,13 @@ type Client struct {
 
 // NewClient creates new OpenAI API client.
 func NewClient() (*Client, error) {
-	c := DefaultConfig()
 	config := config.AppConfig.OpenAIConfig
+	var c ClientConfig
+	if config.APIType == "azure" {
+		c = DefaultAzureConfig(config)
+	} else {
+		c = DefaultConfig(config)
+	}
 	if config.ProxyMode == "socks5" {
 		proxyadd := fmt.Sprintf("%s:%s", config.ProxyIP, config.ProxyPort)
 		dialer, err := proxy.SOCKS5("tcp", proxyadd, nil, proxy.Direct)
@@ -67,10 +72,10 @@ func NewClientWithConfig(config ClientConfig) *Client {
 // NewOrgClient creates new OpenAI API client for specified Organization ID.
 //
 // Deprecated: Please use NewClientWithConfig.
-func NewOrgClient() *Client {
-	config := DefaultConfig()
-	return NewClientWithConfig(config)
-}
+// func NewOrgClient() *Client {
+// 	config := DefaultConfig()
+// 	return NewClientWithConfig(config)
+// }
 
 func (c *Client) sendRequest(req *http.Request, v any) error {
 	req.Header.Set("Accept", "application/json; charset=utf-8")
@@ -133,6 +138,7 @@ func (c *Client) fullURL(suffix string, args ...any) string {
 		baseURL := c.config.BaseURL
 		baseURL = strings.TrimRight(baseURL, "/")
 		// if suffix is /models change to {endpoint}/openai/models?api-version=2022-12-01
+		// https://whatserver.openai.azure.com/openai/deployments/davinci/completions?api-version=2022-12-01
 		// https://learn.microsoft.com/en-us/rest/api/cognitiveservices/azureopenaistable/models/list?tabs=HTTP
 		if strings.Contains(suffix, "/models") {
 			return fmt.Sprintf("%s/%s%s?api-version=%s", baseURL, consts.AzureAPIPrefix, suffix, c.config.APIVersion)

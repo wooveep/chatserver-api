@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:43:42
- * @LastEditTime: 2023-05-11 19:47:31
+ * @LastEditTime: 2023-05-23 13:05:47
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/chat/chat.go
  */
@@ -75,7 +75,6 @@ func (ch *ChatHandler) ChatRegenerateg() gin.HandlerFunc {
 		}
 		//go func 请求API；
 		chanStream := make(chan string)
-
 		go ch.cSrv.ChatStremResGenerate(ctx, openAIReq, chanStream)
 
 		//返回生成信息；
@@ -163,7 +162,6 @@ func (ch *ChatHandler) ChatCreateNew() gin.HandlerFunc {
 		if err := ctx.ShouldBindJSON(&req); err != nil {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
 			return
-
 		}
 		PresetId, err := strconv.ParseInt(req.PresetId, 10, 64)
 		if err != nil {
@@ -173,10 +171,8 @@ func (ch *ChatHandler) ChatCreateNew() gin.HandlerFunc {
 		chatCreateNewRes, err := ch.cSrv.ChatCreateNew(ctx, userId, PresetId, req.ChatName)
 		if err != nil {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
-
 		} else {
 			response.JSON(ctx, nil, chatCreateNewRes)
-
 		}
 
 	}
@@ -385,76 +381,72 @@ func (ch *ChatHandler) ChatEmbeddingFile() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		file, err := ctx.FormFile("file")
 		if err != nil {
-			response.JSON(ctx, nil, nil)
+			response.JSON(ctx, errors.WithCode(ecode.Unknown, err.Error()), nil)
 			return
 		}
 		// 检查文件类型是否为PDF
-		if fileHeader := file.Header.Get("Content-Type"); fileHeader != "application/pdf" {
-			// ctx.JSON(http.StatusBadRequest, gin.H{"error": "上传文件必须是PDF格式"})
-			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, "上传文件必须是PDF格式"), nil)
+		// if fileHeader := file.Header.Get("Content-Type"); fileHeader != "application/pdf" ||  {
+		// 	// ctx.JSON(http.StatusBadRequest, gin.H{"error": "上传文件必须是PDF格式"})
+		// 	response.JSON(ctx, errors.WithCode(ecode.ValidateErr, "上传文件必须是PDF格式"), nil)
 
-			return
-		}
+		// 	return
+		// }
 		// 获取文件名
+		fileHeader := file.Header.Get("Content-Type")
+
 		title := ctx.PostForm("title")
 		if title == "" {
 			title = file.Filename
 		}
 
 		// 获取类别参数
-		classify := ctx.PostForm("classify")
+		// classify := ctx.PostForm("classify")
 		// 保存文件到本地
 		err = ctx.SaveUploadedFile(file, "uploadfile/"+file.Filename)
 		if err != nil {
 			// ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			response.JSON(ctx, nil, nil)
+			response.JSON(ctx, errors.WithCode(ecode.Unknown, err.Error()), nil)
 			return
 		}
-		textlist, err := tika.ReadPd3f(file.Filename)
-		if err != nil {
-			// ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			response.JSON(ctx, nil, nil)
-			return
-		}
-
-		textlen := len(textlist)
-		for i := 0; i < textlen; i += 10 {
-			end := i + 10
-			if end > textlen {
-				end = textlen
-			}
-			batchlist := textlist[i:end]
-			embeddinglist, err := ch.cSrv.ChatEmbeddingGenerate(batchlist)
+		var textlist []string
+		if fileHeader == "application/pdf" {
+			textlist, err = tika.ReadPd3f(file.Filename)
 			if err != nil {
 				// ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				response.JSON(ctx, nil, nil)
+				response.JSON(ctx, errors.WithCode(ecode.Unknown, err.Error()), nil)
 				return
 			}
-			for j := 0; j < len(batchlist); j++ {
-				err = ch.cSrv.ChatEmbeddingSave(ctx, title, batchlist[j], classify, embeddinglist[j])
-				if err != nil {
-					// ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-					response.JSON(ctx, nil, nil)
-					return
-				}
+		}
+		if fileHeader == "text/markdown" {
+			textlist, err = tika.ProcessMarkDown(file.Filename)
+			if err != nil {
+				// ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				response.JSON(ctx, errors.WithCode(ecode.Unknown, err.Error()), nil)
+				return
 			}
 		}
-		response.JSON(ctx, nil, nil)
-
-		// src, err := file.Open()
-		// if err != nil {
-		// 	response.JSON(ctx, nil, nil)
-		// 	return
+		// textlen := len(textlist)
+		// for i := 0; i < textlen; i += 10 {
+		// 	end := i + 10
+		// 	if end > textlen {
+		// 		end = textlen
+		// 	}
+		// 	batchlist := textlist[i:end]
+		// 	embeddinglist, err := ch.cSrv.ChatEmbeddingGenerate(batchlist)
+		// 	if err != nil {
+		// 		// ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// 		response.JSON(ctx, nil, nil)
+		// 		return
+		// 	}
+		// 	for j := 0; j < len(batchlist); j++ {
+		// 		err = ch.cSrv.ChatEmbeddingSave(ctx, title, batchlist[j], classify, embeddinglist[j])
+		// 		if err != nil {
+		// 			// ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// 			response.JSON(ctx, nil, nil)
+		// 			return
+		// 		}
+		// 	}
 		// }
-		// defer src.Close()
-
+		response.JSON(ctx, nil, map[string]interface{}{"list": textlist})
 	}
 }
-
-// func (ch *ChatHandler) TestJieba() gin.HandlerFunc {
-// 	return func(ctx *gin.Context) {
-// 		text := ctx.Query("text")
-// 		a := ch.cSrv.ChatTest(ctx, text)
-// 		response.JSON(ctx, nil, a)
-// 	}
-// }

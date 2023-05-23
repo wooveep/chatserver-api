@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-05-19 13:58:59
+ * @LastEditTime: 2023-05-23 13:10:42
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -221,19 +221,20 @@ func (cs *chatService) ChatMessageSave(ctx *gin.Context, role, message string, m
 		return
 	}
 	chatId := ctx.GetInt64(consts.ChatID)
-	recocd := entity.Record{}
-	recocd.Id = msgid
-	recocd.ChatId = chatId
-	recocd.Sender = role
-	recocd.Message = message
-	recocd.MessageHash = security.Md5(message)
+	record := entity.Record{}
+	record.Id = msgid
+	record.ChatId = chatId
+	record.Sender = role
+	record.Message = message
+	record.MessageHash = security.Md5(message)
+	record.MessageToken = tiktoken.NumTokensSingleString(message)
 	if count == 0 {
 		logger.Debugf("聊天消息记录新建")
-		err = cs.cd.ChatRecordSave(ctx, &recocd)
+		err = cs.cd.ChatRecordSave(ctx, &record)
 		return
 	} else {
 		logger.Debugf("聊天消息记录更新")
-		err = cs.cd.ChatRecordUpdate(ctx, &recocd)
+		err = cs.cd.ChatRecordUpdate(ctx, &record)
 		return
 	}
 }
@@ -397,11 +398,17 @@ func (cs *chatService) ChatStreamResProcess(ctx *gin.Context, chanStream <-chan 
 	}
 	ctx.Stream(func(w io.Writer) bool {
 		if msg, ok := <-chanStream; ok {
+			if msg == "[content_filter]" {
+				messages = "尊敬的客户，非常感谢您使用我们的服务。我们注意到您最近提交的问题被我们的内容过滤器拦截了。我们深表歉意，因为我们的过滤器是为了保护我们的用户免受不良内容的侵害而设置的。但是，我们也理解您的问题对您来说非常重要。为了解决这个问题，我们需要更多的信息。请您告诉我们您的问题的具体内容和背景，我们将尽快为您提供帮助。如果您有任何疑问或需要进一步的帮助，请随时联系网站管理员。再次感谢您的支持和理解。"
+				ctx.SSEvent("chatting", map[string]string{"question_id": strconv.FormatInt(questionId, 10), "msgid": strconv.FormatInt(msgid, 10), "time": msgtime, "text": messages})
+				return false
+			}
 			messages += msg
 			ctx.SSEvent("chatting", map[string]string{"question_id": strconv.FormatInt(questionId, 10), "msgid": strconv.FormatInt(msgid, 10), "time": msgtime, "delta": messages})
 			// logger.Debugf("stream-event: ID:%s ,time:%s,msg:%s", ctx.GetString(consts.RequestId), msgtime, msg)
 			return true
 		}
+
 		ctx.SSEvent("chatting", map[string]string{"question_id": strconv.FormatInt(questionId, 10), "msgid": strconv.FormatInt(msgid, 10), "time": msgtime, "text": messages})
 		return false
 	})
@@ -464,6 +471,16 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 				close(chanStream)
 				return
 			}
+			if response.Choices[0].FinishReason == "content_filter" {
+				logger.Debugf("chat请求ID：%s", response.ID)
+				lastMessage.Content = resmessage
+				lastMessage.Role = openai.ChatMessageRoleAssistant
+				cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
+				chanStream <- "[content_filter]"
+				stream.Close()
+				close(chanStream)
+				return
+			}
 		}
 		if errors.Is(err, io.EOF) {
 			lastMessage.Content = resmessage
@@ -493,6 +510,7 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 			return
 		default:
 			chanStream <- response.Choices[0].Delta.Content
+			logger.Debugf(response.Choices[0].Delta.Content)
 			resmessage += response.Choices[0].Delta.Content
 		}
 	}

@@ -10,8 +10,11 @@ jwt:
   ttl: 3600
   blacklistperiod: 10
 openai:
-  authtoken:             #OPEANI的APIKEY 
-  orgid:                 #OPENAI页面的组织ID 
+  apitype:                        #填写 “azure”或“openai” 默认为openai
+  apiurl:                         #当使用azure API 时需要填写API终结点地址
+  apiversion: "2023-05-15"        #当使用azure API 时需要填写APIversion
+  authtoken:              #填写 azure 密钥  或 openai API KEY 
+  orgid:                  #OPENAI页面的组织ID  azureAPI不需要填写
   proxymode: socks5      #如果为空则不使用代理
   proxyip:                
   proxyport:             
