@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:51:03
- * @LastEditTime: 2023-05-23 10:45:41
+ * @LastEditTime: 2023-05-24 11:10:25
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/consts/consts.go
  */
@@ -39,6 +39,7 @@ const (
 	AzureAPIKeyHeader = "api-key"
 	UserInvitePrefix  = "User_Invite_relation_list:"
 	UserAvatarPrefix  = "User_Avatar_url_list:"
+	CaptchaPrefix     = "Captchat_list:"
 )
 
 var AzureToModel = map[string]string{

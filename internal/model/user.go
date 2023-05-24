@@ -1,26 +1,26 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 15:44:35
- * @LastEditTime: 2023-05-21 20:51:47
+ * @LastEditTime: 2023-05-24 11:35:21
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/user.go
  */
 package model
 
-import "chatserver-api/pkg/jtime"
-
 type UserLoginReq struct {
 	Username string `json:"username" validate:"required"  label:"用户名"`
 	Password string `json:"password" validate:"required"  label:"密码"`
+	Captcha  string `json:"captcha" validate:"required"  label:"验证码"`
 }
 type UserLoginRes struct {
-	Token    string         `json:"token"`
-	ExpireAt jtime.JsonTime `json:"expire_at"`
+	Token   string `json:"token"`
+	TimeOut int    `json:"timeout"`
 }
 type UserRegisterReq struct {
 	Username   string `json:"username" validate:"required,username"  label:"用户名"`
 	Password   string `json:"password" validate:"required"  label:"密码"`
 	Email      string `json:"email" validate:"required"  label:"邮箱地址"`
+	Captcha    string `json:"captcha" validate:"required"  label:"验证码"`
 	InviteCode string `json:"invite_code" label:"邀请码"`
 }
 
@@ -87,11 +87,16 @@ type UserPasswordResetReq struct {
 }
 
 type UserForgetReq struct {
-	Email string `json:"email"`
+	Email   string `json:"email"`
+	Captcha string `json:"captcha" validate:"required"  label:"验证码"`
 }
 
 type UserInviteLinkRes struct {
 	InviteLink   string  `json:"invite_link"`
 	InviteNumber int     `json:"invite_number"`
 	InviteReward float64 `json:"invite_reward"`
+}
+
+type CaptchaRes struct {
+	Image string `json:"image"`
 }

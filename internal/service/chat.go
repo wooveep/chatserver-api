@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-05-23 13:10:42
+ * @LastEditTime: 2023-05-24 14:38:01
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -399,7 +399,12 @@ func (cs *chatService) ChatStreamResProcess(ctx *gin.Context, chanStream <-chan 
 	ctx.Stream(func(w io.Writer) bool {
 		if msg, ok := <-chanStream; ok {
 			if msg == "[content_filter]" {
-				messages = "尊敬的客户，非常感谢您使用我们的服务。我们注意到您最近提交的问题被我们的内容过滤器拦截了。我们深表歉意，因为我们的过滤器是为了保护我们的用户免受不良内容的侵害而设置的。但是，我们也理解您的问题对您来说非常重要。为了解决这个问题，我们需要更多的信息。请您告诉我们您的问题的具体内容和背景，我们将尽快为您提供帮助。如果您有任何疑问或需要进一步的帮助，请随时联系网站管理员。再次感谢您的支持和理解。"
+				messages = "尊敬的客户，非常感谢您使用我们的服务。我们注意到您最近提交的问题被我们的内容过滤器拦截了。我们深表歉意，因为我们的过滤器是为了保护我们的用户免受不良内容的侵害而设置的。但是，我们也理解您的问题对您来说非常重要。如果您有任何疑问或需要进一步的帮助，请随时联系网站管理员。再次感谢您的支持和理解。"
+				ctx.SSEvent("chatting", map[string]string{"question_id": strconv.FormatInt(questionId, 10), "msgid": strconv.FormatInt(msgid, 10), "time": msgtime, "text": messages})
+				return false
+			}
+			if msg == "[REQ_ERROR]" {
+				messages += "尊敬的客户，非常感谢您使用我们的服务。由于API暂时异常,我们深表歉意,请随时联系网站管理员。再次感谢您的支持和理解。"
 				ctx.SSEvent("chatting", map[string]string{"question_id": strconv.FormatInt(questionId, 10), "msgid": strconv.FormatInt(msgid, 10), "time": msgtime, "text": messages})
 				return false
 			}
@@ -436,6 +441,7 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 	stream, err := client.CreateChatCompletionStream(req)
 	if err != nil {
 		logger.Errorf("ChatCompletionStream error: %v\n", err)
+		chanStream <- "[REQ_ERROR]"
 		close(chanStream)
 		return
 	}

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:51:00
- * @LastEditTime: 2023-05-22 10:30:23
+ * @LastEditTime: 2023-05-24 21:54:10
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/router/api.go
  */
@@ -53,6 +53,7 @@ func (ar *ApiRouter) Load(g *gin.Engine) {
 	g.GET("/active", ar.userHandler.UserActive())
 	g.POST("/forget", ar.userHandler.UserPasswordForget())
 	g.POST("/resetpassword", ar.userHandler.UserPasswordReset())
+	g.GET("/captcha", ar.userHandler.CaptchaGen())
 	// g.GET("/test", ar.chatHandler.TestJieba())
 	ug := g.Group("/user", middleware.AuthToken())
 	{
@@ -83,6 +84,7 @@ func (ar *ApiRouter) Load(g *gin.Engine) {
 	{
 		pg.POST("/new", ar.presetHandler.PresetCreateNew())
 		pg.GET("/list", ar.presetHandler.PresetGetList())
+		pg.POST("/update", ar.presetHandler.PresetUpdate())
 	}
 	eg := g.Group("/embedding", middleware.AuthToken())
 	{

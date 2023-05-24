@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-11 11:55:58
- * @LastEditTime: 2023-04-13 15:51:55
+ * @LastEditTime: 2023-05-24 21:55:45
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/preset/preset.go
  */
@@ -29,6 +29,21 @@ func NewPresetHandler(_pSrv service.PresetService) *PresetHandler {
 	return ph
 }
 
+func (ph *PresetHandler) PresetUpdate() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var req model.PresetUpdateReq
+		if err := ctx.ShouldBindJSON(&req); err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
+			return
+		}
+		if err := ph.pSrv.PresetUpdate(ctx, req); err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.Unknown, err.Error()), nil)
+			return
+		}
+		response.JSON(ctx, nil, nil)
+	}
+}
+
 func (ph *PresetHandler) PresetCreateNew() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var req model.PresetCreateNewReq
@@ -36,7 +51,7 @@ func (ph *PresetHandler) PresetCreateNew() gin.HandlerFunc {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
 			return
 		}
-		res, err := ph.pSrv.PresetCreateNew(ctx, &req)
+		res, err := ph.pSrv.PresetCreateNew(ctx, req)
 		if err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "创建失败"), nil)
 		} else {

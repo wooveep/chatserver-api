@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:57:20
- * @LastEditTime: 2023-05-19 09:10:39
+ * @LastEditTime: 2023-05-24 11:59:20
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/errors/ecode/code.go
  */
@@ -57,6 +57,9 @@ const (
 
 	//CDKEY err
 	CdKeyErr
+
+	//CatChap err
+	CaptchaErr
 )
 
 const (

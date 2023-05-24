@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-10 14:06:46
- * @LastEditTime: 2023-05-18 22:14:56
+ * @LastEditTime: 2023-05-24 11:21:28
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/active/active.go
  */
@@ -19,6 +19,7 @@ import (
 func getActiveCodeKey(code string) string {
 	return "User_Active_Code_list:" + security.Md5(code)
 }
+
 func activeCodeSave(ctx context.Context, code string, userId int64) (err error) {
 	timer := 172800 * time.Second
 	rc := cache.GetRedisClient()

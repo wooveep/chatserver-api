@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-15 13:30:31
- * @LastEditTime: 2023-05-21 19:38:30
+ * @LastEditTime: 2023-05-24 22:05:19
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/admin.go
  */
@@ -88,21 +88,11 @@ func (as *adminService) GiftCardUpdate(ctx *gin.Context, req model.GiftCardUpdat
 		return err
 	}
 	giftcard.Id = cardId
-	if req.CardAmount != 0 {
-		giftcard.CardAmount = req.CardAmount
-	}
-	if req.CardDiscount != 0 {
-		giftcard.CardDiscount = req.CardDiscount
-	}
-	if req.CardName != "" {
-		giftcard.CardName = req.CardName
-	}
-	if req.CardLink != "" {
-		giftcard.CardBuyLink = req.CardLink
-	}
-	if req.CardComment != "" {
-		giftcard.CardComment = req.CardComment
-	}
+	giftcard.CardAmount = req.CardAmount
+	giftcard.CardDiscount = req.CardDiscount
+	giftcard.CardName = req.CardName
+	giftcard.CardBuyLink = req.CardLink
+	giftcard.CardComment = req.CardComment
 	return as.kd.GiftCardUpdate(ctx, &giftcard)
 }
 

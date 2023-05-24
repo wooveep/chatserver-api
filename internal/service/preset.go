@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-11 10:22:31
- * @LastEditTime: 2023-05-10 21:29:58
+ * @LastEditTime: 2023-05-24 21:54:59
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/preset.go
  */
@@ -23,8 +23,9 @@ import (
 var _ PresetService = (*presetService)(nil)
 
 type PresetService interface {
-	PresetCreateNew(ctx context.Context, req *model.PresetCreateNewReq) (res model.PresetCreateNewRes, err error)
+	PresetCreateNew(ctx context.Context, req model.PresetCreateNewReq) (res model.PresetCreateNewRes, err error)
 	PresetGetList(ctx context.Context) (res model.PresetGetListRes, err error)
+	PresetUpdate(ctx context.Context, req model.PresetUpdateReq) (err error)
 }
 
 // userService 实现UserService接口
@@ -40,7 +41,31 @@ func NewPresetService(_pd dao.PresetDao) *presetService {
 	}
 }
 
-func (ps *presetService) PresetCreateNew(ctx context.Context, req *model.PresetCreateNewReq) (res model.PresetCreateNewRes, err error) {
+func (ps *presetService) PresetUpdate(ctx context.Context, req model.PresetUpdateReq) (err error) {
+	preset := entity.Preset{}
+	presetId, err := strconv.ParseInt(req.PresetId, 10, 64)
+	if err != nil {
+		return
+	}
+	preset.Id = presetId
+	preset.PresetName = req.PresetName
+	preset.PresetContent = req.PresetContent
+	preset.Classify = req.Classify
+	preset.Frequency = req.Frequency
+	preset.LogitBias = req.LogitBias
+	preset.WithEmbedding = req.WithEmbedding
+	preset.Temperature = req.Temperature
+	preset.ModelName = req.ModelName
+	preset.MaxTokens = req.MaxTokens
+	preset.TopP = req.TopP
+	preset.Presence = req.Presence
+	err = ps.pd.PresetUpdate(ctx, &preset)
+	if err != nil {
+		return
+	}
+	return nil
+}
+func (ps *presetService) PresetCreateNew(ctx context.Context, req model.PresetCreateNewReq) (res model.PresetCreateNewRes, err error) {
 	preset := entity.Preset{}
 	preset.Id = ps.iSrv.GenSnowID()
 

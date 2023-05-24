@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:37:13
- * @LastEditTime: 2023-05-21 21:33:06
+ * @LastEditTime: 2023-05-24 21:39:23
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/user.go
  */
@@ -16,10 +16,10 @@ import (
 	"chatserver-api/pkg/avatar"
 	"chatserver-api/pkg/cache"
 	"chatserver-api/pkg/config"
-	"chatserver-api/pkg/jtime"
 	"chatserver-api/pkg/jwt"
 	"chatserver-api/pkg/logger"
 	"chatserver-api/pkg/mail"
+	"chatserver-api/pkg/verification"
 	"chatserver-api/utils/security"
 	"chatserver-api/utils/uuid"
 	"context"
@@ -61,6 +61,8 @@ type UserService interface {
 	UserInviteReward(ctx *gin.Context)
 	UserInviteVerify(ctx *gin.Context, code string)
 	UserGiftCardListGet(ctx *gin.Context) (res model.GiftCardListRes, err error)
+	CaptchaGen(ctx *gin.Context) (res model.CaptchaRes, err error)
+	CaptchaVerify(ctx *gin.Context, code string) bool
 }
 
 // userService 实现UserService接口
@@ -98,7 +100,8 @@ func (us *userService) UserLogin(ctx context.Context, username, password string)
 	// 	err = errors.New("用户授权过期")
 	// 	return res, err
 	// }
-	expireAt := time.Now().Add(time.Duration(config.AppConfig.JwtConfig.JwtTtl) * time.Second)
+	timeOut := time.Duration(config.AppConfig.JwtConfig.JwtTtl) * time.Second
+	expireAt := time.Now().Add(timeOut)
 	claims := jwt.BuildClaims(expireAt, userInfo.Id)
 	token, err := jwt.GenToken(claims, config.AppConfig.JwtConfig.Secret)
 	if err != nil {
@@ -107,7 +110,7 @@ func (us *userService) UserLogin(ctx context.Context, username, password string)
 		return res, err
 	}
 	res.Token = token
-	res.ExpireAt = jtime.JsonTime(expireAt)
+	res.TimeOut = int(config.AppConfig.JwtConfig.JwtTtl) * 1000
 	return res, err
 }
 
@@ -127,7 +130,8 @@ func (us *userService) UserRefresh(ctx *gin.Context) (res model.UserLoginRes, er
 	// 	err = errors.New("用户授权过期")
 	// 	return res, err
 	// }
-	expireAt := time.Now().Add(time.Duration(config.AppConfig.JwtConfig.JwtTtl) * time.Second)
+	timeOut := time.Duration(config.AppConfig.JwtConfig.JwtTtl) * time.Second
+	expireAt := time.Now().Add(timeOut)
 	claims := jwt.BuildClaims(expireAt, userInfo.Id)
 	token, err := jwt.GenToken(claims, config.AppConfig.JwtConfig.Secret)
 	if err != nil {
@@ -136,7 +140,7 @@ func (us *userService) UserRefresh(ctx *gin.Context) (res model.UserLoginRes, er
 		return res, err
 	}
 	res.Token = token
-	res.ExpireAt = jtime.JsonTime(expireAt)
+	res.TimeOut = int(config.AppConfig.JwtConfig.JwtTtl) * 1000
 	err = jwt.JoinBlackList(ctx, tokenStr, config.AppConfig.JwtConfig.Secret)
 	if err != nil {
 		logger.Infof("加入黑名单失败%s", userInfo.Username)
@@ -491,6 +495,7 @@ func (us *userService) UserInviteVerify(ctx *gin.Context, code string) {
 	if err != nil {
 		return
 	}
+	return
 }
 
 func (us *userService) UserGiftCardListGet(ctx *gin.Context) (res model.GiftCardListRes, err error) {
@@ -511,4 +516,14 @@ func (us *userService) UserGiftCardListGet(ctx *gin.Context) (res model.GiftCard
 	}
 	res.GiftCardList = giftcardlistRes
 	return
+}
+
+func (us *userService) CaptchaGen(ctx *gin.Context) (res model.CaptchaRes, err error) {
+	image, err := verification.GenerateCaptcha(ctx)
+	res.Image = image
+	return
+}
+
+func (us *userService) CaptchaVerify(ctx *gin.Context, code string) bool {
+	return verification.VerifyCaptcha(ctx, code)
 }

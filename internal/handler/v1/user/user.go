@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:36:21
- * @LastEditTime: 2023-05-21 20:53:24
+ * @LastEditTime: 2023-05-24 11:59:48
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/user/user.go
  */
@@ -59,6 +59,11 @@ func (uh *UserHandler) UserRegister() gin.HandlerFunc {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
 			return
 		}
+		iscode := uh.userSrv.CaptchaVerify(ctx, req.Captcha)
+		if !iscode {
+			response.JSON(ctx, errors.WithCode(ecode.CaptchaErr, "验证码错误"), nil)
+			return
+		}
 		res, err := uh.userSrv.UserRegister(ctx, req)
 		if err != nil {
 			uh.userSrv.UserDelete(ctx)
@@ -83,6 +88,11 @@ func (uh *UserHandler) UserLogin() gin.HandlerFunc {
 		var req model.UserLoginReq
 		if err := ctx.ShouldBindJSON(&req); err != nil {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
+			return
+		}
+		iscode := uh.userSrv.CaptchaVerify(ctx, req.Captcha)
+		if !iscode {
+			response.JSON(ctx, errors.WithCode(ecode.CaptchaErr, "验证码错误"), nil)
 			return
 		}
 		res, err := uh.userSrv.UserLogin(ctx, req.Username, req.Password)
@@ -211,6 +221,11 @@ func (uh *UserHandler) UserPasswordForget() gin.HandlerFunc {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
 			return
 		}
+		iscode := uh.userSrv.CaptchaVerify(ctx, req.Captcha)
+		if !iscode {
+			response.JSON(ctx, errors.WithCode(ecode.CaptchaErr, "验证码错误"), nil)
+			return
+		}
 		isemail, err := uh.userSrv.UserVerifyEmail(ctx, req.Email)
 		if err != nil || isemail.Isvalid {
 			response.JSON(ctx, errors.WithCode(ecode.Unknown, "邮箱不存在"), nil)
@@ -276,6 +291,17 @@ func (uh *UserHandler) UserInviteLinkGet() gin.HandlerFunc {
 		res, err := uh.userSrv.UserInviteLinkGet(ctx)
 		if err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "邀请链接获取失败"), nil)
+			return
+		}
+		response.JSON(ctx, nil, res)
+	}
+}
+
+func (uh *UserHandler) CaptchaGen() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		res, err := uh.userSrv.CaptchaGen(ctx)
+		if err != nil {
+			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "验证码获取失败"), nil)
 			return
 		}
 		response.JSON(ctx, nil, res)
