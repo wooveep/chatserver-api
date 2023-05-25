@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-24 09:52:31
- * @LastEditTime: 2023-05-24 11:24:45
+ * @LastEditTime: 2023-05-25 21:43:19
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/verification/captcha.go
  */
@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"chatserver-api/internal/consts"
 	"chatserver-api/pkg/cache"
+	"chatserver-api/pkg/logger"
 	"chatserver-api/utils/security"
 	"context"
 	"encoding/base64"
@@ -19,6 +20,7 @@ import (
 	"time"
 
 	afcap "github.com/afocus/captcha"
+	"github.com/go-redis/redis/v8"
 )
 
 func getCaptchaCodeKey(code string) string {
@@ -57,10 +59,13 @@ func VerifyCaptcha(ctx context.Context, code string) bool {
 	rc := cache.GetRedisClient()
 	code_re, err := rc.Get(ctx, getCaptchaCodeKey(code)).Result()
 	if err != nil {
+		if err != redis.Nil {
+			logger.Errorf("Redis连接异常:%v", err.Error())
+		}
 		return false
 	}
+	rc.Del(ctx, getCaptchaCodeKey(code))
 	if code == code_re {
-		rc.Del(ctx, getCaptchaCodeKey(code))
 		return true
 	} else {
 		return false

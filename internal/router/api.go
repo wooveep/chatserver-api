@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:51:00
- * @LastEditTime: 2023-05-24 21:54:10
+ * @LastEditTime: 2023-05-25 22:26:03
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/router/api.go
  */
@@ -57,6 +57,7 @@ func (ar *ApiRouter) Load(g *gin.Engine) {
 	// g.GET("/test", ar.chatHandler.TestJieba())
 	ug := g.Group("/user", middleware.AuthToken())
 	{
+		ug.GET("/balance", ar.userHandler.UserGetBalance())
 		ug.GET("/avatar", ar.userHandler.UserGetAvatar())
 		ug.GET("/info", ar.userHandler.UserGetInfo())
 		ug.GET("/logout", ar.userHandler.UserLogout())

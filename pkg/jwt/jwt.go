@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:57:25
- * @LastEditTime: 2023-05-10 10:49:02
+ * @LastEditTime: 2023-05-25 22:30:06
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/jwt/jwt.go
  */
@@ -11,11 +11,13 @@ package jwt
 import (
 	"chatserver-api/pkg/cache"
 	"chatserver-api/pkg/config"
+	"chatserver-api/pkg/logger"
 	"chatserver-api/utils/security"
 	"context"
 	"strconv"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/golang-jwt/jwt/v4"
 )
 
@@ -78,10 +80,13 @@ func JoinBlackList(ctx context.Context, tokenstr string, secretKey string) (err 
 func IsInBlackList(ctx context.Context, token string) bool {
 	rc := cache.GetRedisClient()
 	joinUnixStr, err := rc.Get(ctx, getBlackListKey(token)).Result()
-	joinUnix, err := strconv.ParseInt(joinUnixStr, 10, 64)
-	if joinUnixStr == "" || err != nil {
+	if err != nil {
+		if err != redis.Nil {
+			logger.Errorf("Redis连接异常:%v", err.Error())
+		}
 		return false
 	}
+	joinUnix, err := strconv.ParseInt(joinUnixStr, 10, 64)
 	if time.Now().Unix()-joinUnix < config.AppConfig.JwtConfig.JwtBlacklistGracePeriod {
 		return false
 	}

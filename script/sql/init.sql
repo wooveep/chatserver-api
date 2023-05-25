@@ -146,7 +146,7 @@ CREATE TABLE public.bill (
 	id int8 NOT NULL, -- 账单ID
 	user_id int8 NOT NULL, -- 用户ID
 	cost_change numeric(10, 2) NOT NULL, -- 变动金额
-	amount numeric(10, 2) NOT NULL, -- 账户余额
+	balance numeric(10, 2) NOT NULL, -- 账户余额
 	cost_comment text NOT NULL, -- 变动说明
 	created_at timestamptz NOT NULL DEFAULT now(), -- 记录的创建时间，默认为当前时间
 	updated_at timestamptz NOT NULL DEFAULT now(), -- 记录的更新时间，默认为当前时间

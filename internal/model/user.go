@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 15:44:35
- * @LastEditTime: 2023-05-24 11:35:21
+ * @LastEditTime: 2023-05-25 16:24:45
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/user.go
  */
@@ -53,14 +53,22 @@ type UserGetInfoRes struct {
 	Nickname string `json:"nickname"`
 	Email    string `json:"email"`
 	Phone    string `json:"phone"`
-	// AvatarUrl string  `json:"avatar_url"`
-	Role    string  `json:"role"`
-	Balance float64 `json:"balance"`
+	Role     string `json:"role"`
 }
 
+type UserInfo struct {
+	Username string `gorm:"column:username" json:"username"`
+	Nickname string `gorm:"column:nickname" json:"nickname"`
+	Password string `gorm:"column:password" json:"password"`
+	Email    string `gorm:"column:email" json:"email"`
+	Phone    string `gorm:"column:phone" json:"phone"`
+	Role     int    `gorm:"column:role" json:"role"`
+	IsActive bool   `gorm:"column:is_active" json:"is_active"`
+}
 type UserAvatarRes struct {
 	Avatar string `json:"avatar"`
 }
+
 type UserActiveReq struct {
 	ActiveCode string `form:"active_code"  validate:"required"`
 }
@@ -68,6 +76,7 @@ type UserActiveReq struct {
 type UserUpdateNickNameReq struct {
 	Nickname string `json:"nickname" validate:"required"  label:"用户昵称"`
 }
+
 type UserUpdateNickNameRes struct {
 	IsChanged bool `json:"is_changed"`
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:51:03
- * @LastEditTime: 2023-05-24 11:10:25
+ * @LastEditTime: 2023-05-25 21:57:18
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/consts/consts.go
  */
@@ -15,12 +15,15 @@ const (
 	// UserID 用户id key
 	UserID       = "user_id"
 	ChatID       = "chat_id"
-	Balance      = "balance_ctx"
-	TokenCtx     = "token_ctx"
-	InviteReward = 5
-	CBCKEY       = "ABCDABCDABCDABCD"
-	CDKEYBASE    = "E8S2DZX9WYLTN6BQA7CP5IK3MJUFR4HV"
-	InviteBase   = "E8uvS2pqDZXbcde9WYfiLTNrs6BxQA7CPmn5IyzK3MwJUktFghR4HVaj"
+	BalanceCtx   = "balance_ctx"
+	CostTokenCtx = "cost_token_ctx"
+	JWTTokenCtx  = "token_ctx"
+
+	InviteReward   = 3
+	RegisterReward = 3
+	CBCKEY         = "ABCDABCDABCDABCD"
+	CDKEYBASE      = "E8S2DZX9WYLTN6BQA7CP5IK3MJUFR4HV"
+	InviteBase     = "E8uvS2pqDZXbcde9WYfiLTNrs6BxQA7CPmn5IyzK3MwJUktFghR4HVaj"
 	// EmbedCtx = "with_emebedding_ctx"
 	// TimeLayout 时间格式
 	TimeLayout                     = "2006-01-02 15:04:05"
@@ -30,22 +33,33 @@ const (
 	AzureAPIPrefix                 = "openai"
 	AzureDeploymentsPrefix         = "deployments"
 	AvatarSize                     = 24
-	TokenPrice                     = 0.00007
+	TokenPrice                     = 0.00015
 
 	APITypeOpenAI  APIType = "OPEN_AI"
 	APITypeAzure   APIType = "AZURE"
 	APITypeAzureAD APIType = "AZURE_AD"
 
-	AzureAPIKeyHeader = "api-key"
-	UserInvitePrefix  = "User_Invite_relation_list:"
-	UserAvatarPrefix  = "User_Avatar_url_list:"
-	CaptchaPrefix     = "Captchat_list:"
+	AzureAPIKeyHeader    = "api-key"
+	UserInvitePrefix     = "User_Invite_relation_list:"
+	UserAvatarPrefix     = "User_Avatar_url_list:"
+	UserInviteLinkPrefix = "User_Invite_Link_list:"
+	UserInfoPrefix       = "User_Info_list:"
+	UserBalancePrefix    = "User_Balance_list:"
+	CaptchaPrefix        = "Captchat_list:"
+	PresetPrefix         = "Preset_list:"
+	GiftcardPrefix       = "GiftCard_list:"
+	UserChatIDPrefix     = "User_ChatId_set:"
+	ChatRecordIDPrefix   = "Chat_RecordId_set:"
 )
 
 var AzureToModel = map[string]string{
 	"gpt-3.5-turbo":          "gpt3",
 	"text-davinci-003":       "davinci",
 	"text-embedding-ada-002": "embedding",
+}
+
+var ModelMaxToken = map[string]int{
+	"gpt-3.5-turbo": 4096,
 }
 
 const (

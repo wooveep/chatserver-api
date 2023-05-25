@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:43:42
- * @LastEditTime: 2023-05-23 13:05:47
+ * @LastEditTime: 2023-05-25 21:05:00
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/chat/chat.go
  */
@@ -67,8 +67,14 @@ func (ch *ChatHandler) ChatRegenerateg() gin.HandlerFunc {
 			return
 		}
 		//验证请求体余额
-		pre_cost := float64(tiktoken.NumTokensFromMessages(openAIReq.Messages, openAIReq.Model)+openAIReq.MaxTokens) * consts.TokenPrice
-		if ctx.GetFloat64(consts.Balance) < pre_cost {
+		pre_token := tiktoken.NumTokensFromMessages(openAIReq.Messages, openAIReq.Model) + openAIReq.MaxTokens
+		if pre_token >= consts.ModelMaxToken[openAIReq.Model] {
+			logger.Debugf("预验证TOKEN，超出模型内存%d", pre_token)
+			response.JSON(ctx, errors.WithCode(ecode.OversizeErr, "问题过长超出模型内存"), nil)
+			return
+		}
+		pre_cost := float64(pre_token) * consts.TokenPrice
+		if ctx.GetFloat64(consts.BalanceCtx) < pre_cost {
 			logger.Debugf("预验证TOKEN，余额不足%f", pre_cost)
 			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足"), nil)
 			return
@@ -79,6 +85,8 @@ func (ch *ChatHandler) ChatRegenerateg() gin.HandlerFunc {
 
 		//返回生成信息；
 		msgId, messages := ch.cSrv.ChatStreamResProcess(ctx, chanStream, questionId, answerId)
+
+		ch.cSrv.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{{Role: openai.ChatMessageRoleAssistant, Content: messages}}, openAIReq.Model)
 
 		//保存生成信息;
 		if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleAssistant, messages, msgId); err != nil {
@@ -126,12 +134,19 @@ func (ch *ChatHandler) ChatChatting() gin.HandlerFunc {
 			return
 		}
 		//验证请求体余额
-		pre_cost := float64(tiktoken.NumTokensFromMessages(openAIReq.Messages, openAIReq.Model)+openAIReq.MaxTokens) * consts.TokenPrice
-		if ctx.GetFloat64(consts.Balance) < pre_cost {
+		pre_token := tiktoken.NumTokensFromMessages(openAIReq.Messages, openAIReq.Model) + openAIReq.MaxTokens
+		if pre_token >= consts.ModelMaxToken[openAIReq.Model] {
+			logger.Debugf("预验证TOKEN，超出模型内存%d", pre_token)
+			response.JSON(ctx, errors.WithCode(ecode.OversizeErr, "问题过长超出模型内存"), nil)
+			return
+		}
+		pre_cost := float64(pre_token) * consts.TokenPrice
+		if ctx.GetFloat64(consts.BalanceCtx) < pre_cost {
 			logger.Debugf("预验证TOKEN，余额不足%f", pre_cost)
 			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足"), nil)
 			return
 		}
+
 		//会话请求消息保存
 		if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleUser, req.Message, questionId); err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "用户请求消息保存失败"), nil)
@@ -143,6 +158,7 @@ func (ch *ChatHandler) ChatChatting() gin.HandlerFunc {
 		go ch.cSrv.ChatStremResGenerate(ctx, openAIReq, chanStream)
 		//发送回答
 		msgId, messages := ch.cSrv.ChatStreamResProcess(ctx, chanStream, questionId, 0)
+		ch.cSrv.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{{Role: openai.ChatMessageRoleAssistant, Content: messages}}, openAIReq.Model)
 		//保存回答消息
 		if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleAssistant, messages, msgId); err != nil {
 			logger.Errorf("生成问题消息保存失败:%s", err)

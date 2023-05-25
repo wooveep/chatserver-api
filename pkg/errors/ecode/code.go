@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:57:20
- * @LastEditTime: 2023-05-24 11:59:20
+ * @LastEditTime: 2023-05-25 19:20:51
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/errors/ecode/code.go
  */
@@ -60,6 +60,9 @@ const (
 
 	//CatChap err
 	CaptchaErr
+
+	//PromptLength ERR
+	OversizeErr
 )
 
 const (

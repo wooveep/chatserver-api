@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-15 13:30:31
- * @LastEditTime: 2023-05-24 22:05:19
+ * @LastEditTime: 2023-05-25 16:10:35
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/admin.go
  */
@@ -12,10 +12,13 @@ import (
 	"chatserver-api/internal/dao"
 	"chatserver-api/internal/model"
 	"chatserver-api/internal/model/entity"
+	"chatserver-api/pkg/cache"
+	"chatserver-api/pkg/logger"
 	"chatserver-api/utils/uuid"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 )
 
 var _ AdminService = (*adminService)(nil)
@@ -32,6 +35,7 @@ type adminService struct {
 	kd   dao.CDkeyDao
 	ud   dao.UserDao
 	aSrv uuid.SnowNode
+	rc   *redis.Client
 }
 
 func NewAdminService(_kd dao.CDkeyDao, _ud dao.UserDao) *adminService {
@@ -39,6 +43,7 @@ func NewAdminService(_kd dao.CDkeyDao, _ud dao.UserDao) *adminService {
 		kd:   _kd,
 		ud:   _ud,
 		aSrv: *uuid.NewNode(5),
+		rc:   cache.GetRedisClient(),
 	}
 }
 
@@ -71,6 +76,10 @@ func (as *adminService) CdKeyGenerate(ctx *gin.Context, number int, CardId int64
 }
 
 func (as *adminService) GiftCardCreate(ctx *gin.Context, req model.GiftCardCreate) error {
+	err := as.rc.Del(ctx, consts.GiftcardPrefix+"0").Err()
+	if err != nil {
+		logger.Errorf("删除GiftcardList缓存失败:%v", err.Error())
+	}
 	var giftcard entity.GiftCard
 	giftcard.Id = as.aSrv.GenSnowID()
 	giftcard.CardAmount = req.CardAmount
@@ -95,7 +104,3 @@ func (as *adminService) GiftCardUpdate(ctx *gin.Context, req model.GiftCardUpdat
 	giftcard.CardComment = req.CardComment
 	return as.kd.GiftCardUpdate(ctx, &giftcard)
 }
-
-// func (as *adminService) GiftCardListGet(ctx *gin.Context){
-
-// }

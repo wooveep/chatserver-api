@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 19:47:43
- * @LastEditTime: 2023-05-21 20:59:01
+ * @LastEditTime: 2023-05-25 16:23:22
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/query/user.go
  */
@@ -9,6 +9,7 @@ package query
 
 import (
 	"chatserver-api/internal/dao"
+	"chatserver-api/internal/model"
 	"chatserver-api/internal/model/entity"
 	"chatserver-api/pkg/db"
 	"context"
@@ -80,9 +81,9 @@ func (ud *userDao) UserGetByName(ctx context.Context, username string) (entity.U
 	return user, err
 }
 
-func (ud *userDao) UserGetById(ctx context.Context, userId int64) (entity.User, error) {
-	var user entity.User
-	err := ud.ds.Master().Where("id = ?", userId).Find(&user).Error
+func (ud *userDao) UserGetById(ctx context.Context, userId int64) (model.UserInfo, error) {
+	var user model.UserInfo
+	err := ud.ds.Master().Model(&entity.User{}).Where("id = ?", userId).Find(&user).Error
 	return user, err
 }
 func (ud *userDao) UserGetAvatar(ctx context.Context, userId int64) (string, error) {

@@ -50,7 +50,7 @@ func AuthToken() gin.HandlerFunc {
 			return
 		}
 		c.Set(consts.UserID, claims.UserId)
-		c.Set(consts.TokenCtx, tokenstr)
+		c.Set(consts.JWTTokenCtx, tokenstr)
 		c.Next()
 	}
 }

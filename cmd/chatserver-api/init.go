@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:54:42
- * @LastEditTime: 2023-05-19 13:59:08
+ * @LastEditTime: 2023-05-25 18:41:17
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/cmd/chatserver-api/init.go
  */
@@ -25,7 +25,7 @@ func InitRouter(ds db.IDataSource) Router {
 	userService := service.NewUserService(userDao, cdkeyDao)
 	userhandler := user.NewUserHandler(userService)
 	chatDao := query.NewChatDao(ds)
-	chatService := service.NewChatService(chatDao)
+	chatService := service.NewChatService(chatDao, userService)
 	chathandler := chat.NewChatHandler(chatService)
 	presetDao := query.NewPresetsDao(ds)
 	presetService := service.NewPresetService(presetDao)

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-05-24 14:38:01
+ * @LastEditTime: 2023-05-25 23:07:44
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -19,12 +19,14 @@ import (
 	"chatserver-api/internal/dao"
 	"chatserver-api/internal/model"
 	"chatserver-api/internal/model/entity"
+	"chatserver-api/pkg/cache"
 	"chatserver-api/pkg/logger"
 	"chatserver-api/pkg/openai"
 	"chatserver-api/pkg/pgvector"
 	"chatserver-api/pkg/tiktoken"
 	"chatserver-api/utils/security"
 	"chatserver-api/utils/uuid"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -35,6 +37,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 )
 
 var _ ChatService = (*chatService)(nil)
@@ -58,21 +61,25 @@ type ChatService interface {
 	ChatEmbeddingSave(ctx context.Context, title, body, classify string, embeddata openai.Embedding) error
 	ChatEmbeddingGenerate(str []string) (embedVectors []openai.Embedding, err error)
 	ChatEmbeddingCompare(ctx context.Context, question, classify string) (contextStr string, err error)
+	ChatCostCalculate(ctx *gin.Context, promptMsgs []openai.ChatCompletionMessage, model string)
 	// ChatTest(ctx context.Context, text string) (keyword string)
 }
 
 // userService 实现UserService接口
 type chatService struct {
-	cd dao.ChatDao
-	// jieba tokenize.Tokenizer
+	cd   dao.ChatDao
+	uSrv UserService
+	rc   *redis.Client
+
 	iSrv uuid.SnowNode
 }
 
-func NewChatService(_cd dao.ChatDao) *chatService {
+func NewChatService(_cd dao.ChatDao, _uSrv UserService) *chatService {
 	return &chatService{
-		cd: _cd,
-		// jieba: _jieba,
+		cd:   _cd,
+		uSrv: _uSrv,
 		iSrv: *uuid.NewNode(1),
+		rc:   cache.GetRedisClient(),
 	}
 }
 
@@ -87,6 +94,7 @@ func (cs *chatService) ChatCreateNew(ctx context.Context, userId, presetId int64
 		return
 	}
 	res.ChatId = strconv.FormatInt(chat.Id, 10)
+	cs.rc.SAdd(ctx, consts.UserChatIDPrefix+strconv.FormatInt(userId, 10), chat.Id)
 	return
 }
 
@@ -107,23 +115,37 @@ func (cs *chatService) ChatDelete(ctx *gin.Context) error {
 	userId := ctx.GetInt64(consts.UserID)
 	chatId := ctx.GetInt64(consts.ChatID)
 	if chatId == -1 {
+		cs.rc.Del(ctx, consts.UserChatIDPrefix+strconv.FormatInt(userId, 10))
 		return cs.cd.ChatDeleteAll(ctx, userId)
 	} else {
+		cs.rc.SRem(ctx, consts.UserChatIDPrefix+strconv.FormatInt(userId, 10), chatId)
 		return cs.cd.ChatDeleteOne(ctx, userId, chatId)
 	}
 }
 
+// 验证会话用户归属
 func (cs *chatService) ChatUserVerify(ctx *gin.Context) (err error) {
 	userId := ctx.GetInt64(consts.UserID)
 	chatId := ctx.GetInt64(consts.ChatID)
-	count, err := cs.cd.ChatUserVerify(ctx, userId, chatId)
-	if count == 0 || err != nil {
-		err = errors.Join(errors.New("用户会话校验失败"))
-		return
+	n, err := cs.rc.Exists(ctx, consts.UserChatIDPrefix+strconv.FormatInt(userId, 10)).Result()
+	if n > 0 {
+		exist, err := cs.rc.SIsMember(ctx, consts.UserChatIDPrefix+strconv.FormatInt(userId, 10), chatId).Result()
+		if err != nil {
+			logger.Errorf("Redis连接异常:%v", err.Error())
+		}
+		if exist {
+			return nil
+		}
 	}
-	//获取Chat是否需要embedding上下文
-
-	return
+	count, err := cs.cd.ChatUserVerify(ctx, userId, chatId)
+	if err != nil {
+		return err
+	}
+	if count != 0 {
+		return nil
+	} else {
+		return errors.New("用户会话校验失败")
+	}
 }
 
 func (cs *chatService) ChatListGet(ctx *gin.Context) (res model.ChatListRes, err error) {
@@ -135,11 +157,13 @@ func (cs *chatService) ChatListGet(ctx *gin.Context) (res model.ChatListRes, err
 		return
 	}
 	for _, v := range chatlist {
+		cs.rc.SAdd(ctx, consts.UserChatIDPrefix+strconv.FormatInt(userId, 10), v.ChatId)
 		chatOne.ChatId = strconv.FormatInt(v.ChatId, 10)
 		chatOne.PresetId = strconv.FormatInt(v.PresetId, 10)
 		chatOne.ChatName = v.ChatName
 		chatOne.CreatedAt = v.CreatedAt
 		chatListRes = append(chatListRes, chatOne)
+
 	}
 	res.ChatList = chatListRes
 	return
@@ -173,8 +197,8 @@ func (cs *chatService) ChatRecordGet(ctx *gin.Context) (res model.RecordHistoryR
 		recordOne.Message = recordlist[i].Message
 		recordOne.CreatedAt = recordlist[i].CreatedAt
 		recordOne.Sender = recordlist[i].Sender
+		cs.rc.SAdd(ctx, consts.ChatRecordIDPrefix+strconv.FormatInt(chatId, 10), recordlist[i].Id)
 		recordListRes = append(recordListRes, recordOne)
-
 	}
 	res.Records = recordListRes
 	res.ChatId = strconv.FormatInt(chatId, 10)
@@ -184,43 +208,55 @@ func (cs *chatService) ChatRecordGet(ctx *gin.Context) (res model.RecordHistoryR
 func (cs *chatService) ChatRecordClear(ctx *gin.Context) (err error) {
 	chatId := ctx.GetInt64(consts.ChatID)
 	err = cs.cd.ChatRecordClear(ctx, chatId)
+	cs.rc.Del(ctx, consts.ChatRecordIDPrefix+strconv.FormatInt(chatId, 10))
 	return
 }
 
 func (cs *chatService) ChatBalanceVerify(ctx *gin.Context) (err error) {
 	userId := ctx.GetInt64(consts.UserID)
-	userbalance, err := cs.cd.ChatBalanceGet(ctx, userId)
-	ctx.Set(consts.Balance, userbalance.Balance)
-	if userbalance.Balance < float64(0) {
+	userbalance, err := cs.uSrv.UserGetBalance(ctx, userId)
+	ctx.Set(consts.BalanceCtx, userbalance)
+	if userbalance < float64(0) {
 		err = errors.New("Insufficient account balance")
 	}
 	return err
 }
 
-func (cs *chatService) ChatCostCalculate(ctx *gin.Context, promptMsgs []openai.ChatCompletionMessage, model string) {
-	balance := ctx.GetFloat64(consts.Balance)
-	token := tiktoken.NumTokensFromMessages(promptMsgs, model)
-	cost := float64(token) * 0.00007
-	newBalance := balance - cost
-	logger.Debugf("Token:%d  totalCost:%f  newBalance%f", token, cost, newBalance)
-	if newBalance < float64(0) {
-		newBalance = float64(0)
-	}
-	ctx.Set(consts.Balance, newBalance)
-}
-
 func (cs *chatService) ChatBalanceUpdate(ctx *gin.Context) (err error) {
 	userId := ctx.GetInt64(consts.UserID)
-	balance := ctx.GetFloat64(consts.Balance)
-	return cs.cd.ChatCostUpdate(ctx, userId, balance)
+	balance := ctx.GetFloat64(consts.BalanceCtx)
+	token := ctx.GetInt(consts.CostTokenCtx)
+	cost := float64(token) * consts.TokenPrice
+	comment := fmt.Sprintf("会话消耗令牌数:%d", token)
+	return cs.uSrv.UserBalanceChange(ctx, userId, balance, -cost, comment)
+}
+
+func (cs *chatService) ChatCostCalculate(ctx *gin.Context, promptMsgs []openai.ChatCompletionMessage, model string) {
+	old_token := ctx.GetInt(consts.CostTokenCtx)
+	token := tiktoken.NumTokensFromMessages(promptMsgs, model)
+	ctx.Set(consts.CostTokenCtx, token+old_token)
+	logger.Debugf("本次消耗TOKEN：%d", token)
+	return
 }
 
 func (cs *chatService) ChatMessageSave(ctx *gin.Context, role, message string, msgid int64) (err error) {
-	count, err := cs.cd.ChatRecordVerify(ctx, msgid)
-	if err != nil {
-		return
-	}
 	chatId := ctx.GetInt64(consts.ChatID)
+	var exist bool
+	n, err := cs.rc.Exists(ctx, consts.ChatRecordIDPrefix+strconv.FormatInt(chatId, 10)).Result()
+	if n > 0 {
+		exist, err = cs.rc.SIsMember(ctx, consts.ChatRecordIDPrefix+strconv.FormatInt(chatId, 10), msgid).Result()
+	}
+	if err != nil || n <= 0 {
+		count, err := cs.cd.ChatRecordVerify(ctx, msgid)
+		if err != nil {
+			return err
+		}
+		if count != 0 {
+			exist = true
+		} else {
+			exist = false
+		}
+	}
 	record := entity.Record{}
 	record.Id = msgid
 	record.ChatId = chatId
@@ -228,8 +264,9 @@ func (cs *chatService) ChatMessageSave(ctx *gin.Context, role, message string, m
 	record.Message = message
 	record.MessageHash = security.Md5(message)
 	record.MessageToken = tiktoken.NumTokensSingleString(message)
-	if count == 0 {
+	if !exist {
 		logger.Debugf("聊天消息记录新建")
+		cs.rc.SAdd(ctx, consts.ChatRecordIDPrefix+strconv.FormatInt(chatId, 10), msgid)
 		err = cs.cd.ChatRecordSave(ctx, &record)
 		return
 	} else {
@@ -308,6 +345,7 @@ func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, 
 	req.FrequencyPenalty = float32(preset.Frequency)
 	req.PresencePenalty = float32(preset.Presence)
 	req.Messages = chatMessages
+	cs.ChatCostCalculate(ctx, chatMessages[1:], preset.ModelName)
 	return
 }
 
@@ -384,7 +422,7 @@ func (cs *chatService) ChatChattingReqProcess(ctx *gin.Context, lastquestion str
 	req.PresencePenalty = float32(preset.Presence)
 	req.Messages = chatMessages
 	questionId = cs.iSrv.GenSnowID()
-
+	cs.ChatCostCalculate(ctx, chatMessages[1:], preset.ModelName)
 	return
 }
 
@@ -429,7 +467,7 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 	blankMessage.Content = "[cmd:continue]"
 	blankMessage.Role = openai.ChatMessageRoleUser
 	chatMessages = req.Messages
-	cs.ChatCostCalculate(ctx, chatMessages[1:], req.Model)
+	// cs.ChatCostCalculate(ctx, chatMessages[1:], req.Model)
 	for _, v := range chatMessages {
 		logger.Debugf("role: %s ;content: %s ", v.Role, v.Content)
 	}
@@ -457,11 +495,11 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 				stream.Close()
 				lastMessage.Content = resmessage
 				lastMessage.Role = openai.ChatMessageRoleAssistant
-				cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
+				// cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
 				chatMessages = append(chatMessages, lastMessage, blankMessage)
 				reqnew = req
 				reqnew.Messages = chatMessages
-				if ctx.GetFloat64(consts.Balance) < float64(tiktoken.NumTokensFromMessages(chatMessages, req.Model)+req.MaxTokens)*consts.TokenPrice {
+				if consts.ModelMaxToken[req.Model] < tiktoken.NumTokensFromMessages(chatMessages, req.Model)+req.MaxTokens {
 					close(chanStream)
 					return
 				}
@@ -470,18 +508,18 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 			}
 			if response.Choices[0].FinishReason == "stop" {
 				logger.Debugf("chat请求ID：%s", response.ID)
-				lastMessage.Content = resmessage
-				lastMessage.Role = openai.ChatMessageRoleAssistant
-				cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
+				// lastMessage.Content = resmessage
+				// lastMessage.Role = openai.ChatMessageRoleAssistant
+				// cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
 				stream.Close()
 				close(chanStream)
 				return
 			}
 			if response.Choices[0].FinishReason == "content_filter" {
 				logger.Debugf("chat请求ID：%s", response.ID)
-				lastMessage.Content = resmessage
-				lastMessage.Role = openai.ChatMessageRoleAssistant
-				cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
+				// lastMessage.Content = resmessage
+				// lastMessage.Role = openai.ChatMessageRoleAssistant
+				// cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
 				chanStream <- "[content_filter]"
 				stream.Close()
 				close(chanStream)
@@ -489,9 +527,9 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 			}
 		}
 		if errors.Is(err, io.EOF) {
-			lastMessage.Content = resmessage
-			lastMessage.Role = openai.ChatMessageRoleAssistant
-			cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
+			// lastMessage.Content = resmessage
+			// lastMessage.Role = openai.ChatMessageRoleAssistant
+			// cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
 			logger.Info("Stream finished")
 			stream.Close()
 			close(chanStream)
@@ -499,18 +537,18 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 		}
 		if err != nil {
 			logger.Errorf("Stream error: %v\n", err)
-			lastMessage.Content = resmessage
-			lastMessage.Role = openai.ChatMessageRoleAssistant
-			cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
+			// lastMessage.Content = resmessage
+			// lastMessage.Role = openai.ChatMessageRoleAssistant
+			// cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
 			stream.Close()
 			close(chanStream)
 			return
 		}
 		select {
 		case <-ctx.Writer.CloseNotify():
-			lastMessage.Content = resmessage
-			lastMessage.Role = openai.ChatMessageRoleAssistant
-			cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
+			// lastMessage.Content = resmessage
+			// lastMessage.Role = openai.ChatMessageRoleAssistant
+			// cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
 			stream.Close()
 			close(chanStream)
 			return
