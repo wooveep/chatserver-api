@@ -16,6 +16,8 @@ RUN apk --no-cache add tzdata ca-certificates libc6-compat libgcc libstdc++
 RUN cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo "Asia/Shanghai" > /etc/timezone 
 COPY --from=builder  /code/src/dist/linux_amd64/chatserver-api  /app/chatserver-api/chatserver-api
 COPY --from=builder  /code/src/dict  /app/chatserver-api/dict
+COPY --from=builder  /code/src/fonts  /app/chatserver-api/fonts
+
 
 WORKDIR /app/chatserver-api
 
