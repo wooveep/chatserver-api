@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:51:03
- * @LastEditTime: 2023-05-26 14:25:01
+ * @LastEditTime: 2023-05-26 17:06:19
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/consts/consts.go
  */
@@ -21,9 +21,9 @@ const (
 
 	InviteReward   = 3
 	RegisterReward = 3
-	CBCKEY         = "ABCDABCDABCDABCD"
-	CDKEYBASE      = "E8S2DZX9WYLTN6BQA7CP5IK3MJUFR4HV"
-	InviteBase     = "E8uvS2pqDZXbcde9WYfiLTNrs6BxQA7CPmn5IyzK3MwJUktFghR4HVaj"
+	CBCKEY         = "QLHDYGCODHTAPWEB"
+	CDKEYBASE      = "XYLTNCP5H4FR8SJUVE2DWIK3MZ6B9QA7"
+	InviteBase     = "zKYqDZXc8uvQA7mngtrsCPpThk53MJ2U6SR4HwfiEdeNjLB9WbIyxVaF"
 	// EmbedCtx = "with_emebedding_ctx"
 	// TimeLayout 时间格式
 	DateLayout                     = "2006-01-02"
