@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:51:00
- * @LastEditTime: 2023-05-25 22:26:03
+ * @LastEditTime: 2023-05-26 10:42:11
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/router/api.go
  */
@@ -67,7 +67,7 @@ func (ar *ApiRouter) Load(g *gin.Engine) {
 		ug.POST("/cdkeypay", ar.userHandler.UserCDkeyPay())
 		ug.GET("/giftcard", ar.userHandler.UserGiftCardListGet())
 		ug.GET("/invitelink", ar.userHandler.UserInviteLinkGet())
-
+		ug.GET("/bill", ar.userHandler.UserBillGet())
 	}
 	cg := g.Group("/chat", middleware.AuthToken())
 	{

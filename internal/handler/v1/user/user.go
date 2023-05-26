@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:36:21
- * @LastEditTime: 2023-05-25 23:26:55
+ * @LastEditTime: 2023-05-26 13:47:00
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/user/user.go
  */
@@ -190,6 +190,22 @@ func (uh *UserHandler) UserUpdateNickName() gin.HandlerFunc {
 	}
 }
 
+func (uh *UserHandler) UserBillGet() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var req model.UserBillGetReq
+		if err := ctx.ShouldBindQuery(&req); err != nil {
+			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
+			return
+		}
+		res, err := uh.uSrv.UserBillGet(ctx, req)
+		if err != nil {
+			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "接口调用失败"), nil)
+		} else {
+			response.JSON(ctx, nil, res)
+		}
+	}
+}
+
 func (uh *UserHandler) UserActive() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var req model.UserActiveReq
@@ -228,6 +244,7 @@ func (uh *UserHandler) UserPasswordModify() gin.HandlerFunc {
 		response.JSON(ctx, nil, nil)
 	}
 }
+
 func (uh *UserHandler) UserPasswordForget() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var req model.UserForgetReq

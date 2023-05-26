@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 19:43:52
- * @LastEditTime: 2023-05-25 17:13:51
+ * @LastEditTime: 2023-05-26 10:17:17
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/user.go
  */
@@ -30,4 +30,5 @@ type UserDao interface {
 	UserInviteGetByCode(ctx context.Context, code string) (entity.Invite, error)
 	UserInviteUpdate(ctx context.Context, invite *entity.Invite) error
 	UserBillCreate(ctx context.Context, bill *entity.Bill) error
+	UserBillGet(ctx context.Context, userId int64, page, pagesize int, start, end string) ([]model.UserBillRes, error)
 }

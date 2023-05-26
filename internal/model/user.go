@@ -1,11 +1,13 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 15:44:35
- * @LastEditTime: 2023-05-25 16:24:45
+ * @LastEditTime: 2023-05-26 13:09:51
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/user.go
  */
 package model
+
+import "chatserver-api/pkg/jtime"
 
 type UserLoginReq struct {
 	Username string `json:"username" validate:"required"  label:"用户名"`
@@ -108,4 +110,21 @@ type UserInviteLinkRes struct {
 
 type CaptchaRes struct {
 	Image string `json:"image"`
+}
+
+type UserBillGetReq struct {
+	Page     int `form:"page"`
+	PageSize int `form:"pagesize" validate:"required"`
+	Date     int `form:"date"`
+}
+
+type UserBillRes struct {
+	CreatedAt   jtime.JsonTime `gorm:"column:created_at" json:"change_time"`
+	CostChange  float64        `gorm:"column:cost_change" json:"change"`
+	Balance     float64        `gorm:"column:balance" json:"balance"`
+	CostComment string         `gorm:"column:cost_comment" json:"comment"`
+}
+
+type UserBillListRes struct {
+	BillList []UserBillRes `json:"bill_list"`
 }

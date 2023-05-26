@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 19:47:43
- * @LastEditTime: 2023-05-25 16:23:22
+ * @LastEditTime: 2023-05-26 16:22:20
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/query/user.go
  */
@@ -41,6 +41,12 @@ func (ud *userDao) UserDelete(ctx context.Context, userId int64) error {
 
 func (ud *userDao) UserBillCreate(ctx context.Context, bill *entity.Bill) error {
 	return ud.ds.Master().Create(bill).Error
+}
+
+func (ud *userDao) UserBillGet(ctx context.Context, userId int64, page, pagesize int, start, end string) ([]model.UserBillRes, error) {
+	var bills []model.UserBillRes
+	err := ud.ds.Master().Model(&entity.Bill{}).Where("user_id = ?", userId).Where("created_at BETWEEN ? AND ?", start, end).Order("id desc").Find(&bills).Error
+	return bills, err
 }
 
 func (ud *userDao) UserGetRole(ctx context.Context, userId int64) (int, error) {

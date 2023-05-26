@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:37:13
- * @LastEditTime: 2023-05-25 23:10:43
+ * @LastEditTime: 2023-05-26 16:29:03
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/user.go
  */
@@ -48,6 +48,7 @@ type UserService interface {
 
 	UserGetInfo(ctx context.Context, userId int64) (res model.UserGetInfoRes, err error)
 	UserGetAvatar(ctx *gin.Context) (res model.UserAvatarRes, err error)
+	UserBillGet(ctx *gin.Context, req model.UserBillGetReq) (res model.UserBillListRes, err error)
 
 	UserGetBalance(ctx context.Context, userId int64) (balance float64, err error)
 	UserBalanceChange(ctx context.Context, userId int64, oldbalance, amount float64, comment string) (err error)
@@ -285,7 +286,7 @@ func (us *userService) UserRegister(ctx *gin.Context, req model.UserRegisterReq)
 	user.Email = req.Email
 	user.Role = consts.StandardUser
 	// user.ExpiredAt = jtime.JsonTime(time.Now().AddDate(0, 0, 7))
-	user.Balance = consts.RegisterReward
+	user.Balance = 0
 	user.IsActive = false
 	user.AvatarUrl, err = avatar.GenNewAvatar(security.Md5WithSalt(req.Username, req.Email))
 	if err != nil {
@@ -441,6 +442,7 @@ func (us *userService) UserActiveChange(ctx *gin.Context) (err error) {
 	if err != nil {
 		return err
 	}
+	us.UserBalanceChange(ctx, userId, 0, consts.RegisterReward, "奖励-新用户注册")
 	us.UserInviteReward(ctx)
 	for i := 1; i <= 3; i++ {
 		_, err = us.UserInviteGen(ctx)
@@ -472,7 +474,7 @@ func (us *userService) UserCDkeyPay(ctx *gin.Context, key string) error {
 	if err != nil {
 		return err
 	}
-	err = us.UserBalanceChange(ctx, userId, balance, keyAmount.CardAmount, "")
+	err = us.UserBalanceChange(ctx, userId, balance, keyAmount.CardAmount, "充值-积分充值卡核销")
 	if err != nil {
 		return err
 	}
@@ -491,6 +493,22 @@ func (us *userService) UserInviteGen(ctx *gin.Context) (string, error) {
 	invite.UserId = userId
 	invite.InviteCode = uuid.GetInvCodeByUID(codeId)
 	return invite.InviteCode, us.ud.UserInviteGen(ctx, invite)
+}
+
+func (us *userService) UserBillGet(ctx *gin.Context, req model.UserBillGetReq) (res model.UserBillListRes, err error) {
+	userId := ctx.GetInt64(consts.UserID)
+	date := time.Unix(int64(req.Date)/1000, 0)
+	if req.Date == 0 {
+		date = time.Now()
+	}
+	start := date.Local().Format(consts.DateLayout)
+	end := date.AddDate(0, 0, 1).Local().Format(consts.DateLayout)
+	bills, err := us.ud.UserBillGet(ctx, userId, req.Page, req.PageSize, start, end)
+	if err != nil {
+		return
+	}
+	res.BillList = bills
+	return res, nil
 }
 
 func (us *userService) UserInviteLinkGet(ctx *gin.Context) (res model.UserInviteLinkRes, err error) {
@@ -566,7 +584,7 @@ func (us *userService) UserInviteReward(ctx *gin.Context) {
 		logger.Errorf("invite_userId:%v 获取用户余额失败", invite_userId)
 		return
 	}
-	err = us.UserBalanceChange(ctx, invite_userId, inviteuser_banlance, consts.InviteReward, "")
+	err = us.UserBalanceChange(ctx, invite_userId, inviteuser_banlance, consts.InviteReward, "奖励-邀请新用户成功")
 	if err != nil {
 		logger.Errorf("UserID：%v 获取奖励失败", invite_userId)
 		return
@@ -576,7 +594,7 @@ func (us *userService) UserInviteReward(ctx *gin.Context) {
 		logger.Errorf("invite_userId:%v 获取用户余额失败", current_userId)
 		return
 	}
-	err = us.UserBalanceChange(ctx, current_userId, currentuser_banlance, consts.InviteReward, "")
+	err = us.UserBalanceChange(ctx, current_userId, currentuser_banlance, consts.InviteReward, "奖励-受邀请注册")
 	if err != nil {
 		logger.Errorf("current_userId:%v 获取奖励失败", current_userId)
 		return

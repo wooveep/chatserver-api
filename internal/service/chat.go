@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-05-25 23:07:44
+ * @LastEditTime: 2023-05-26 16:28:43
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -227,7 +227,7 @@ func (cs *chatService) ChatBalanceUpdate(ctx *gin.Context) (err error) {
 	balance := ctx.GetFloat64(consts.BalanceCtx)
 	token := ctx.GetInt(consts.CostTokenCtx)
 	cost := float64(token) * consts.TokenPrice
-	comment := fmt.Sprintf("会话消耗令牌数:%d", token)
+	comment := fmt.Sprintf("消费-会话消耗令牌数:%d", token)
 	return cs.uSrv.UserBalanceChange(ctx, userId, balance, -cost, comment)
 }
 

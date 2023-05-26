@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:51:03
- * @LastEditTime: 2023-05-25 21:57:18
+ * @LastEditTime: 2023-05-26 14:25:01
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/consts/consts.go
  */
@@ -26,6 +26,7 @@ const (
 	InviteBase     = "E8uvS2pqDZXbcde9WYfiLTNrs6BxQA7CPmn5IyzK3MwJUktFghR4HVaj"
 	// EmbedCtx = "with_emebedding_ctx"
 	// TimeLayout 时间格式
+	DateLayout                     = "2006-01-02"
 	TimeLayout                     = "2006-01-02 15:04:05"
 	TimeLayoutMs                   = "2006-01-02 15:04:05.000"
 	DefaultEmptyMessagesLimit uint = 300

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-05 15:37:14
- * @LastEditTime: 2023-05-11 09:22:38
+ * @LastEditTime: 2023-05-26 13:47:33
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/query/chat.go
  */
@@ -66,9 +66,7 @@ func (cd *chatDao) ChatDeleteOne(ctx context.Context, userId, chatId int64) erro
 
 func (cd *chatDao) ChatDeleteAll(ctx context.Context, userId int64) error {
 	var chatIds []int64
-
 	err := cd.ds.Master().Model(&entity.Chat{}).Where("user_id = ?", userId).Select("id").Find(&chatIds).Error
-
 	if err != nil {
 		return err
 	}
@@ -79,7 +77,6 @@ func (cd *chatDao) ChatDeleteAll(ctx context.Context, userId int64) error {
 		}
 	}
 	return err
-
 }
 
 func (cd *chatDao) ChatDetailGet(ctx context.Context, userId, chatId int64) (model.ChatDetail, error) {
@@ -106,7 +103,7 @@ func (cd *chatDao) ChatRegenRecordGet(ctx context.Context, chatId, msgid int64, 
 
 func (cd *chatDao) ChatListGet(ctx context.Context, userId int64) ([]model.ChatOne, error) {
 	var chatlist []model.ChatOne
-	err := cd.ds.Master().Model(&entity.Chat{}).Where("user_id = ? ", userId).Find(&chatlist).Error
+	err := cd.ds.Master().Model(&entity.Chat{}).Where("user_id = ? ", userId).Order("id").Find(&chatlist).Error
 	return chatlist, err
 }
 
