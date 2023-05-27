@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-10 19:41:56
- * @LastEditTime: 2023-05-24 09:40:09
+ * @LastEditTime: 2023-05-27 10:21:17
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/preset.go
  */
@@ -12,6 +12,7 @@ import "gorm.io/datatypes"
 type PresetCreateNewReq struct {
 	PresetName    string         `json:"preset_name"  validate:"required"`
 	PresetContent string         `json:"preset_content"  validate:"required"`
+	PresetTips    string         `json:"preset_tips"  validate:"required"`
 	ModelName     string         `json:"model_name"`
 	MaxTokens     int            `json:"max_token"`
 	LogitBias     datatypes.JSON `json:"logit_bias"`
@@ -31,6 +32,7 @@ type PresetUpdateReq struct {
 	PresetId      string         `json:"preset_id"  validate:"required"`
 	PresetName    string         `json:"preset_name"`
 	PresetContent string         `json:"preset_content"`
+	PresetTips    string         `json:"preset_tips"`
 	ModelName     string         `json:"model_name"`
 	MaxTokens     int            `json:"max_token"`
 	LogitBias     datatypes.JSON `json:"logit_bias"`
@@ -48,9 +50,11 @@ type PresetGetListRes struct {
 type PresetOneRes struct {
 	PresetId   string `json:"preset_id"`
 	PresetName string `json:"preset_name"`
+	PresetTips string `json:"preset_tips"`
 }
 
 type PresetOne struct {
 	PresetId   int64  `gorm:"column:id" json:"preset_id"`
 	PresetName string `json:"preset_name"`
+	PresetTips string `json:"preset_tips"`
 }

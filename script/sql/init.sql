@@ -177,6 +177,7 @@ CREATE TABLE public.preset (
 	id int8 NOT NULL,
 	preset_name varchar(255) NOT NULL, -- 预设名称
 	preset_content text NOT NULL, -- 预设内容
+	preset_tips varchar(255) -- 预设用户帮助
 	max_token int4 NOT NULL, -- 最大生成内容长度
 	model_name varchar(255) NOT NULL, -- 模型名称
 	logit_bias json NULL, -- 逻辑回归偏置
@@ -203,6 +204,7 @@ COMMENT ON TABLE public.preset IS '存储预设';
 
 COMMENT ON COLUMN public.preset.preset_name IS '预设名称';
 COMMENT ON COLUMN public.preset.preset_content IS '预设内容';
+COMMENT ON COLUMN public.preset.preset_tips IS '预设用户帮助';
 COMMENT ON COLUMN public.preset.max_token IS '最大生成内容长度';
 COMMENT ON COLUMN public.preset.model_name IS '模型名称';
 COMMENT ON COLUMN public.preset.logit_bias IS '逻辑回归偏置';
