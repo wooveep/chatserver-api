@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:37:13
- * @LastEditTime: 2023-05-26 16:29:03
+ * @LastEditTime: 2023-05-27 20:53:03
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/user.go
  */
@@ -63,6 +63,7 @@ type UserService interface {
 
 	UserActiveGen(ctx *gin.Context) (err error)
 	UserActiveChange(ctx *gin.Context) (err error)
+	UserActiveVerify(ctx *gin.Context) bool
 	UserTempCodeVerify(ctx *gin.Context, tempcode string) (Isvalid bool)
 	UserTempCodeGen(ctx *gin.Context) (tempcode string, email string, nickname string, err error)
 
@@ -93,6 +94,19 @@ func NewUserService(_ud dao.UserDao, _kd dao.CDkeyDao) *userService {
 		iSrv: *uuid.NewNode(3),
 		rc:   cache.GetRedisClient(),
 	}
+}
+
+func (us *userService) UserActiveVerify(ctx *gin.Context) bool {
+	userId := ctx.GetInt64(consts.UserID)
+	userInfo, err := us.ud.UserGetById(ctx, userId)
+	if err != nil {
+		logger.Errorf("查询用户失败%s", err)
+		return false
+	}
+	if userInfo.IsActive != true {
+		return false
+	}
+	return true
 }
 
 func (us *userService) UserLogin(ctx context.Context, username, password string) (res model.UserLoginRes, err error) {
