@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-05-26 16:28:43
+ * @LastEditTime: 2023-05-28 15:53:54
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -327,8 +327,9 @@ func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, 
 	} else {
 		systemPreset.Content = preset.PresetContent
 	}
-
-	systemPreset.Content = preset.PresetContent
+	if preset.Extension == 1 {
+		systemPreset.Content = strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Local().Format(consts.DateLayout), -1)
+	}
 	chatMessages = append(chatMessages, systemPreset)
 	for _, record := range records {
 		historyMessage.Role = record.Sender
@@ -402,6 +403,9 @@ func (cs *chatService) ChatChattingReqProcess(ctx *gin.Context, lastquestion str
 		systemPreset.Content = preset.PresetContent
 	}
 
+	if preset.Extension == 1 {
+		systemPreset.Content = strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Local().Format(consts.DateLayout), -1)
+	}
 	chatMessages = append(chatMessages, systemPreset)
 	for _, record := range records {
 		historyMessage.Role = record.Sender

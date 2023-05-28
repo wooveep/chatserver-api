@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-10 19:41:56
- * @LastEditTime: 2023-05-27 10:21:17
+ * @LastEditTime: 2023-05-28 15:09:46
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/preset.go
  */
@@ -22,6 +22,8 @@ type PresetCreateNewReq struct {
 	Frequency     float64        `json:"frequency"`
 	WithEmbedding bool           `json:"with_embedding"`
 	Classify      string         `json:"classify"`
+	Extension     int            `json:"extension"`
+	Privilege     int            `json:"privilege"`
 }
 type PresetCreateNewRes struct {
 	PresetId  int64 `json:"preset_id"`
@@ -42,6 +44,8 @@ type PresetUpdateReq struct {
 	Frequency     float64        `json:"frequency"`
 	WithEmbedding bool           `json:"with_embedding"`
 	Classify      string         `json:"classify"`
+	Extension     int            `json:"extension"`
+	Privilege     int            `json:"privilege"`
 }
 
 type PresetGetListRes struct {
