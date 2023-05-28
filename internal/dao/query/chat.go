@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-05 15:37:14
- * @LastEditTime: 2023-05-26 13:47:33
+ * @LastEditTime: 2023-05-28 17:46:45
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/query/chat.go
  */
@@ -44,6 +44,12 @@ func (cd *chatDao) ChatRecordSave(ctx context.Context, record *entity.Record) er
 
 func (cd *chatDao) ChatRecordClear(ctx context.Context, chatId int64) error {
 	return cd.ds.Master().Where("chat_id = ?", chatId).Delete(&entity.Record{}).Error
+}
+
+func (cd *chatDao) ChatRecordIdGet(ctx context.Context, chatId int64) ([]int64, error) {
+	var recordlist []int64
+	err := cd.ds.Master().Where("chat_id = ?", chatId).Model(&entity.Record{}).Select("id").Find(&recordlist).Error
+	return recordlist, err
 }
 
 func (cd *chatDao) DocEmbeddingSave(ctx context.Context, docs *entity.Documents) error {
