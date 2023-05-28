@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:36:21
- * @LastEditTime: 2023-05-26 13:47:00
+ * @LastEditTime: 2023-05-27 20:54:07
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/user/user.go
  */
@@ -213,8 +213,11 @@ func (uh *UserHandler) UserActive() gin.HandlerFunc {
 			response.JSON(ctx, errors.WithCode(ecode.ValidateErr, err.Error()), nil)
 			return
 		}
-
 		if !uh.uSrv.UserTempCodeVerify(ctx, req.ActiveCode) {
+			if uh.uSrv.UserActiveVerify(ctx) {
+				response.JSON(ctx, nil, nil)
+				return
+			}
 			response.JSON(ctx, errors.WithCode(ecode.ActiveErr, "用户激活失败"), nil)
 			return
 		}

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-05-26 16:28:43
+ * @LastEditTime: 2023-05-28 17:52:18
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -95,6 +95,7 @@ func (cs *chatService) ChatCreateNew(ctx context.Context, userId, presetId int64
 	}
 	res.ChatId = strconv.FormatInt(chat.Id, 10)
 	cs.rc.SAdd(ctx, consts.UserChatIDPrefix+strconv.FormatInt(userId, 10), chat.Id)
+	cs.rc.SAdd(ctx, consts.UserChatIDPrefix+strconv.FormatInt(chat.Id, 10))
 	return
 }
 
@@ -115,10 +116,15 @@ func (cs *chatService) ChatDelete(ctx *gin.Context) error {
 	userId := ctx.GetInt64(consts.UserID)
 	chatId := ctx.GetInt64(consts.ChatID)
 	if chatId == -1 {
+		val3, _ := cs.rc.SMembers(ctx, consts.UserChatIDPrefix+strconv.FormatInt(userId, 10)).Result()
+		for _, v := range val3 {
+			cs.rc.Del(ctx, consts.ChatRecordIDPrefix+v)
+		}
 		cs.rc.Del(ctx, consts.UserChatIDPrefix+strconv.FormatInt(userId, 10))
 		return cs.cd.ChatDeleteAll(ctx, userId)
 	} else {
 		cs.rc.SRem(ctx, consts.UserChatIDPrefix+strconv.FormatInt(userId, 10), chatId)
+		cs.rc.Del(ctx, consts.ChatRecordIDPrefix+strconv.FormatInt(chatId, 10))
 		return cs.cd.ChatDeleteOne(ctx, userId, chatId)
 	}
 }
@@ -247,12 +253,17 @@ func (cs *chatService) ChatMessageSave(ctx *gin.Context, role, message string, m
 		exist, err = cs.rc.SIsMember(ctx, consts.ChatRecordIDPrefix+strconv.FormatInt(chatId, 10), msgid).Result()
 	}
 	if err != nil || n <= 0 {
-		count, err := cs.cd.ChatRecordVerify(ctx, msgid)
+		recordlist, err := cs.cd.ChatRecordIdGet(ctx, chatId)
 		if err != nil {
 			return err
 		}
-		if count != 0 {
-			exist = true
+		if len(recordlist) > 0 {
+			for _, v := range recordlist {
+				cs.rc.SAdd(ctx, consts.ChatRecordIDPrefix+strconv.FormatInt(chatId, 10), v)
+				if msgid == v {
+					exist = true
+				}
+			}
 		} else {
 			exist = false
 		}
@@ -327,8 +338,9 @@ func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, 
 	} else {
 		systemPreset.Content = preset.PresetContent
 	}
-
-	systemPreset.Content = preset.PresetContent
+	if preset.Extension == 1 {
+		systemPreset.Content = strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Local().Format(consts.DateLayout), -1)
+	}
 	chatMessages = append(chatMessages, systemPreset)
 	for _, record := range records {
 		historyMessage.Role = record.Sender
@@ -402,6 +414,9 @@ func (cs *chatService) ChatChattingReqProcess(ctx *gin.Context, lastquestion str
 		systemPreset.Content = preset.PresetContent
 	}
 
+	if preset.Extension == 1 {
+		systemPreset.Content = strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Local().Format(consts.DateLayout), -1)
+	}
 	chatMessages = append(chatMessages, systemPreset)
 	for _, record := range records {
 		historyMessage.Role = record.Sender
