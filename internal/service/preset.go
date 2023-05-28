@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-11 10:22:31
- * @LastEditTime: 2023-05-25 21:55:59
+ * @LastEditTime: 2023-05-27 10:25:30
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/preset.go
  */
@@ -61,6 +61,7 @@ func (ps *presetService) PresetUpdate(ctx context.Context, req model.PresetUpdat
 	preset.Id = presetId
 	preset.PresetName = req.PresetName
 	preset.PresetContent = req.PresetContent
+	preset.PresetTips = req.PresetTips
 	preset.Classify = req.Classify
 	preset.Frequency = req.Frequency
 	preset.LogitBias = req.LogitBias
@@ -85,6 +86,7 @@ func (ps *presetService) PresetCreateNew(ctx context.Context, req model.PresetCr
 	preset.Id = ps.iSrv.GenSnowID()
 	preset.PresetName = req.PresetName
 	preset.PresetContent = req.PresetContent
+	preset.PresetTips = req.PresetTips
 	preset.ModelName = tools.DefaultValue(req.ModelName, openai.GPT3Dot5Turbo).(string)
 	preset.MaxTokens = tools.DefaultValue(req.MaxTokens, 500).(int)
 	preset.Temperature = tools.DefaultValue(req.Temperature, 0.7).(float64)
@@ -128,6 +130,7 @@ func (ps *presetService) PresetGetList(ctx context.Context) (res model.PresetGet
 	for _, v := range presetlist {
 		presetOne.PresetId = strconv.FormatInt(v.PresetId, 10)
 		presetOne.PresetName = v.PresetName
+		presetOne.PresetTips = v.PresetTips
 		presetlistRes = append(presetlistRes, presetOne)
 	}
 	res.PresetsList = presetlistRes

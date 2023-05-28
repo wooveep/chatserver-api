@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-10 19:41:56
- * @LastEditTime: 2023-05-24 09:40:09
+ * @LastEditTime: 2023-05-28 15:09:46
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/preset.go
  */
@@ -12,6 +12,7 @@ import "gorm.io/datatypes"
 type PresetCreateNewReq struct {
 	PresetName    string         `json:"preset_name"  validate:"required"`
 	PresetContent string         `json:"preset_content"  validate:"required"`
+	PresetTips    string         `json:"preset_tips"  validate:"required"`
 	ModelName     string         `json:"model_name"`
 	MaxTokens     int            `json:"max_token"`
 	LogitBias     datatypes.JSON `json:"logit_bias"`
@@ -21,6 +22,8 @@ type PresetCreateNewReq struct {
 	Frequency     float64        `json:"frequency"`
 	WithEmbedding bool           `json:"with_embedding"`
 	Classify      string         `json:"classify"`
+	Extension     int            `json:"extension"`
+	Privilege     int            `json:"privilege"`
 }
 type PresetCreateNewRes struct {
 	PresetId  int64 `json:"preset_id"`
@@ -31,6 +34,7 @@ type PresetUpdateReq struct {
 	PresetId      string         `json:"preset_id"  validate:"required"`
 	PresetName    string         `json:"preset_name"`
 	PresetContent string         `json:"preset_content"`
+	PresetTips    string         `json:"preset_tips"`
 	ModelName     string         `json:"model_name"`
 	MaxTokens     int            `json:"max_token"`
 	LogitBias     datatypes.JSON `json:"logit_bias"`
@@ -40,6 +44,8 @@ type PresetUpdateReq struct {
 	Frequency     float64        `json:"frequency"`
 	WithEmbedding bool           `json:"with_embedding"`
 	Classify      string         `json:"classify"`
+	Extension     int            `json:"extension"`
+	Privilege     int            `json:"privilege"`
 }
 
 type PresetGetListRes struct {
@@ -48,9 +54,11 @@ type PresetGetListRes struct {
 type PresetOneRes struct {
 	PresetId   string `json:"preset_id"`
 	PresetName string `json:"preset_name"`
+	PresetTips string `json:"preset_tips"`
 }
 
 type PresetOne struct {
 	PresetId   int64  `gorm:"column:id" json:"preset_id"`
 	PresetName string `json:"preset_name"`
+	PresetTips string `json:"preset_tips"`
 }

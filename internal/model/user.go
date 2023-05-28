@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 15:44:35
- * @LastEditTime: 2023-05-26 13:09:51
+ * @LastEditTime: 2023-05-26 22:50:40
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/user.go
  */
@@ -114,7 +114,7 @@ type CaptchaRes struct {
 
 type UserBillGetReq struct {
 	Page     int `form:"page"`
-	PageSize int `form:"pagesize" validate:"required"`
+	PageSize int `form:"pagesize"`
 	Date     int `form:"date"`
 }
 

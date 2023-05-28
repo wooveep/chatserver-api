@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 14:38:52
- * @LastEditTime: 2023-05-08 16:19:06
+ * @LastEditTime: 2023-05-28 17:59:25
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/db/db.go
  */
@@ -25,14 +25,14 @@ type Writer struct {
 
 func (w Writer) Printf(format string, args ...interface{}) {
 	// log.Infof(format, args...)
-	slogger.Infof(format, args...)
+	slogger.Warnf(format, args...)
 }
 
 var slowLogger = logger.New(
 	Writer{},
 	logger.Config{
 		SlowThreshold:             200 * time.Millisecond, // Slow SQL threshold
-		LogLevel:                  logger.Info,            // Log level
+		LogLevel:                  logger.Warn,            // Log level
 		IgnoreRecordNotFoundError: true,                   // Ignore ErrRecordNotFound error for logger
 		Colorful:                  false,                  // Disable color
 	},

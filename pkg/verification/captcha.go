@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-24 09:52:31
- * @LastEditTime: 2023-05-25 21:43:19
+ * @LastEditTime: 2023-05-27 21:12:48
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/verification/captcha.go
  */
@@ -30,7 +30,7 @@ func getCaptchaCodeKey(code string) string {
 func GenerateCaptcha(ctx context.Context) (imgbase string, err error) {
 	cap := afcap.New()
 	rc := cache.GetRedisClient()
-	timer := 600 * time.Second
+	timer := 1200 * time.Second
 	cap.SetFont("./fonts/comic.ttf")
 	// 设置验证码大小
 	cap.SetSize(128, 64)
