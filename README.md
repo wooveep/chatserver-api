@@ -1,16 +1,21 @@
 <!--
  * @Author: cloudyi.li
  * @Date: 2023-05-10 09:15:49
- * @LastEditTime: 2023-05-28 16:12:21
+ * @LastEditTime: 2023-05-28 18:27:32
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/README.md
 -->
 
 # 基于OPENAI的ChatGPT API开发的AI助手服务
 
+## 体验站
+
+  [https://chat.wooveep.net](https://chat.wooveep.net/#/register/uNJtISQw)
+
 本仓库为后端API服务，依赖的前端仓库为[wooveep](https://github.com/wooveep)/[chatserver-web](https://github.com/wooveep/chatserver-web)
 
 - [基于OPENAI的ChatGPT API开发的AI助手服务](#基于openai的chatgpt-api开发的ai助手服务)
+  - [体验站](#体验站)
   - [实现功能](#实现功能)
   - [应用场景](#应用场景)
   - [目标群体](#目标群体)
