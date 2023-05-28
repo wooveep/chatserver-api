@@ -173,11 +173,11 @@ COMMENT ON COLUMN public.bill.updated_at IS '记录的更新时间，默认为�
 
 -- DROP TABLE public.preset;
 
+
 CREATE TABLE public.preset (
 	id int8 NOT NULL,
 	preset_name varchar(255) NOT NULL, -- 预设名称
 	preset_content text NOT NULL, -- 预设内容
-	preset_tips varchar(255) -- 预设用户帮助
 	max_token int4 NOT NULL, -- 最大生成内容长度
 	model_name varchar(255) NOT NULL, -- 模型名称
 	logit_bias json NULL, -- 逻辑回归偏置
@@ -192,6 +192,8 @@ CREATE TABLE public.preset (
 	is_del int4 NULL DEFAULT 0, -- 删除标志
 	classify varchar NULL, -- embedding分类
 	privilege int4 NOT NULL DEFAULT 1, -- 预设用户权限
+	preset_tips varchar(255) NULL, -- 预设使用提示
+	"extension" int4 NULL DEFAULT 0, -- 扩展
 	CONSTRAINT preset_frequency_check CHECK (((frequency >= ('-2'::integer)::double precision) AND (frequency <= (2)::double precision))),
 	CONSTRAINT preset_pkey PRIMARY KEY (id),
 	CONSTRAINT preset_presence_check CHECK (((presence >= ('-2'::integer)::double precision) AND (presence <= (2)::double precision))),
@@ -204,7 +206,6 @@ COMMENT ON TABLE public.preset IS '存储预设';
 
 COMMENT ON COLUMN public.preset.preset_name IS '预设名称';
 COMMENT ON COLUMN public.preset.preset_content IS '预设内容';
-COMMENT ON COLUMN public.preset.preset_tips IS '预设用户帮助';
 COMMENT ON COLUMN public.preset.max_token IS '最大生成内容长度';
 COMMENT ON COLUMN public.preset.model_name IS '模型名称';
 COMMENT ON COLUMN public.preset.logit_bias IS '逻辑回归偏置';
@@ -219,7 +220,8 @@ COMMENT ON COLUMN public.preset.deleted_at IS '删除时间';
 COMMENT ON COLUMN public.preset.is_del IS '删除标志';
 COMMENT ON COLUMN public.preset.classify IS 'embedding分类';
 COMMENT ON COLUMN public.preset.privilege IS '预设用户权限';
-
+COMMENT ON COLUMN public.preset.preset_tips IS '预设使用提示';
+COMMENT ON COLUMN public.preset."extension" IS '扩展';
 
 -- Drop table
 
