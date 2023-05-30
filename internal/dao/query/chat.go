@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-05 15:37:14
- * @LastEditTime: 2023-05-28 17:46:45
+ * @LastEditTime: 2023-05-29 20:47:37
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/query/chat.go
  */
@@ -131,6 +131,6 @@ func (cd *chatDao) ChatBalanceGet(ctx context.Context, userId int64) (model.User
 
 func (cd *chatDao) ChatEmbeddingCompare(ctx context.Context, question pgvector.Vector, classify string) ([]model.DocsCompare, error) {
 	var docsbody []model.DocsCompare
-	err := cd.ds.Master().Model(&entity.Documents{}).Clauses(clause.OrderBy{Expression: clause.Expr{SQL: "Embedding <=> ? ", Vars: []interface{}{question}}}).Limit(3).Where("classify = ?", classify).Find(&docsbody).Error
+	err := cd.ds.Master().Model(&entity.Documents{}).Clauses(clause.OrderBy{Expression: clause.Expr{SQL: "Embedding <=> ? ", Vars: []interface{}{question}}}).Limit(5).Where("classify = ?", classify).Find(&docsbody).Error
 	return docsbody, err
 }

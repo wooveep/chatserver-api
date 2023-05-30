@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-05-28 17:52:18
+ * @LastEditTime: 2023-05-30 10:40:13
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -24,6 +24,7 @@ import (
 	"chatserver-api/pkg/openai"
 	"chatserver-api/pkg/pgvector"
 	"chatserver-api/pkg/tiktoken"
+	"chatserver-api/pkg/tokenize"
 	"chatserver-api/utils/security"
 	"chatserver-api/utils/uuid"
 	"fmt"
@@ -67,19 +68,20 @@ type ChatService interface {
 
 // userService 实现UserService接口
 type chatService struct {
-	cd   dao.ChatDao
-	uSrv UserService
-	rc   *redis.Client
-
-	iSrv uuid.SnowNode
+	cd    dao.ChatDao
+	uSrv  UserService
+	rc    *redis.Client
+	jieba tokenize.Tokenizer
+	iSrv  uuid.SnowNode
 }
 
-func NewChatService(_cd dao.ChatDao, _uSrv UserService) *chatService {
+func NewChatService(_cd dao.ChatDao, _uSrv UserService, _jieba tokenize.Tokenizer) *chatService {
 	return &chatService{
-		cd:   _cd,
-		uSrv: _uSrv,
-		iSrv: *uuid.NewNode(1),
-		rc:   cache.GetRedisClient(),
+		cd:    _cd,
+		uSrv:  _uSrv,
+		iSrv:  *uuid.NewNode(1),
+		rc:    cache.GetRedisClient(),
+		jieba: _jieba,
 	}
 }
 
@@ -325,9 +327,9 @@ func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, 
 			}
 		}
 		//将用户问题进行关键词提取
-		// emkeyword := cs.jieba.GetKeyword(emquestion)
+		emkeyword := cs.jieba.GetKeyword(emquestion) + records[len(records)-1].Message
 		//通过用户问题 lastquestion + records（User历史）获取Context信息
-		embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emquestion, preset.Classify)
+		embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emkeyword, preset.Classify)
 		if err != nil {
 			logger.Errorf("获取embedding上下文失败: %v\n", err)
 			return
@@ -400,9 +402,9 @@ func (cs *chatService) ChatChattingReqProcess(ctx *gin.Context, lastquestion str
 
 		emquestion += lastquestion
 		//将用户问题进行关键词提取
-		// emkeyword := cs.jieba.GetKeyword(emquestion)
+		emkeyword := cs.jieba.GetKeyword(emquestion) + lastquestion
 		//通过用户问题 lastquestion + records（User历史）获取Context信息
-		embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emquestion, preset.Classify)
+		embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emkeyword, preset.Classify)
 		if err != nil {
 			logger.Errorf("获取embedding上下文失败: %v\n", err)
 			return
@@ -615,6 +617,7 @@ func (cs *chatService) ChatEmbeddingCompare(ctx context.Context, question, class
 	if len(textbody) != 0 {
 		for _, v := range textbody {
 			contextStr += v.Body
+			logger.Debugf(v.Body)
 		}
 		return
 	}

@@ -66,7 +66,7 @@ type FieldRect struct {
 	resultText string
 }
 
-func ReadPd3f(filename string) ([]string, error) {
+func ReadPd3f(title, filename string) ([]string, error) {
 	f, r, err := pdf.Open("uploadfile/" + filename)
 	defer f.Close()
 	if err != nil {
@@ -126,12 +126,12 @@ func ReadPd3f(filename string) ([]string, error) {
 
 	for i, v := range list1 {
 		textbody += v
-		if len(textbody) > 600 || i == len(list1)-1 {
-			textbodylist = append(textbodylist, filename+"\n"+textbody)
+		if len(textbody) > 900 || i == len(list1)-1 {
+			textbodylist = append(textbodylist, title+"\n"+textbody)
 			textbody = ""
 		}
 	}
-	// file, err := os.Create("tmpfile/" + path + "output.txt")
+	// file, err := os.Create("output.txt")
 	// if err != nil {
 	// 	fmt.Println("Error creating file:", err)
 	// 	return nil, err
@@ -140,9 +140,9 @@ func ReadPd3f(filename string) ([]string, error) {
 
 	// writer := bufio.NewWriter(file)
 
-	// for _, v := range textbodylist {
+	// for _, v := range list1 {
 	// 	writer.WriteString(v)
-	// 	writer.WriteString("\n------------------\n")
+	// 	// writer.WriteString("\n------------------\n")
 	// }
 
 	// writer.Flush()
