@@ -27,7 +27,7 @@ email:
   proxymode:  socks5      #如果为空则不使用代理
   proxyip:  
   proxyport:  
-# 数据库配置（mysql）
+# 数据库配置 （Postgresql数据库）
 database:
   dbname:   #数据库名称
   host:  #数据库服务地址
