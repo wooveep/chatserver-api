@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:37:13
- * @LastEditTime: 2023-05-31 15:04:28
+ * @LastEditTime: 2023-05-31 19:15:57
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/user.go
  */
@@ -28,6 +28,7 @@ import (
 	"errors"
 	"math/rand"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -361,10 +362,18 @@ func (us *userService) UserVerifyEmail(ctx *gin.Context, email string) (res mode
 	if UserId != 0 {
 		res.Isvalid = false
 		ctx.Set(consts.UserID, UserId)
+		logger.Debugf("邮箱校验信息：%d", UserId)
 	} else {
-		res.Isvalid = true
+		mVeri := mail.NewVerifier()
+		err := mVeri.VerifierEmail(email)
+		if err != nil {
+			logger.Warnf("邮箱%s验证错误:%v", email, err)
+			res.Isvalid = false
+			return res, err
+		} else {
+			res.Isvalid = true
+		}
 	}
-	logger.Debugf("邮箱校验信息：%d", UserId)
 	return
 }
 
@@ -415,7 +424,10 @@ func (us *userService) UserTempCodeGen(ctx *gin.Context) (tempcode string, email
 
 func (us *userService) UserTempCodeVerify(ctx *gin.Context, tempcode string) (Isvalid bool) {
 	Isvalid = false
-	codeStr, err := base64.StdEncoding.DecodeString(tempcode)
+	re := regexp.MustCompile(`^[A-Za-z0-9+]+={0,2}`)
+	tempcodeM := re.FindString(tempcode)
+	logger.Debugf("activeCode:%s", tempcodeM)
+	codeStr, err := base64.StdEncoding.DecodeString(tempcodeM)
 	if err != nil {
 		return
 	}

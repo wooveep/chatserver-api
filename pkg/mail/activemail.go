@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-09 18:46:24
- * @LastEditTime: 2023-05-12 16:54:31
+ * @LastEditTime: 2023-05-31 18:53:29
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/mail/activemail.go
  */
@@ -87,7 +87,7 @@ func SendActiceCode(email string, nickname string, activeCode string) error {
             </div>
             <div class="content">
                 <h2>亲爱的{{ .NickName }}: 您好!</h2>
-                <p>请点击链接激活<b><a href="{{ .CodeLinK }}">{{ .CodeLinK }}<a></b></p>
+                <p>请点击链接激活<br><b><a href="{{ .CodeLinK }}">{{ .CodeLinK }}<a></b><br></p>
                 <p><strong>如果链接无法点击，请复制链接到浏览器打开</strong></p>
                 <p>在使用前请查看使用说明：</p>
                 <p>如果后续使用有任何问题可以联系管理员，Email: <b>cloudyi@wooveep.net</b></p>

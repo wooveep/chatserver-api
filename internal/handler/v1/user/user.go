@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:36:21
- * @LastEditTime: 2023-05-31 14:30:13
+ * @LastEditTime: 2023-05-31 18:44:23
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/user/user.go
  */
@@ -162,7 +162,7 @@ func (uh *UserHandler) UserVerifyEmail() gin.HandlerFunc {
 		}
 		res, err := uh.uSrv.UserVerifyEmail(ctx, req.Email)
 		if err != nil {
-			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "接口调用失败"), nil)
+			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "邮箱地址错误"), nil)
 		} else {
 			response.JSON(ctx, nil, res)
 		}

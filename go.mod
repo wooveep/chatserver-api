@@ -22,6 +22,7 @@ require (
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
+	github.com/hbollon/go-edlib v1.6.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/pgx/v5 v5.3.1 // indirect
@@ -46,6 +47,7 @@ require (
 )
 
 require (
+	github.com/AfterShip/email-verifier v1.3.3
 	github.com/afocus/captcha v0.0.0-20191010092841-4bd1f21c8868
 	github.com/alexflint/go-scalar v1.2.0 // indirect
 	github.com/bwmarrin/snowflake v0.3.0

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-05-30 10:40:13
+ * @LastEditTime: 2023-05-31 19:28:05
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -497,6 +497,7 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 	if err != nil {
 		logger.Errorf("ChatCompletionStream error: %v\n", err)
 		chanStream <- "[REQ_ERROR]"
+		time.Sleep(1 * time.Millisecond)
 		close(chanStream)
 		return
 	}
@@ -539,6 +540,7 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 				// cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
 				chanStream <- "[content_filter]"
 				stream.Close()
+				time.Sleep(1 * time.Millisecond)
 				close(chanStream)
 				return
 			}

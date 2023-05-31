@@ -56,7 +56,7 @@ func (ch *ChatHandler) ChatRegenerateg() gin.HandlerFunc {
 		}
 		err = ch.cSrv.ChatBalanceVerify(ctx)
 		if err != nil {
-			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足"), nil)
+			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足，请充值。（打开侧边栏点击最下方齿轮⚙️图标，打开设置页面，点击“充值”标签。购买充值卡充值）"), nil)
 			return
 		}
 		//生成请求信息；
@@ -76,7 +76,7 @@ func (ch *ChatHandler) ChatRegenerateg() gin.HandlerFunc {
 		pre_cost := float64(pre_token) * consts.TokenPrice
 		if ctx.GetFloat64(consts.BalanceCtx) < pre_cost {
 			logger.Debugf("预验证TOKEN，余额不足%f", pre_cost)
-			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足"), nil)
+			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足，请充值。（打开侧边栏点击最下方齿轮⚙️图标，打开设置页面，点击“充值”标签。购买充值卡充值）"), nil)
 			return
 		}
 		//go func 请求API；
@@ -124,7 +124,7 @@ func (ch *ChatHandler) ChatChatting() gin.HandlerFunc {
 		//获取用户余额
 		err = ch.cSrv.ChatBalanceVerify(ctx)
 		if err != nil {
-			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足"), nil)
+			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足，请充值。（打开侧边栏点击最下方齿轮⚙️图标，打开设置页面，点击“充值”标签。购买充值卡充值）"), nil)
 			return
 		}
 		//会话请求消息处理
@@ -143,7 +143,7 @@ func (ch *ChatHandler) ChatChatting() gin.HandlerFunc {
 		pre_cost := float64(pre_token) * consts.TokenPrice
 		if ctx.GetFloat64(consts.BalanceCtx) < pre_cost {
 			logger.Debugf("预验证TOKEN，余额不足%f", pre_cost)
-			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足"), nil)
+			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足，请充值。（打开侧边栏点击最下方齿轮⚙️图标，打开设置页面，点击“充值”标签。购买充值卡充值）"), nil)
 			return
 		}
 
