@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-31 17:32:37
- * @LastEditTime: 2023-05-31 18:38:01
+ * @LastEditTime: 2023-05-31 21:44:16
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/mail/verifymail_test.go
  */
@@ -22,7 +22,7 @@ func Test_verifierEmail(t *testing.T) {
 	}{
 		{
 			name: "test1",
-			args: args{email: "11@transwarp.io"},
+			args: args{email: "wu.jianchao@sinovatio.com"},
 		},
 	}
 	for _, tt := range tests {

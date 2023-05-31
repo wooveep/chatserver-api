@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-31 17:32:37
- * @LastEditTime: 2023-05-31 18:36:28
+ * @LastEditTime: 2023-05-31 21:44:25
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/mail/verifymail.go
  */
@@ -19,7 +19,7 @@ type Verifier struct {
 
 func NewVerifier() *Verifier {
 	return &Verifier{
-		verifier: emailverifier.NewVerifier().EnableSMTPCheck().DisableCatchAllCheck(),
+		verifier: emailverifier.NewVerifier().EnableSMTPCheck().DisableCatchAllCheck().FromEmail("user@wooveep.net"),
 	}
 }
 func (v *Verifier) VerifierEmail(email string) error {
