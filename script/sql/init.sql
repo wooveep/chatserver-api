@@ -138,6 +138,8 @@ COMMENT ON COLUMN public.invite.updated_at IS '记录的更新时间，默认为
 
 
 
+-- public.bill definition
+
 -- Drop table
 
 -- DROP TABLE public.bill;
@@ -145,14 +147,12 @@ COMMENT ON COLUMN public.invite.updated_at IS '记录的更新时间，默认为
 CREATE TABLE public.bill (
 	id int8 NOT NULL, -- 账单ID
 	user_id int8 NOT NULL, -- 用户ID
-	cost_change numeric(10, 2) NOT NULL, -- 变动金额
-	balance numeric(10, 2) NOT NULL, -- 账户余额
+	cost_change numeric(10, 5) NOT NULL, -- 变动金额
+	balance numeric(10, 5) NOT NULL, -- 账户余额
 	cost_comment text NOT NULL, -- 变动说明
 	created_at timestamptz NOT NULL DEFAULT now(), -- 记录的创建时间，默认为当前时间
 	updated_at timestamptz NOT NULL DEFAULT now(), -- 记录的更新时间，默认为当前时间
-	CONSTRAINT bill_pkey PRIMARY KEY (id),
-	CONSTRAINT bill_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id),
-	CONSTRAINT bill_user_id_fkey1 FOREIGN KEY (user_id) REFERENCES public."user"(id) ON DELETE CASCADE
+	CONSTRAINT bill_pkey PRIMARY KEY (id)
 );
 CREATE INDEX bill_user_id_idx ON public.bill USING btree (user_id);
 COMMENT ON TABLE public.bill IS '用户账单';
@@ -162,17 +162,23 @@ COMMENT ON TABLE public.bill IS '用户账单';
 COMMENT ON COLUMN public.bill.id IS '账单ID';
 COMMENT ON COLUMN public.bill.user_id IS '用户ID';
 COMMENT ON COLUMN public.bill.cost_change IS '变动金额';
-COMMENT ON COLUMN public.bill.amount IS '账户余额';
+COMMENT ON COLUMN public.bill.balance IS '账户余额';
 COMMENT ON COLUMN public.bill.cost_comment IS '变动说明';
 COMMENT ON COLUMN public.bill.created_at IS '记录的创建时间，默认为当前时间';
 COMMENT ON COLUMN public.bill.updated_at IS '记录的更新时间，默认为当前时间';
 
 
+-- public.bill foreign keys
+
+ALTER TABLE public.bill ADD CONSTRAINT bill_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id);
+ALTER TABLE public.bill ADD CONSTRAINT bill_user_id_fkey1 FOREIGN KEY (user_id) REFERENCES public."user"(id) ON DELETE CASCADE;
+
+
+-- public.preset definition
 
 -- Drop table
 
 -- DROP TABLE public.preset;
-
 
 CREATE TABLE public.preset (
 	id int8 NOT NULL,
@@ -222,6 +228,7 @@ COMMENT ON COLUMN public.preset.classify IS 'embedding分类';
 COMMENT ON COLUMN public.preset.privilege IS '预设用户权限';
 COMMENT ON COLUMN public.preset.preset_tips IS '预设使用提示';
 COMMENT ON COLUMN public.preset."extension" IS '扩展';
+
 
 -- Drop table
 
