@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-02-15 14:05:41
- * @LastEditTime: 2023-05-23 10:11:46
+ * @LastEditTime: 2023-05-31 22:59:53
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/config/conf.go
  */
@@ -21,12 +21,13 @@ type Config struct {
 	DBConfig     DBConfig     `mapstructure:"database"` // 数据库信息
 	RedisConfig  RedisConfig  `mapstructure:"redis"`    // redis
 	LogConfig    LogConfig    `mapstructure:"log"`      // uber z
+	CustomConfig CustomConfig `mapstructure:"custom"`
 }
 
 type JwtConfig struct {
 	Secret                  string `mapstructure:"secret"`
-	JwtTtl                  int64  `mapstructure:"ttl"`              // token 有效期（秒）
-	JwtBlacklistGracePeriod int64  `mapstructure:"blacklistperiod" ` // 黑名单宽限时间（秒）
+	JwtTtl                  int64  `mapstructure:"ttl"`             // token 有效期（秒）
+	JwtBlacklistGracePeriod int64  `mapstructure:"blacklistperiod"` // 黑名单宽限时间（秒）
 }
 
 type OpenAIConfig struct {
@@ -84,4 +85,8 @@ type EmailCofig struct {
 	ProxyMode string `mapstructure:"smtphost"`
 	ProxyIP   string `mapstructure:"proxyip"`
 	ProxyPort string `mapstructure:"proxyport"`
+}
+
+type CustomConfig struct {
+	AzureProxy string `mapstructure:"azureproxy"`
 }

@@ -1,13 +1,14 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-31 17:32:37
- * @LastEditTime: 2023-05-31 22:27:05
+ * @LastEditTime: 2023-05-31 23:08:10
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/mail/verifymail.go
  */
 package mail
 
 import (
+	"chatserver-api/pkg/config"
 	"errors"
 
 	emailverifier "github.com/AfterShip/email-verifier"
@@ -18,8 +19,9 @@ type Verifier struct {
 }
 
 func NewVerifier() *Verifier {
+	proxyUrl := config.AppConfig.CustomConfig.AzureProxy
 	return &Verifier{
-		verifier: emailverifier.NewVerifier().EnableSMTPCheck().DisableCatchAllCheck().FromEmail("user@wooveep.net"),
+		verifier: emailverifier.NewVerifier().Proxy(proxyUrl).EnableSMTPCheck().DisableCatchAllCheck().FromEmail("user@wooveep.net"),
 	}
 }
 func (v *Verifier) VerifierEmail(email string) error {
