@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:37:13
- * @LastEditTime: 2023-05-27 20:53:03
+ * @LastEditTime: 2023-05-31 15:04:28
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/user.go
  */
@@ -130,7 +130,7 @@ func (us *userService) UserLogin(ctx context.Context, username, password string)
 	settime := config.AppConfig.JwtConfig.JwtTtl + int64(num*9)
 	timeOut := time.Duration(settime) * time.Second
 	expireAt := time.Now().Add(timeOut)
-	claims := jwt.BuildClaims(expireAt, userInfo.Id)
+	claims := jwt.BuildClaims(expireAt, userInfo.Id, userInfo.Role)
 	token, err := jwt.GenToken(claims, config.AppConfig.JwtConfig.Secret)
 	if err != nil {
 		logger.Infof("JWTTOKEN生成错误%s", username)
@@ -158,7 +158,7 @@ func (us *userService) UserRefresh(ctx *gin.Context) (res model.UserLoginRes, er
 	settime := config.AppConfig.JwtConfig.JwtTtl + int64(num*9)
 	timeOut := time.Duration(settime) * time.Second
 	expireAt := time.Now().Add(timeOut)
-	claims := jwt.BuildClaims(expireAt, userId)
+	claims := jwt.BuildClaims(expireAt, userId, userInfo.Role)
 	token, err := jwt.GenToken(claims, config.AppConfig.JwtConfig.Secret)
 	if err != nil {
 		logger.Infof("JWTTOKEN生成错误%s", userInfo.Username)

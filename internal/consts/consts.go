@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:51:03
- * @LastEditTime: 2023-05-26 17:06:19
+ * @LastEditTime: 2023-05-31 15:03:15
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/consts/consts.go
  */
@@ -15,6 +15,7 @@ const (
 	// UserID 用户id key
 	UserID       = "user_id"
 	ChatID       = "chat_id"
+	RoleID       = "role_id"
 	BalanceCtx   = "balance_ctx"
 	CostTokenCtx = "cost_token_ctx"
 	JWTTokenCtx  = "token_ctx"

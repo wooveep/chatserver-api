@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:55:27
- * @LastEditTime: 2023-05-10 10:49:35
+ * @LastEditTime: 2023-05-31 15:02:54
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/middleware/jwt.go
  */
@@ -50,6 +50,7 @@ func AuthToken() gin.HandlerFunc {
 			return
 		}
 		c.Set(consts.UserID, claims.UserId)
+		c.Set(consts.RoleID, claims.RoleId)
 		c.Set(consts.JWTTokenCtx, tokenstr)
 		c.Next()
 	}
