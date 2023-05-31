@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-31 17:32:37
- * @LastEditTime: 2023-05-31 21:44:25
+ * @LastEditTime: 2023-05-31 22:27:05
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/mail/verifymail.go
  */
