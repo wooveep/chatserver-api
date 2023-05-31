@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:36:21
- * @LastEditTime: 2023-05-31 18:44:23
+ * @LastEditTime: 2023-05-31 19:46:20
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/user/user.go
  */
@@ -81,7 +81,7 @@ func (uh *UserHandler) UserRegister() gin.HandlerFunc {
 		r1, err := uh.uSrv.UserVerifyUserName(ctx, req.Username)
 		r2, err := uh.uSrv.UserVerifyEmail(ctx, req.Email)
 		if err != nil {
-			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "未知错误注册失败"), nil)
+			response.JSON(ctx, errors.WithCode(ecode.Unknown, "邮箱地址错误或无法接受邮件"), nil)
 			logger.Error(err.Error())
 			return
 		}
@@ -162,7 +162,7 @@ func (uh *UserHandler) UserVerifyEmail() gin.HandlerFunc {
 		}
 		res, err := uh.uSrv.UserVerifyEmail(ctx, req.Email)
 		if err != nil {
-			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "邮箱地址错误"), nil)
+			response.JSON(ctx, errors.WithCode(ecode.Unknown, "邮箱地址错误或无法接受邮件"), nil)
 		} else {
 			response.JSON(ctx, nil, res)
 		}
