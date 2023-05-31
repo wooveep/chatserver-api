@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:36:21
- * @LastEditTime: 2023-05-27 20:54:07
+ * @LastEditTime: 2023-05-31 14:30:13
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/user/user.go
  */
@@ -78,6 +78,18 @@ func (uh *UserHandler) UserRegister() gin.HandlerFunc {
 			response.JSON(ctx, errors.WithCode(ecode.CaptchaErr, "验证码错误"), nil)
 			return
 		}
+		r1, err := uh.uSrv.UserVerifyUserName(ctx, req.Username)
+		r2, err := uh.uSrv.UserVerifyEmail(ctx, req.Email)
+		if err != nil {
+			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "未知错误注册失败"), nil)
+			logger.Error(err.Error())
+			return
+		}
+		if !r1.Isvalid || !r2.Isvalid {
+			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "用户名或邮箱已被注册"), nil)
+			logger.Error(err.Error())
+			return
+		}
 		res, err := uh.uSrv.UserRegister(ctx, req)
 		if err != nil {
 			uh.uSrv.UserDelete(ctx)
@@ -88,7 +100,7 @@ func (uh *UserHandler) UserRegister() gin.HandlerFunc {
 		err = uh.uSrv.UserActiveGen(ctx)
 		if err != nil {
 			uh.uSrv.UserDelete(ctx)
-			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "未知错误注册失败"), res)
+			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "激活码生成失败"), res)
 			logger.Error(err.Error())
 			return
 		}
