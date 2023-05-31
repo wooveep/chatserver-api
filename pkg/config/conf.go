@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-02-15 14:05:41
- * @LastEditTime: 2023-05-31 22:59:53
+ * @LastEditTime: 2023-05-31 23:18:23
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/config/conf.go
  */
@@ -85,6 +85,7 @@ type EmailCofig struct {
 	ProxyMode string `mapstructure:"smtphost"`
 	ProxyIP   string `mapstructure:"proxyip"`
 	ProxyPort string `mapstructure:"proxyport"`
+	PreCheck  bool   `mapstructure:"precheck"`
 }
 
 type CustomConfig struct {

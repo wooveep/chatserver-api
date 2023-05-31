@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:37:13
- * @LastEditTime: 2023-05-31 22:26:32
+ * @LastEditTime: 2023-05-31 23:19:33
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/user.go
  */
@@ -364,15 +364,16 @@ func (us *userService) UserVerifyEmail(ctx *gin.Context, email string) (res mode
 		ctx.Set(consts.UserID, UserId)
 		logger.Debugf("邮箱校验信息：%d", UserId)
 	} else {
-		// mVeri := mail.NewVerifier()
-		// err := mVeri.VerifierEmail(email)
-		// if err != nil {
-		// 	logger.Warnf("邮箱%s验证错误:%v", email, err)
-		// 	res.Isvalid = false
-		// 	return res, err
-		// } else {
+		if config.AppConfig.EmailCofig.PreCheck {
+			mVeri := mail.NewVerifier()
+			err := mVeri.VerifierEmail(email)
+			if err != nil {
+				logger.Warnf("邮箱%s验证错误:%v", email, err)
+				res.Isvalid = false
+				return res, err
+			}
+		}
 		res.Isvalid = true
-		// }
 	}
 	return
 }
