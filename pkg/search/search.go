@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-01 08:53:25
- * @LastEditTime: 2023-06-08 13:08:07
+ * @LastEditTime: 2023-06-08 15:08:34
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/search.go
  */
@@ -43,7 +43,7 @@ func summaryContent(message string) string {
 	var chatMessages []openai.ChatCompletionMessage
 	var systemPreset, userMessage openai.ChatCompletionMessage
 	systemPreset.Role = openai.ChatMessageRoleSystem
-	systemPreset.Content = `Summarize the content of the webpage based on its title, extract the main information and list the detailed data included. Keep it within 500 words.please respond in Chinese.`
+	systemPreset.Content = `Summarize the content of the webpage based on its title, extract the main information and list the detailed data included,and keep it within 300 words.please respond in Chinese.`
 	userMessage.Role = openai.ChatMessageRoleUser
 	userMessage.Content = message
 	chatMessages = append(chatMessages, systemPreset, userMessage)
@@ -77,6 +77,7 @@ func CustomSearch(ctx context.Context, query string) (string, error) {
 	googlecfg := config.AppConfig.GoogelConfig
 	ner, keyword := nerDetec(query)
 	if ner == 0 {
+		logger.Debug("没有实体返回")
 		return "", nil
 	}
 	rc := cache.GetRedisClient()
@@ -99,9 +100,9 @@ func CustomSearch(ctx context.Context, query string) (string, error) {
 
 	switch ner {
 	case 2:
-		resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(8).Sort("date").Cr("zh-CN").DateRestrict("d[2]").ExactTerms(keyword).Q(query).Do()
+		resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(10).Sort("date").Cr("zh-CN").DateRestrict("d[2]").ExactTerms(keyword).Q(query).Do()
 	default:
-		resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(8).Cr("zh-CN").ExactTerms(keyword).Q(query).Do()
+		resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(10).Cr("zh-CN").DateRestrict("y[3]").Sort("date").ExactTerms(keyword).Q(query).Do()
 	}
 
 	if err != nil {
@@ -110,21 +111,20 @@ func CustomSearch(ctx context.Context, query string) (string, error) {
 	}
 
 	for _, result := range resp.Items {
-		// logger.Debug(result.Link)
-		// if find := strings.Contains(result.Link, "htm"); find {
 		searchone := searchOne{}
 		searchone.Title = result.Title
 		searchone.Snippet = result.Snippet
 		searchone.Link = result.Link
 		searchResult = append(searchResult, searchone)
-		// }
 	}
 
 	lenresult := len(searchResult)
-	if lenresult > 4 {
-		lenresult = 4
+	if lenresult == 0 {
+		return "", nil
 	}
-
+	if lenresult > 6 {
+		lenresult = 6
+	}
 	wg := sync.WaitGroup{}
 
 	var lock sync.Mutex
@@ -139,7 +139,7 @@ func CustomSearch(ctx context.Context, query string) (string, error) {
 				summary = summaryContent("Title:" + v.Title + "\n" + "Link" + v.Link + "\n" + "Content:" + content)
 			}
 			lock.Lock()
-			textcontent += v.Snippet + "\n" + summary + "\n"
+			textcontent += "Title:\n" + v.Title + "\n" + "Snippet:\n" + v.Snippet + "\n" + "Content:\n" + summary + "\n" + "Web Link:\n" + v.Link + "\n"
 			lock.Unlock()
 		}(v)
 

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-07 09:50:35
- * @LastEditTime: 2023-06-08 09:34:32
+ * @LastEditTime: 2023-06-08 14:36:28
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/crawl.go
  */
@@ -83,8 +83,8 @@ func crawlPage(u string) string {
 	if textlen == 0 {
 		return ""
 	}
-	if textlen > 3700 {
-		textlen = 3700
+	if textlen > 3500 {
+		textlen = 3500
 	}
 	// fmt.Printf("TextContent : %s\n", textcontent[:textlen])
 	return article.Title + "\n" + textcontent[:textlen-1]

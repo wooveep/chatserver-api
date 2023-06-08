@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-06-08 10:31:16
+ * @LastEditTime: 2023-06-08 14:28:23
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -296,7 +296,7 @@ func (cs *chatService) ChatMessageSave(ctx *gin.Context, role, message string, m
 
 func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, memoryLevel int16) (answerid int64, req openai.ChatCompletionRequest, err error) {
 	var chatMessages []openai.ChatCompletionMessage
-	var systemPreset, historyMessage openai.ChatCompletionMessage
+	var systemPreset, historyMessage, lastMessage openai.ChatCompletionMessage
 	var logitbia map[string]int
 	var emquestion, embedcontexts string
 	userId := ctx.GetInt64(consts.UserID)
@@ -322,6 +322,7 @@ func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, 
 		logger.Errorf("获取会话消息记录失败: %v\n", err)
 		return
 	}
+	lastquestion := records[len(records)-1].Message
 	systemPreset.Role = openai.ChatMessageRoleSystem
 
 	switch preset.Extension {
@@ -330,10 +331,18 @@ func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, 
 		{
 			systemPreset.Content = strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Local().Format(consts.DateLayout), -1)
 		}
-	// 联网搜索
+		// 联网搜索
 	case 2:
 		{
-			systemPreset.Content = preset.PresetContent
+			// lastquestion 查询拼接
+			searchContext := cs.ChatSearchExtension(ctx, lastquestion)
+			content := strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Format(consts.DateLayout), -1)
+			systemPreset.Content = strings.Replace(content, "{{ context }}", searchContext, -1)
+		}
+	// 翻译助手
+	case 4:
+		{
+			lastMessage.Content = "translate:\t"
 		}
 	//embedding 数据
 	case 3:
@@ -346,7 +355,7 @@ func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, 
 				}
 			}
 			//将用户问题进行关键词提取
-			emkeyword := cs.jieba.GetKeyword(emquestion) + records[len(records)-1].Message
+			emkeyword := cs.jieba.GetKeyword(emquestion) + lastquestion
 			//通过用户问题 lastquestion + records（User历史）获取Context信息
 			embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emkeyword, preset.Classify)
 			if err != nil {
@@ -361,12 +370,17 @@ func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, 
 	}
 
 	chatMessages = append(chatMessages, systemPreset)
-	for _, record := range records {
-		historyMessage.Role = record.Sender
-		historyMessage.Content = record.Message
-		logger.Debugf("ROLE:%s,Message:%s", record.Sender, record.Message)
-		chatMessages = append(chatMessages, historyMessage)
+	if len(records) > 1 {
+		for _, record := range records[:len(records)-2] {
+			historyMessage.Role = record.Sender
+			historyMessage.Content = record.Message
+			logger.Debugf("ROLE:%s,Message:%s", record.Sender, record.Message)
+			chatMessages = append(chatMessages, historyMessage)
+		}
 	}
+	lastMessage.Role = openai.ChatMessageRoleUser
+	lastMessage.Content += lastquestion
+	chatMessages = append(chatMessages, lastMessage)
 	req.Model = preset.ModelName
 	req.Stream = true
 	req.MaxTokens = preset.MaxTokens
@@ -669,7 +683,7 @@ func (cs *chatService) ChatSearchExtension(ctx *gin.Context, question string) (r
 		return
 	}
 	if result == "" {
-		result, err = cs.rc.Get(ctx, consts.UserBalancePrefix+strconv.FormatInt(chatId, 10)).Result()
+		result, err = cs.rc.Get(ctx, consts.ChatSearchPrefix+strconv.FormatInt(chatId, 10)).Result()
 		if err == nil {
 			return
 		} else {

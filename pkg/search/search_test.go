@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-01 08:53:25
- * @LastEditTime: 2023-06-08 09:38:24
+ * @LastEditTime: 2023-06-08 13:28:22
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/search_test.go
  */
@@ -33,7 +33,7 @@ func Test_customSearch(t *testing.T) {
 		{
 			name: "test1",
 			args: args{
-				query: "介绍一下南京鼓楼医院",
+				query: "中国最新一届常委有哪些人",
 			},
 		},
 		// {

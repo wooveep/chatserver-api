@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-06 11:23:44
- * @LastEditTime: 2023-06-08 11:34:12
+ * @LastEditTime: 2023-06-08 14:54:46
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/ner.go
  */
@@ -100,16 +100,20 @@ func nerDetec(query string) (int, string) {
 	json.Unmarshal([]byte(response.ToJsonString()), &nlpres)
 	// fmt.Printf("%s\n", nlpres.Response.NormalText)
 	for _, v := range nlpres.Response.CompoundParticiples {
-		if v.Pos == "NR" || v.Pos == "NN" || v.Pos == "FW" {
-			participles = append(participles, v.Word)
-		}
+		// if v.Pos == "NR" || v.Pos == "NN" || v.Pos == "FW" {
+		// 	participles = append(participles, v.Word)
+		// }
 		logger.Debug(v.Pos + "||" + v.Word)
 	}
 	// fmt.Printf("%s\n", nlpres.Response.BasicParticiples[0].Pos)
 	var generic []string
 	if len(nlpres.Response.Entities) > 0 {
 		for _, v := range nlpres.Response.Entities {
+			logger.Debug(v.Type + "||" + v.Word)
 			generic = append(generic, v.Type)
+			if v.Type != "time.generic" && v.Type != "quantity.generic" {
+				participles = append(participles, v.Word)
+			}
 		}
 	} else {
 		return 0, ""
