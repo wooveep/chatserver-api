@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 12:54:42
- * @LastEditTime: 2023-05-30 10:41:22
+ * @LastEditTime: 2023-06-06 22:18:06
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/cmd/chatserver-api/init.go
  */
@@ -20,7 +20,7 @@ import (
 )
 
 func InitRouter(ds db.IDataSource) Router {
-	tk := tokenize.NewTokenizer()
+	tk := tokenize.NewTokenizer("./dict")
 	userDao := query.NewUserDao(ds)
 	cdkeyDao := query.NewCDkeyDao(ds)
 	userService := service.NewUserService(userDao, cdkeyDao)

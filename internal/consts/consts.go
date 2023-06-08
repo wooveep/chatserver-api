@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:51:03
- * @LastEditTime: 2023-05-31 15:03:15
+ * @LastEditTime: 2023-06-07 22:16:59
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/consts/consts.go
  */
@@ -52,6 +52,8 @@ const (
 	GiftcardPrefix       = "GiftCard_list:"
 	UserChatIDPrefix     = "User_ChatId_set:"
 	ChatRecordIDPrefix   = "Chat_RecordId_set:"
+	ChatSearchPrefix     = "Chat_Search_list:"
+	QuerySearchPrefix    = "Query_Search_list:"
 )
 
 var AzureToModel = map[string]string{
