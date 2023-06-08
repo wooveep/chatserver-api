@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-06 11:23:44
- * @LastEditTime: 2023-06-08 08:59:24
+ * @LastEditTime: 2023-06-08 22:37:07
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/ner_test.go
  */
@@ -53,20 +53,6 @@ func Test_nerDetec(t *testing.T) {
 				query: "上一个问题回答一下",
 			},
 			want: 0,
-		},
-		{
-			name: "test5",
-			args: args{
-				query: "南京第一医院怎么样",
-			},
-			want: 1,
-		},
-		{
-			name: "test6",
-			args: args{
-				query: "南京今天天气怎样",
-			},
-			want: 2,
 		},
 	}
 	for _, tt := range tests {

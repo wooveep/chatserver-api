@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-07 09:50:35
- * @LastEditTime: 2023-06-08 16:32:20
+ * @LastEditTime: 2023-06-08 22:36:53
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/crawl.go
  */
@@ -41,13 +41,9 @@ func delete_extra_space(s string) string {
 }
 
 func crawlPage(u string) string {
-	// dialer, err := proxy.SOCKS5("tcp", "192.168.10.253:1080", nil, proxy.Direct)
-	// if err != nil {
-	// 	logger.Errorf("failed to download %s: %v\n", u, err)
-	// }
+
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		// Dial:            dialer.Dial,
 	}
 	c := &http.Client{
 		Transport: tr,

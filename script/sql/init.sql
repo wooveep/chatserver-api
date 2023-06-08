@@ -162,7 +162,7 @@ COMMENT ON TABLE public.bill IS '用户账单';
 COMMENT ON COLUMN public.bill.id IS '账单ID';
 COMMENT ON COLUMN public.bill.user_id IS '用户ID';
 COMMENT ON COLUMN public.bill.cost_change IS '变动金额';
-COMMENT ON COLUMN public.bill.amount IS '账户余额';
+COMMENT ON COLUMN public.bill.balance IS '账户余额';
 COMMENT ON COLUMN public.bill.cost_comment IS '变动说明';
 COMMENT ON COLUMN public.bill.created_at IS '记录的创建时间，默认为当前时间';
 COMMENT ON COLUMN public.bill.updated_at IS '记录的更新时间，默认为当前时间';
@@ -337,3 +337,17 @@ CREATE TABLE embed.documents (
 
 COMMENT ON COLUMN embed.documents.classify IS 'Embedding分类';
 
+
+INSERT INTO public.preset (id, preset_name, preset_content, max_token, model_name, logit_bias, temperature, top_p, presence, frequency, created_at, updated_at, with_embedding, deleted_at, is_del, classify, privilege, preset_tips, "extension") VALUES(1646361709138419712, '智能助手', 'You are ChatGPT, a large language model trained by OpenAI. Please strictly follow the rules below when answering the user''s questions.
+Knowledge cutoff: 2021-09 
+Current date: {{ current_date }}
+Rules:\```
+1.All answers are to be provided in Markdown format.
+2.When you receive the instruction ''[cmd:continue]'', please continue answering questions directly from where you left off in the previous response. You do not need to explain the interruption in your response.
+3. If the user''s language is Chinese, please answer the user''s questions in Chinese.
+\```', 300, 'gpt-3.5-turbo', NULL, 0.2, 0.9, 0.3, 0.3, '2023-04-13 11:56:34.057', '2023-05-28 10:33:12.468', false, '0001-01-01 08:00:00.000', 0, NULL, 1, '我擅长根据问题生成具有创意的内容。
+但对于刚刚发生的事情，以及未来发生的事情我无法回答。
+比如我无法告诉今天的天气怎么样。
+你可以问我：
+“如何高效的阅读？”
+“天空为什么是蓝色的？”', 1);

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-01 08:53:25
- * @LastEditTime: 2023-06-08 16:23:10
+ * @LastEditTime: 2023-06-08 22:37:40
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/search.go
  */
@@ -24,11 +24,6 @@ import (
 	"google.golang.org/api/googleapi/transport"
 )
 
-// 实体检测
-
-// 页面爬取
-
-// 页面摘要提取
 func summaryContent(message string) string {
 	if message == "" {
 		return ""

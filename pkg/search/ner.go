@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-06 11:23:44
- * @LastEditTime: 2023-06-08 16:22:35
+ * @LastEditTime: 2023-06-08 22:37:28
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/ner.go
  */
@@ -47,13 +47,6 @@ type nlpResponse struct {
 }
 
 func genin(target string, str_array []string) (count int) {
-	// sort.Strings(str_array)
-	// index := sort.SearchStrings(str_array, target)
-	// //index的取值：[0,len(str_array)]
-	// if index < len(str_array) && str_array[index] == target { //需要注意此处的判断，先判断 &&左侧的条件，如果不满足则结束此处判断，不会再进行右侧的判断
-	// 	count
-	// }
-	// return false
 
 	for _, v := range str_array {
 		if v == target {
@@ -68,9 +61,6 @@ func nerDetec(query string) (int, string) {
 	var participles []string
 	tencentcfg := config.AppConfig.TencentConfig
 
-	// 实例化一个认证对象，入参需要传入腾讯云账户 SecretId 和 SecretKey，此处还需注意密钥对的保密
-	// 代码泄露可能会导致 SecretId 和 SecretKey 泄露，并威胁账号下所有资源的安全性。以下代码示例仅供参考，建议采用更安全的方式来使用密钥，请参见：https://cloud.tencent.com/document/product/1278/85305
-	// 密钥可前往官网控制台 https://console.cloud.tencent.com/cam/capi 进行获取
 	credential := common.NewCredential(
 		tencentcfg.SecretId,
 		tencentcfg.SecretKey,
@@ -98,14 +88,10 @@ func nerDetec(query string) (int, string) {
 	}
 	// 输出json格式的字符串回包
 	json.Unmarshal([]byte(response.ToJsonString()), &nlpres)
-	// fmt.Printf("%s\n", nlpres.Response.NormalText)
 	for _, v := range nlpres.Response.CompoundParticiples {
-		// if v.Pos == "NR" || v.Pos == "NN" || v.Pos == "FW" {
-		// 	participles = append(participles, v.Word)
-		// }
+
 		logger.Debug(v.Pos + "||" + v.Word)
 	}
-	// fmt.Printf("%s\n", nlpres.Response.BasicParticiples[0].Pos)
 	var generic []string
 	if len(nlpres.Response.Entities) > 0 {
 		for _, v := range nlpres.Response.Entities {
