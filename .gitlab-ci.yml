@@ -34,8 +34,8 @@ build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
     - echo "Compiling the code..."
-    - sudo docker build -t wooveep/chatserver-api:latest .
-    - sudo docker push wooveep/chatserver-api:latest
+    - sudo docker build -t wooveep/chatserver-api:deploy .
+    # - sudo docker push wooveep/chatserver-api:deploy
     - echo "Compile complete."
 
 deploy-job:      # This job runs in the deploy stage.

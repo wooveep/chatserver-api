@@ -1,34 +1,45 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-02-15 14:05:41
- * @LastEditTime: 2023-05-23 10:11:46
+ * @LastEditTime: 2023-06-08 11:29:23
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/config/conf.go
  */
 package config
 
 type Config struct {
-	Mode         string       `mapstructure:"mode"`           // gin启动模式
-	Port         string       `mapstructure:"port"`           // 启动端口
-	AppName      string       `mapstructure:"app-name"`       //应用名称
-	Url          string       `mapstructure:"url"`            // 应用地址,用于自检 eg. http://127.0.0.1
-	MaxPingCount int          `mapstructure:"max-ping-count"` // 最大自检次数，用户健康检查
-	Language     string       `mapstructure:"language"`       // 项目语言
-	ExternalURL  string       `mapstructure:"externalurl"`
-	JwtConfig    JwtConfig    `mapstructure:"jwt"`
-	OpenAIConfig OpenAIConfig `mapstructure:"openai"`
-	EmailCofig   EmailCofig   `mapstructure:"email"`
-	DBConfig     DBConfig     `mapstructure:"database"` // 数据库信息
-	RedisConfig  RedisConfig  `mapstructure:"redis"`    // redis
-	LogConfig    LogConfig    `mapstructure:"log"`      // uber z
+	Mode          string        `mapstructure:"mode"`           // gin启动模式
+	Port          string        `mapstructure:"port"`           // 启动端口
+	AppName       string        `mapstructure:"app-name"`       //应用名称
+	Url           string        `mapstructure:"url"`            // 应用地址,用于自检 eg. http://127.0.0.1
+	MaxPingCount  int           `mapstructure:"max-ping-count"` // 最大自检次数，用户健康检查
+	Language      string        `mapstructure:"language"`       // 项目语言
+	ExternalURL   string        `mapstructure:"externalurl"`
+	JwtConfig     JwtConfig     `mapstructure:"jwt"`
+	OpenAIConfig  OpenAIConfig  `mapstructure:"openai"`
+	EmailCofig    EmailCofig    `mapstructure:"email"`
+	DBConfig      DBConfig      `mapstructure:"database"` // 数据库信息
+	RedisConfig   RedisConfig   `mapstructure:"redis"`    // redis
+	LogConfig     LogConfig     `mapstructure:"log"`      // uber z
+	CustomConfig  CustomConfig  `mapstructure:"custom"`
+	TencentConfig TencentConfig `mapstructure:"tencent"`
+	GoogelConfig  GoogelConfig  `mapstructure:"google"`
 }
 
 type JwtConfig struct {
 	Secret                  string `mapstructure:"secret"`
-	JwtTtl                  int64  `mapstructure:"ttl"`              // token 有效期（秒）
-	JwtBlacklistGracePeriod int64  `mapstructure:"blacklistperiod" ` // 黑名单宽限时间（秒）
+	JwtTtl                  int64  `mapstructure:"ttl"`             // token 有效期（秒）
+	JwtBlacklistGracePeriod int64  `mapstructure:"blacklistperiod"` // 黑名单宽限时间（秒）
 }
 
+type TencentConfig struct {
+	SecretId  string `mapstructure:"secretid"`
+	SecretKey string `mapstructure:"secretkey"`
+}
+type GoogelConfig struct {
+	ApiKey string `mapstructure:"apikey"`
+	CxId   string `mapstructure:"cxid"`
+}
 type OpenAIConfig struct {
 	APIType    string `mapstructure:"apitype"`
 	APIURL     string `mapstructure:"apiurl"`
@@ -84,4 +95,9 @@ type EmailCofig struct {
 	ProxyMode string `mapstructure:"smtphost"`
 	ProxyIP   string `mapstructure:"proxyip"`
 	ProxyPort string `mapstructure:"proxyport"`
+	PreCheck  bool   `mapstructure:"precheck"`
+}
+
+type CustomConfig struct {
+	AzureProxy string `mapstructure:"azureproxy"`
 }

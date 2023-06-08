@@ -71,6 +71,8 @@ func (ps *presetService) PresetUpdate(ctx context.Context, req model.PresetUpdat
 	preset.MaxTokens = req.MaxTokens
 	preset.TopP = req.TopP
 	preset.Presence = req.Presence
+	preset.Extension = req.Extension
+	preset.Privilege = req.Privilege
 	err = ps.pd.PresetUpdate(ctx, &preset)
 	if err != nil {
 		return
@@ -96,6 +98,8 @@ func (ps *presetService) PresetCreateNew(ctx context.Context, req model.PresetCr
 	preset.Presence = tools.DefaultValue(req.Presence, 0.2).(float64)
 	preset.WithEmbedding = tools.DefaultValue(req.WithEmbedding, false).(bool)
 	preset.Classify = tools.DefaultValue(req.Classify, "").(string)
+	preset.Extension = tools.DefaultValue(req.Extension, 0).(int)
+	preset.Privilege = tools.DefaultValue(req.Privilege, 1).(int)
 	err = ps.pd.PresetCreateNew(ctx, &preset)
 	if err != nil {
 		res.IsSuccess = false

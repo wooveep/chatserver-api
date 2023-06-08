@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-01 12:55:30
- * @LastEditTime: 2023-05-04 14:48:57
+ * @LastEditTime: 2023-05-31 14:44:33
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/tika/pdf_test.go
  */
@@ -85,12 +85,18 @@ func Test_readPdf(t *testing.T) {
 // 		// TODO: Add test cases.
 // 		{
 // 			name: "test1",
-// 			args: args{"hyperbase.pdf"},
+// 			args: args{"/Users/cloudyi/goProject/chatserver-api/uploadfile/创远信科_SK-6000详细技术手册.pdf"},
 // 		},
 // 	}
 // 	for _, tt := range tests {
 // 		t.Run(tt.name, func(t *testing.T) {
-// 			ReadPd3f(tt.args.path)
+// 			a, err := ReadPd3f(tt.args.path)
+// 			if err != nil {
+// 				fmt.Printf(err.Error())
+// 			}
+// 			for _, v := range a {
+// 				fmt.Println(v)
+// 			}
 // 		})
 // 	}
 // }
