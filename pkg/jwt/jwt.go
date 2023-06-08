@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:57:25
- * @LastEditTime: 2023-05-25 22:30:06
+ * @LastEditTime: 2023-05-31 15:02:16
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/jwt/jwt.go
  */
@@ -24,12 +24,14 @@ import (
 // CustomClaims 在标准声明中加入用户id
 type CustomClaims struct {
 	UserId int64 `json:"user_id"`
+	RoleId int   `json:"role_id"`
 	jwt.RegisteredClaims
 }
 
-func BuildClaims(exp time.Time, uid int64) *CustomClaims {
+func BuildClaims(exp time.Time, uid int64, rid int) *CustomClaims {
 	return &CustomClaims{
 		UserId: uid,
+		RoleId: rid,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(exp),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

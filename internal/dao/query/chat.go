@@ -131,6 +131,6 @@ func (cd *chatDao) ChatBalanceGet(ctx context.Context, userId int64) (model.User
 
 func (cd *chatDao) ChatEmbeddingCompare(ctx context.Context, question pgvector.Vector, classify string) ([]model.DocsCompare, error) {
 	var docsbody []model.DocsCompare
-	err := cd.ds.Master().Model(&entity.Documents{}).Clauses(clause.OrderBy{Expression: clause.Expr{SQL: "Embedding <=> ? ", Vars: []interface{}{question}}}).Limit(3).Where("classify = ?", classify).Find(&docsbody).Error
+	err := cd.ds.Master().Model(&entity.Documents{}).Clauses(clause.OrderBy{Expression: clause.Expr{SQL: "Embedding <=> ? ", Vars: []interface{}{question}}}).Limit(5).Where("classify = ?", classify).Find(&docsbody).Error
 	return docsbody, err
 }

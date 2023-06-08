@@ -10,37 +10,40 @@ package consts
 type APIType string
 
 const (
-	// RequestId 请求id名称
-	RequestId = "request_id"
-	// UserID 用户id key
-	UserID       = "user_id"
-	ChatID       = "chat_id"
-	BalanceCtx   = "balance_ctx"
-	CostTokenCtx = "cost_token_ctx"
-	JWTTokenCtx  = "token_ctx"
+	RequestId     = "request_id"
+	UserID        = "user_id"
+	ChatID        = "chat_id"
+	RoleID        = "role_id"
+	BalanceCtx    = "balance_ctx"
+	CostTokenCtx  = "cost_token_ctx"
+	JWTTokenCtx   = "token_ctx"
+	PriceRatioCtx = "priceratio_ctx"
 
 	InviteReward   = 3
 	RegisterReward = 3
-	CBCKEY         = "ABCDABCDABCDABCD"
-	CDKEYBASE      = "E8S2DZX9WYLTN6BQA7CP5IK3MJUFR4HV"
-	InviteBase     = "E8uvS2pqDZXbcde9WYfiLTNrs6BxQA7CPmn5IyzK3MwJUktFghR4HVaj"
-	// EmbedCtx = "with_emebedding_ctx"
+
+	CBCKEY     = "ABCDABCDABCDABCD"
+	CDKEYBASE  = "E8S2DZX9WYLTN6BQA7CP5IK3MJUFR4HV"
+	InviteBase = "E8uvS2pqDZXbcde9WYfiLTNrs6BxQA7CPmn5IyzK3MwJUktFghR4HVaj"
+
 	// TimeLayout 时间格式
-	DateLayout                     = "2006-01-02"
-	TimeLayout                     = "2006-01-02 15:04:05"
-	TimeLayoutMs                   = "2006-01-02 15:04:05.000"
+	DateLayout   = "2006-01-02"
+	TimeLayout   = "2006-01-02 15:04:05"
+	TimeLayoutMs = "2006-01-02 15:04:05.000"
+
 	DefaultEmptyMessagesLimit uint = 300
 	OpenaiAPIURLv1                 = "https://api.openai.com/v1"
 	AzureAPIPrefix                 = "openai"
 	AzureDeploymentsPrefix         = "deployments"
-	AvatarSize                     = 24
-	TokenPrice                     = 0.00015
+	AzureAPIKeyHeader              = "api-key"
+
+	AvatarSize = 24
+	TokenPrice = 0.00015
 
 	APITypeOpenAI  APIType = "OPEN_AI"
 	APITypeAzure   APIType = "AZURE"
 	APITypeAzureAD APIType = "AZURE_AD"
 
-	AzureAPIKeyHeader    = "api-key"
 	UserInvitePrefix     = "User_Invite_relation_list:"
 	UserAvatarPrefix     = "User_Avatar_url_list:"
 	UserInviteLinkPrefix = "User_Invite_Link_list:"
@@ -51,6 +54,8 @@ const (
 	GiftcardPrefix       = "GiftCard_list:"
 	UserChatIDPrefix     = "User_ChatId_set:"
 	ChatRecordIDPrefix   = "Chat_RecordId_set:"
+	ChatSearchPrefix     = "Chat_Search_list:"
+	QuerySearchPrefix    = "Query_Search_list:"
 )
 
 var AzureToModel = map[string]string{

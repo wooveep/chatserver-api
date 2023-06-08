@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-22 13:41:03
- * @LastEditTime: 2023-05-22 16:15:24
+ * @LastEditTime: 2023-05-29 09:39:33
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/tika/markdown_test.go
  */
@@ -22,7 +22,7 @@ func TestProcessMarkDown(t *testing.T) {
 	}{
 		{
 			name: "test1",
-			args: args{filename: "../../uploadfile/科学技术普及法(2002-06-29).md"},
+			args: args{filename: "../../uploadfile/保守国家秘密法(2010-04-29).md"},
 		},
 	}
 	for _, tt := range tests {

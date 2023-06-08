@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:43:42
- * @LastEditTime: 2023-05-25 21:05:00
+ * @LastEditTime: 2023-05-29 16:57:26
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/chat/chat.go
  */
@@ -56,7 +56,7 @@ func (ch *ChatHandler) ChatRegenerateg() gin.HandlerFunc {
 		}
 		err = ch.cSrv.ChatBalanceVerify(ctx)
 		if err != nil {
-			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足"), nil)
+			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足，请充值。（打开侧边栏点击最下方齿轮⚙️图标，打开设置页面，点击“充值”标签。购买充值卡充值）"), nil)
 			return
 		}
 		//生成请求信息；
@@ -76,7 +76,7 @@ func (ch *ChatHandler) ChatRegenerateg() gin.HandlerFunc {
 		pre_cost := float64(pre_token) * consts.TokenPrice
 		if ctx.GetFloat64(consts.BalanceCtx) < pre_cost {
 			logger.Debugf("预验证TOKEN，余额不足%f", pre_cost)
-			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足"), nil)
+			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足，请充值。（打开侧边栏点击最下方齿轮⚙️图标，打开设置页面，点击“充值”标签。购买充值卡充值）"), nil)
 			return
 		}
 		//go func 请求API；
@@ -124,7 +124,7 @@ func (ch *ChatHandler) ChatChatting() gin.HandlerFunc {
 		//获取用户余额
 		err = ch.cSrv.ChatBalanceVerify(ctx)
 		if err != nil {
-			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足"), nil)
+			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足，请充值。（打开侧边栏点击最下方齿轮⚙️图标，打开设置页面，点击“充值”标签。购买充值卡充值）"), nil)
 			return
 		}
 		//会话请求消息处理
@@ -143,7 +143,7 @@ func (ch *ChatHandler) ChatChatting() gin.HandlerFunc {
 		pre_cost := float64(pre_token) * consts.TokenPrice
 		if ctx.GetFloat64(consts.BalanceCtx) < pre_cost {
 			logger.Debugf("预验证TOKEN，余额不足%f", pre_cost)
-			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足"), nil)
+			response.JSON(ctx, errors.WithCode(ecode.NotFoundErr, "用户余额不足，请充值。（打开侧边栏点击最下方齿轮⚙️图标，打开设置页面，点击“充值”标签。购买充值卡充值）"), nil)
 			return
 		}
 
@@ -426,7 +426,7 @@ func (ch *ChatHandler) ChatEmbeddingFile() gin.HandlerFunc {
 		}
 		var textlist []string
 		if fileHeader == "application/pdf" {
-			textlist, err = tika.ReadPd3f(file.Filename)
+			textlist, err = tika.ReadPd3f(title, file.Filename)
 			if err != nil {
 				// ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				response.JSON(ctx, errors.WithCode(ecode.Unknown, err.Error()), nil)
@@ -451,14 +451,14 @@ func (ch *ChatHandler) ChatEmbeddingFile() gin.HandlerFunc {
 		// 	embeddinglist, err := ch.cSrv.ChatEmbeddingGenerate(batchlist)
 		// 	if err != nil {
 		// 		// ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		// 		response.JSON(ctx, nil, nil)
+		// 		response.JSON(ctx, err, nil)
 		// 		return
 		// 	}
 		// 	for j := 0; j < len(batchlist); j++ {
 		// 		err = ch.cSrv.ChatEmbeddingSave(ctx, title, batchlist[j], classify, embeddinglist[j])
 		// 		if err != nil {
 		// 			// ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		// 			response.JSON(ctx, nil, nil)
+		// 			response.JSON(ctx, err, nil)
 		// 			return
 		// 		}
 		// 	}

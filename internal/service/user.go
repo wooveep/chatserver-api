@@ -28,6 +28,7 @@ import (
 	"errors"
 	"math/rand"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -130,7 +131,7 @@ func (us *userService) UserLogin(ctx context.Context, username, password string)
 	settime := config.AppConfig.JwtConfig.JwtTtl + int64(num*9)
 	timeOut := time.Duration(settime) * time.Second
 	expireAt := time.Now().Add(timeOut)
-	claims := jwt.BuildClaims(expireAt, userInfo.Id)
+	claims := jwt.BuildClaims(expireAt, userInfo.Id, userInfo.Role)
 	token, err := jwt.GenToken(claims, config.AppConfig.JwtConfig.Secret)
 	if err != nil {
 		logger.Infof("JWTTOKEN生成错误%s", username)
@@ -158,7 +159,7 @@ func (us *userService) UserRefresh(ctx *gin.Context) (res model.UserLoginRes, er
 	settime := config.AppConfig.JwtConfig.JwtTtl + int64(num*9)
 	timeOut := time.Duration(settime) * time.Second
 	expireAt := time.Now().Add(timeOut)
-	claims := jwt.BuildClaims(expireAt, userId)
+	claims := jwt.BuildClaims(expireAt, userId, userInfo.Role)
 	token, err := jwt.GenToken(claims, config.AppConfig.JwtConfig.Secret)
 	if err != nil {
 		logger.Infof("JWTTOKEN生成错误%s", userInfo.Username)
@@ -361,10 +362,19 @@ func (us *userService) UserVerifyEmail(ctx *gin.Context, email string) (res mode
 	if UserId != 0 {
 		res.Isvalid = false
 		ctx.Set(consts.UserID, UserId)
+		logger.Debugf("邮箱校验信息：%d", UserId)
 	} else {
+		if config.AppConfig.EmailCofig.PreCheck {
+			mVeri := mail.NewVerifier()
+			err := mVeri.VerifierEmail(email)
+			if err != nil {
+				logger.Warnf("邮箱%s验证错误:%v", email, err)
+				res.Isvalid = false
+				return res, err
+			}
+		}
 		res.Isvalid = true
 	}
-	logger.Debugf("邮箱校验信息：%d", UserId)
 	return
 }
 
@@ -415,7 +425,10 @@ func (us *userService) UserTempCodeGen(ctx *gin.Context) (tempcode string, email
 
 func (us *userService) UserTempCodeVerify(ctx *gin.Context, tempcode string) (Isvalid bool) {
 	Isvalid = false
-	codeStr, err := base64.StdEncoding.DecodeString(tempcode)
+	re := regexp.MustCompile(`^[A-Za-z0-9+]+={0,2}`)
+	tempcodeM := re.FindString(tempcode)
+	logger.Debugf("activeCode:%s", tempcodeM)
+	codeStr, err := base64.StdEncoding.DecodeString(tempcodeM)
 	if err != nil {
 		return
 	}

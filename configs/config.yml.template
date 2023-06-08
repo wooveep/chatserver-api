@@ -7,7 +7,7 @@ max-ping-count: 10 #自检次数
 language: zh # 项目语言，en或者zh
 jwt:
   secret: ABCDFTGSEDE
-  ttl: 3600
+  ttl: 223600
   blacklistperiod: 10
 openai:
   apitype:                        #填写 “azure”或“openai” 默认为openai
@@ -15,9 +15,9 @@ openai:
   apiversion: "2023-05-15"        #当使用azure API 时需要填写APIversion
   authtoken:              #填写 azure 密钥  或 openai API KEY 
   orgid:                  #OPENAI页面的组织ID  azureAPI不需要填写
-  proxymode: socks5      #如果为空则不使用代理
-  proxyip:                
-  proxyport:             
+  proxymode: socks5       #如果为空则不使用代理 http 或 socks5 
+  proxyip:                代理IP
+  proxyport:              代理端口
 email:
   smtphost:               #smtp邮箱地址
   smtpport:               #邮箱端口
@@ -26,8 +26,21 @@ email:
   smtpsender:             #邮件发件人姓名
   proxymode:  socks5      #如果为空则不使用代理
   proxyip:  
-  proxyport:  
-# 数据库配置 （Postgresql数据库）
+  proxyport:
+ 
+# 联网GPT搜索配置。
+tencent:  # 腾讯API密钥 申请开通NLP服务 用于对用户的问题进行NER识别
+  secretid:
+  secretkey: 
+google:  #谷歌搜索API密钥 用于对用户的问题进行搜索
+  apiKey:   #谷歌API KEY
+  cxid:    #谷歌自定义搜索ID
+
+custom: 
+ #进行邮箱有效性检测，需要向邮件服务器25端口发送数据，有些VPS封禁了出站25端口需要使用代理 
+  azureproxy: socks5://代理IP:代理端口?timeout=5s   #如果不需要代理置空
+
+# 数据库配置(postgresql)
 database:
   dbname:   #数据库名称
   host:  #数据库服务地址

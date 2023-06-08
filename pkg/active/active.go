@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-10 14:06:46
- * @LastEditTime: 2023-05-25 21:48:00
+ * @LastEditTime: 2023-05-31 18:51:25
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/active/active.go
  */
@@ -14,7 +14,6 @@ import (
 	"chatserver-api/utils/uuid"
 	"context"
 	"strconv"
-	"time"
 
 	"github.com/go-redis/redis/v8"
 )
@@ -24,9 +23,9 @@ func getActiveCodeKey(code string) string {
 }
 
 func activeCodeSave(ctx context.Context, code string, userId int64) (err error) {
-	timer := 172800 * time.Second
+	// timer := 172800 * time.Second
 	rc := cache.GetRedisClient()
-	err = rc.SetNX(ctx, getActiveCodeKey(code), userId, timer).Err()
+	err = rc.SetNX(ctx, getActiveCodeKey(code), userId, 0).Err()
 	return err
 }
 

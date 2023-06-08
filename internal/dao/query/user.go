@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-04 19:47:43
- * @LastEditTime: 2023-05-26 16:22:20
+ * @LastEditTime: 2023-05-31 14:32:56
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/query/user.go
  */
@@ -36,7 +36,7 @@ func (ud *userDao) UserUpdate(ctx context.Context, user *entity.User) error {
 }
 
 func (ud *userDao) UserDelete(ctx context.Context, userId int64) error {
-	return ud.ds.Master().Delete(&entity.User{Id: userId}).Error
+	return ud.ds.Master().Unscoped().Delete(&entity.User{Id: userId}).Error
 }
 
 func (ud *userDao) UserBillCreate(ctx context.Context, bill *entity.Bill) error {

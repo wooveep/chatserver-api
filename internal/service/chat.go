@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-05-28 17:52:18
+ * @LastEditTime: 2023-06-08 16:55:35
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -23,7 +23,9 @@ import (
 	"chatserver-api/pkg/logger"
 	"chatserver-api/pkg/openai"
 	"chatserver-api/pkg/pgvector"
+	"chatserver-api/pkg/search"
 	"chatserver-api/pkg/tiktoken"
+	"chatserver-api/pkg/tokenize"
 	"chatserver-api/utils/security"
 	"chatserver-api/utils/uuid"
 	"fmt"
@@ -62,24 +64,26 @@ type ChatService interface {
 	ChatEmbeddingGenerate(str []string) (embedVectors []openai.Embedding, err error)
 	ChatEmbeddingCompare(ctx context.Context, question, classify string) (contextStr string, err error)
 	ChatCostCalculate(ctx *gin.Context, promptMsgs []openai.ChatCompletionMessage, model string)
+	ChatSearchExtension(ctx *gin.Context, question string) (result string)
 	// ChatTest(ctx context.Context, text string) (keyword string)
 }
 
 // userService 实现UserService接口
 type chatService struct {
-	cd   dao.ChatDao
-	uSrv UserService
-	rc   *redis.Client
-
-	iSrv uuid.SnowNode
+	cd    dao.ChatDao
+	uSrv  UserService
+	rc    *redis.Client
+	jieba tokenize.Tokenizer
+	iSrv  uuid.SnowNode
 }
 
-func NewChatService(_cd dao.ChatDao, _uSrv UserService) *chatService {
+func NewChatService(_cd dao.ChatDao, _uSrv UserService, _jieba tokenize.Tokenizer) *chatService {
 	return &chatService{
-		cd:   _cd,
-		uSrv: _uSrv,
-		iSrv: *uuid.NewNode(1),
-		rc:   cache.GetRedisClient(),
+		cd:    _cd,
+		uSrv:  _uSrv,
+		iSrv:  *uuid.NewNode(1),
+		rc:    cache.GetRedisClient(),
+		jieba: _jieba,
 	}
 }
 
@@ -119,12 +123,14 @@ func (cs *chatService) ChatDelete(ctx *gin.Context) error {
 		val3, _ := cs.rc.SMembers(ctx, consts.UserChatIDPrefix+strconv.FormatInt(userId, 10)).Result()
 		for _, v := range val3 {
 			cs.rc.Del(ctx, consts.ChatRecordIDPrefix+v)
+			cs.rc.Del(ctx, consts.ChatSearchPrefix+v)
 		}
 		cs.rc.Del(ctx, consts.UserChatIDPrefix+strconv.FormatInt(userId, 10))
 		return cs.cd.ChatDeleteAll(ctx, userId)
 	} else {
 		cs.rc.SRem(ctx, consts.UserChatIDPrefix+strconv.FormatInt(userId, 10), chatId)
 		cs.rc.Del(ctx, consts.ChatRecordIDPrefix+strconv.FormatInt(chatId, 10))
+		cs.rc.Del(ctx, consts.ChatSearchPrefix+strconv.FormatInt(chatId, 10))
 		return cs.cd.ChatDeleteOne(ctx, userId, chatId)
 	}
 }
@@ -215,6 +221,7 @@ func (cs *chatService) ChatRecordClear(ctx *gin.Context) (err error) {
 	chatId := ctx.GetInt64(consts.ChatID)
 	err = cs.cd.ChatRecordClear(ctx, chatId)
 	cs.rc.Del(ctx, consts.ChatRecordIDPrefix+strconv.FormatInt(chatId, 10))
+	cs.rc.Del(ctx, consts.ChatSearchPrefix+strconv.FormatInt(chatId, 10))
 	return
 }
 
@@ -232,7 +239,8 @@ func (cs *chatService) ChatBalanceUpdate(ctx *gin.Context) (err error) {
 	userId := ctx.GetInt64(consts.UserID)
 	balance := ctx.GetFloat64(consts.BalanceCtx)
 	token := ctx.GetInt(consts.CostTokenCtx)
-	cost := float64(token) * consts.TokenPrice
+	priceratio := ctx.GetInt(consts.PriceRatioCtx)
+	cost := float64(token) * consts.TokenPrice * float64(priceratio)
 	comment := fmt.Sprintf("消费-会话消耗令牌数:%d", token)
 	return cs.uSrv.UserBalanceChange(ctx, userId, balance, -cost, comment)
 }
@@ -289,7 +297,7 @@ func (cs *chatService) ChatMessageSave(ctx *gin.Context, role, message string, m
 
 func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, memoryLevel int16) (answerid int64, req openai.ChatCompletionRequest, err error) {
 	var chatMessages []openai.ChatCompletionMessage
-	var systemPreset, historyMessage openai.ChatCompletionMessage
+	var systemPreset, historyMessage, lastMessage openai.ChatCompletionMessage
 	var logitbia map[string]int
 	var emquestion, embedcontexts string
 	userId := ctx.GetInt64(consts.UserID)
@@ -315,39 +323,66 @@ func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, 
 		logger.Errorf("获取会话消息记录失败: %v\n", err)
 		return
 	}
+	lastquestion := records[len(records)-1].Message
 	systemPreset.Role = openai.ChatMessageRoleSystem
-	if preset.WithEmbedding {
-		if len(records) != 0 {
-			for _, v := range records {
-				if v.Sender == "user" {
-					emquestion += v.Message
+	ctx.Set(consts.PriceRatioCtx, 1)
+	switch preset.Extension {
+	// 默认智能助手
+	case 1:
+		{
+			systemPreset.Content = strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Local().Format(consts.DateLayout), -1)
+		}
+		// 联网搜索
+	case 2:
+		{
+			// lastquestion 查询拼接
+			ctx.Set(consts.PriceRatioCtx, 5)
+			searchContext := cs.ChatSearchExtension(ctx, lastquestion)
+			content := strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Format(consts.DateLayout), -1)
+			systemPreset.Content = strings.Replace(content, "{{ context }}", searchContext, -1)
+		}
+	// 翻译助手
+	case 4:
+		{
+			lastMessage.Content = "translate:\t"
+		}
+	//embedding 数据
+	case 3:
+		{
+			if len(records) != 0 {
+				for _, v := range records {
+					if v.Sender == "user" {
+						emquestion += v.Message
+					}
 				}
 			}
+			//将用户问题进行关键词提取
+			emkeyword := cs.jieba.GetKeyword(emquestion) + lastquestion
+			//通过用户问题 lastquestion + records（User历史）获取Context信息
+			embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emkeyword, preset.Classify)
+			if err != nil {
+				logger.Errorf("获取embedding上下文失败: %v\n", err)
+				return
+			}
+			//替换拼接PresetContent
+			systemPreset.Content = strings.Replace(preset.PresetContent, "{{ context }}", embedcontexts, -1)
 		}
-		//将用户问题进行关键词提取
-		// emkeyword := cs.jieba.GetKeyword(emquestion)
-		//通过用户问题 lastquestion + records（User历史）获取Context信息
-		embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emquestion, preset.Classify)
-		if err != nil {
-			logger.Errorf("获取embedding上下文失败: %v\n", err)
-			return
-		}
-		//替换拼接PresetContent
-		systemPreset.Content = strings.Replace(preset.PresetContent, "{{ context }}", embedcontexts, -1)
-
-	} else {
+	default:
 		systemPreset.Content = preset.PresetContent
 	}
-	if preset.Extension == 1 {
-		systemPreset.Content = strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Local().Format(consts.DateLayout), -1)
-	}
+
 	chatMessages = append(chatMessages, systemPreset)
-	for _, record := range records {
-		historyMessage.Role = record.Sender
-		historyMessage.Content = record.Message
-		logger.Debugf("ROLE:%s,Message:%s", record.Sender, record.Message)
-		chatMessages = append(chatMessages, historyMessage)
+	if len(records) > 1 {
+		for _, record := range records[:len(records)-2] {
+			historyMessage.Role = record.Sender
+			historyMessage.Content = record.Message
+			logger.Debugf("ROLE:%s,Message:%s", record.Sender, record.Message)
+			chatMessages = append(chatMessages, historyMessage)
+		}
 	}
+	lastMessage.Role = openai.ChatMessageRoleUser
+	lastMessage.Content += lastquestion
+	chatMessages = append(chatMessages, lastMessage)
 	req.Model = preset.ModelName
 	req.Stream = true
 	req.MaxTokens = preset.MaxTokens
@@ -388,34 +423,53 @@ func (cs *chatService) ChatChattingReqProcess(ctx *gin.Context, lastquestion str
 		logger.Errorf("获取会话消息记录失败: %v\n", err)
 		return
 	}
+	ctx.Set(consts.PriceRatioCtx, 1)
 	systemPreset.Role = openai.ChatMessageRoleSystem
-	if preset.WithEmbedding {
-		if len(records) != 0 {
-			for _, v := range records {
-				if v.Sender == "user" {
-					emquestion += v.Message
+	switch preset.Extension {
+	// 默认智能助手
+	case 1:
+		{
+			systemPreset.Content = strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Local().Format(consts.DateLayout), -1)
+		}
+	// 联网搜索
+	case 2:
+		{
+			// lastquestion 查询拼接
+			ctx.Set(consts.PriceRatioCtx, 5)
+			searchContext := cs.ChatSearchExtension(ctx, lastquestion)
+			content := strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Format(consts.DateLayout), -1)
+			systemPreset.Content = strings.Replace(content, "{{ context }}", searchContext, -1)
+		}
+	// 翻译助手
+	case 4:
+		{
+			lastMessage.Content = "translate:\t"
+		}
+	//embedding 数据
+	case 3:
+		{
+			if len(records) != 0 {
+				for _, v := range records {
+					if v.Sender == "user" {
+						emquestion += v.Message
+					}
 				}
 			}
-		}
 
-		emquestion += lastquestion
-		//将用户问题进行关键词提取
-		// emkeyword := cs.jieba.GetKeyword(emquestion)
-		//通过用户问题 lastquestion + records（User历史）获取Context信息
-		embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emquestion, preset.Classify)
-		if err != nil {
-			logger.Errorf("获取embedding上下文失败: %v\n", err)
-			return
+			emquestion += lastquestion
+			//将用户问题进行关键词提取
+			emkeyword := cs.jieba.GetKeyword(emquestion) + lastquestion
+			//通过用户问题 lastquestion + records（User历史）获取Context信息
+			embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emkeyword, preset.Classify)
+			if err != nil {
+				logger.Errorf("获取embedding上下文失败: %v\n", err)
+				return
+			}
+			//替换拼接PresetContent
+			systemPreset.Content = strings.Replace(preset.PresetContent, "{{ context }}", embedcontexts, -1)
 		}
-		//替换拼接PresetContent
-		systemPreset.Content = strings.Replace(preset.PresetContent, "{{ context }}", embedcontexts, -1)
-
-	} else {
+	default:
 		systemPreset.Content = preset.PresetContent
-	}
-
-	if preset.Extension == 1 {
-		systemPreset.Content = strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Local().Format(consts.DateLayout), -1)
 	}
 	chatMessages = append(chatMessages, systemPreset)
 	for _, record := range records {
@@ -425,7 +479,7 @@ func (cs *chatService) ChatChattingReqProcess(ctx *gin.Context, lastquestion str
 		chatMessages = append(chatMessages, historyMessage)
 	}
 	lastMessage.Role = openai.ChatMessageRoleUser
-	lastMessage.Content = lastquestion
+	lastMessage.Content += lastquestion
 	chatMessages = append(chatMessages, lastMessage)
 	req.Model = preset.ModelName
 	req.Stream = true
@@ -452,13 +506,13 @@ func (cs *chatService) ChatStreamResProcess(ctx *gin.Context, chanStream <-chan 
 	ctx.Stream(func(w io.Writer) bool {
 		if msg, ok := <-chanStream; ok {
 			if msg == "[content_filter]" {
-				messages = "尊敬的客户，非常感谢您使用我们的服务。我们注意到您最近提交的问题被我们的内容过滤器拦截了。我们深表歉意，因为我们的过滤器是为了保护我们的用户免受不良内容的侵害而设置的。但是，我们也理解您的问题对您来说非常重要。如果您有任何疑问或需要进一步的帮助，请随时联系网站管理员。再次感谢您的支持和理解。"
-				ctx.SSEvent("chatting", map[string]string{"question_id": strconv.FormatInt(questionId, 10), "msgid": strconv.FormatInt(msgid, 10), "time": msgtime, "text": messages})
+				err_messages := "尊敬的客户，非常感谢您使用我们的服务。我们注意到您最近提交的问题被我们的内容过滤器拦截了。我们深表歉意，因为我们的过滤器是为了保护我们的用户免受不良内容的侵害而设置的。但是，我们也理解您的问题对您来说非常重要。如果您有任何疑问或需要进一步的帮助，请随时联系网站管理员。再次感谢您的支持和理解。"
+				ctx.SSEvent("chatting", map[string]string{"question_id": strconv.FormatInt(questionId, 10), "msgid": strconv.FormatInt(msgid, 10), "time": msgtime, "text": err_messages})
 				return false
 			}
 			if msg == "[REQ_ERROR]" {
-				messages += "尊敬的客户，非常感谢您使用我们的服务。由于API暂时异常,我们深表歉意,请随时联系网站管理员。再次感谢您的支持和理解。"
-				ctx.SSEvent("chatting", map[string]string{"question_id": strconv.FormatInt(questionId, 10), "msgid": strconv.FormatInt(msgid, 10), "time": msgtime, "text": messages})
+				err_messages := messages + "尊敬的客户，非常感谢您使用我们的服务。由于API暂时异常,我们深表歉意,请随时联系网站管理员。再次感谢您的支持和理解。"
+				ctx.SSEvent("chatting", map[string]string{"question_id": strconv.FormatInt(questionId, 10), "msgid": strconv.FormatInt(msgid, 10), "time": msgtime, "text": err_messages})
 				return false
 			}
 			messages += msg
@@ -495,6 +549,7 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 	if err != nil {
 		logger.Errorf("ChatCompletionStream error: %v\n", err)
 		chanStream <- "[REQ_ERROR]"
+		time.Sleep(1 * time.Millisecond)
 		close(chanStream)
 		return
 	}
@@ -537,6 +592,7 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 				// cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
 				chanStream <- "[content_filter]"
 				stream.Close()
+				time.Sleep(1 * time.Millisecond)
 				close(chanStream)
 				return
 			}
@@ -615,9 +671,41 @@ func (cs *chatService) ChatEmbeddingCompare(ctx context.Context, question, class
 	if len(textbody) != 0 {
 		for _, v := range textbody {
 			contextStr += v.Body
+			logger.Debugf(v.Body)
 		}
 		return
 	}
+	return
+}
+
+func (cs *chatService) ChatSearchExtension(ctx *gin.Context, question string) (result string) {
+	chatId := ctx.GetInt64(consts.ChatID)
+
+	result, err := search.CustomSearch(ctx, question)
+	if err != nil {
+		logger.Warnf("搜索异常:%v", err.Error())
+		return
+	}
+	if result == "" {
+		result, err = cs.rc.Get(ctx, consts.ChatSearchPrefix+strconv.FormatInt(chatId, 10)).Result()
+		if err == nil {
+			return
+		} else {
+			if err != redis.Nil {
+				logger.Errorf("Redis连接异常:%v", err.Error())
+				return
+			}
+			logger.Debugf(" 缓存不存在:%v", err.Error())
+			return
+		}
+
+	}
+	// err = cs.rc.Set(ctx, consts.ChatSearchPrefix+security.Md5(question), result, 30*time.Minute).Err()
+	err = cs.rc.Set(ctx, consts.ChatSearchPrefix+strconv.FormatInt(chatId, 10), result, 0).Err()
+	if err != nil {
+		logger.Errorf("Redis连接异常:%v", err.Error())
+	}
+
 	return
 }
 
