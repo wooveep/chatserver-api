@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-06-08 14:28:23
+ * @LastEditTime: 2023-06-08 16:55:35
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -239,7 +239,8 @@ func (cs *chatService) ChatBalanceUpdate(ctx *gin.Context) (err error) {
 	userId := ctx.GetInt64(consts.UserID)
 	balance := ctx.GetFloat64(consts.BalanceCtx)
 	token := ctx.GetInt(consts.CostTokenCtx)
-	cost := float64(token) * consts.TokenPrice
+	priceratio := ctx.GetInt(consts.PriceRatioCtx)
+	cost := float64(token) * consts.TokenPrice * float64(priceratio)
 	comment := fmt.Sprintf("消费-会话消耗令牌数:%d", token)
 	return cs.uSrv.UserBalanceChange(ctx, userId, balance, -cost, comment)
 }
@@ -324,7 +325,7 @@ func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, 
 	}
 	lastquestion := records[len(records)-1].Message
 	systemPreset.Role = openai.ChatMessageRoleSystem
-
+	ctx.Set(consts.PriceRatioCtx, 1)
 	switch preset.Extension {
 	// 默认智能助手
 	case 1:
@@ -335,6 +336,7 @@ func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, 
 	case 2:
 		{
 			// lastquestion 查询拼接
+			ctx.Set(consts.PriceRatioCtx, 5)
 			searchContext := cs.ChatSearchExtension(ctx, lastquestion)
 			content := strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Format(consts.DateLayout), -1)
 			systemPreset.Content = strings.Replace(content, "{{ context }}", searchContext, -1)
@@ -421,6 +423,7 @@ func (cs *chatService) ChatChattingReqProcess(ctx *gin.Context, lastquestion str
 		logger.Errorf("获取会话消息记录失败: %v\n", err)
 		return
 	}
+	ctx.Set(consts.PriceRatioCtx, 1)
 	systemPreset.Role = openai.ChatMessageRoleSystem
 	switch preset.Extension {
 	// 默认智能助手
@@ -432,6 +435,7 @@ func (cs *chatService) ChatChattingReqProcess(ctx *gin.Context, lastquestion str
 	case 2:
 		{
 			// lastquestion 查询拼接
+			ctx.Set(consts.PriceRatioCtx, 5)
 			searchContext := cs.ChatSearchExtension(ctx, lastquestion)
 			content := strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Format(consts.DateLayout), -1)
 			systemPreset.Content = strings.Replace(content, "{{ context }}", searchContext, -1)

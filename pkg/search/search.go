@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-01 08:53:25
- * @LastEditTime: 2023-06-08 15:08:34
+ * @LastEditTime: 2023-06-08 16:23:10
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/search.go
  */
@@ -22,12 +22,6 @@ import (
 
 	customsearch "google.golang.org/api/customsearch/v1"
 	"google.golang.org/api/googleapi/transport"
-)
-
-const (
-	apiKey = "AIzaSyB1PJ1jZ5hzGRD5ZB1iJ1EhZEntunS5S4c"
-	cx     = "708f239208e3942ee"
-	// query  = "南京有哪些好玩的"
 )
 
 // 实体检测
@@ -100,14 +94,21 @@ func CustomSearch(ctx context.Context, query string) (string, error) {
 
 	switch ner {
 	case 2:
-		resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(10).Sort("date").Cr("zh-CN").DateRestrict("d[2]").ExactTerms(keyword).Q(query).Do()
+		{
+			resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(10).Sort("date").Cr("zh-CN").DateRestrict("d[2]").ExactTerms(keyword).Q(query).Do()
+			if err != nil {
+				logger.Errorf("%s", err)
+				return "", err
+			}
+		}
 	default:
-		resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(10).Cr("zh-CN").DateRestrict("y[3]").Sort("date").ExactTerms(keyword).Q(query).Do()
-	}
-
-	if err != nil {
-		logger.Errorf("%s", err)
-		return "", err
+		{
+			resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(10).Cr("zh-CN").DateRestrict("y[3]").ExactTerms(keyword).Sort("date").Q(query).Do()
+			if err != nil {
+				logger.Errorf("%s", err)
+				return "", err
+			}
+		}
 	}
 
 	for _, result := range resp.Items {

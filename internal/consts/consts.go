@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:51:03
- * @LastEditTime: 2023-06-07 22:16:59
+ * @LastEditTime: 2023-06-08 16:51:55
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/consts/consts.go
  */
@@ -13,12 +13,13 @@ const (
 	// RequestId 请求id名称
 	RequestId = "request_id"
 	// UserID 用户id key
-	UserID       = "user_id"
-	ChatID       = "chat_id"
-	RoleID       = "role_id"
-	BalanceCtx   = "balance_ctx"
-	CostTokenCtx = "cost_token_ctx"
-	JWTTokenCtx  = "token_ctx"
+	UserID        = "user_id"
+	ChatID        = "chat_id"
+	RoleID        = "role_id"
+	BalanceCtx    = "balance_ctx"
+	CostTokenCtx  = "cost_token_ctx"
+	JWTTokenCtx   = "token_ctx"
+	PriceRatioCtx = "priceratio_ctx"
 
 	InviteReward   = 3
 	RegisterReward = 3

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-07 09:50:35
- * @LastEditTime: 2023-06-08 14:36:28
+ * @LastEditTime: 2023-06-08 16:32:20
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/crawl.go
  */
@@ -69,15 +69,6 @@ func crawlPage(u string) string {
 		logger.Errorf("failed to parse %s: %v\n", u, err)
 		return ""
 	}
-
-	// fmt.Printf("URL     : %s\n", u)
-	// fmt.Printf("Title   : %s\n", article.Title)
-	// fmt.Printf("Author  : %s\n", article.Byline)
-	// fmt.Printf("Length  : %d\n", article.Length)
-	// fmt.Printf("Excerpt : %s\n", article.Excerpt)
-	// fmt.Printf("SiteName: %s\n", article.SiteName)
-	// fmt.Printf("Image   : %s\n", article.Image)
-	// fmt.Printf("Favicon : %s\n", article.Favicon)
 	textcontent := delete_extra_space(article.TextContent)
 	textlen := len(textcontent)
 	if textlen == 0 {
@@ -86,6 +77,5 @@ func crawlPage(u string) string {
 	if textlen > 3500 {
 		textlen = 3500
 	}
-	// fmt.Printf("TextContent : %s\n", textcontent[:textlen])
 	return article.Title + "\n" + textcontent[:textlen-1]
 }

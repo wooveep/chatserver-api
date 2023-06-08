@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-06 11:23:44
- * @LastEditTime: 2023-06-08 14:54:46
+ * @LastEditTime: 2023-06-08 16:22:35
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/ner.go
  */
@@ -111,7 +111,7 @@ func nerDetec(query string) (int, string) {
 		for _, v := range nlpres.Response.Entities {
 			logger.Debug(v.Type + "||" + v.Word)
 			generic = append(generic, v.Type)
-			if v.Type != "time.generic" && v.Type != "quantity.generic" {
+			if v.Type == "loc.generic" || v.Type == "org.generic" || v.Type == "medicine" || v.Type == "event.generic" || v.Type == "product.generic" || v.Type == "person.generic" {
 				participles = append(participles, v.Word)
 			}
 		}

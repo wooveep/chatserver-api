@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-01 08:53:25
- * @LastEditTime: 2023-06-08 13:28:22
+ * @LastEditTime: 2023-06-08 16:32:52
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/search_test.go
  */
@@ -31,9 +31,9 @@ func Test_customSearch(t *testing.T) {
 	}{
 		// TODO: Add test cases.
 		{
-			name: "test1",
+			name: "test3",
 			args: args{
-				query: "中国最新一届常委有哪些人",
+				query: "今年高考作文题目是什么",
 			},
 		},
 		// {
@@ -45,8 +45,10 @@ func Test_customSearch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotResultstr, _ := CustomSearch(context.Background(), tt.args.query)
-
+			gotResultstr, err := CustomSearch(context.Background(), tt.args.query)
+			if err != nil {
+				fmt.Println(err)
+			}
 			fmt.Println(gotResultstr)
 		})
 	}
