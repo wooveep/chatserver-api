@@ -34,8 +34,8 @@ build-job:       # This job runs in the build stage, which runs first.
   stage: build
   script:
     - echo "Compiling the code..."
-    - sudo docker build -t wooveep/chatserver-api:deploy .
-    # - sudo docker push wooveep/chatserver-api:deploy
+    - sudo docker build -t wooveep/chatserver-api:latest .
+    - sudo docker push wooveep/chatserver-api:latest
     - echo "Compile complete."
 
 deploy-job:      # This job runs in the deploy stage.
@@ -44,5 +44,5 @@ deploy-job:      # This job runs in the deploy stage.
     - echo "Deploying application..." 
     - 'sudo docker  stop chatserver-api'
     - 'sudo docker rm chatserver-api'
-    - 'sudo  docker run  -d   --name chatserver-api  -p 18080:18080  -v /home/cloudyi/chatserver-api/configs:/app/chatserver-api/configs   -v /home/cloudyi/chatserver-api/logs:/app/chatserver-api/logs  -v /home/cloudyi/chatserver-api/head_photo:/app/chatserver-api/head_photo  wooveep/chatserver-api:deploy' 
+    - 'sudo  docker run  -d   --name chatserver-api  -p 18080:18080  -v /home/cloudyi/chatserver-api/configs:/app/chatserver-api/configs   -v /home/cloudyi/chatserver-api/logs:/app/chatserver-api/logs  -v /home/cloudyi/chatserver-api/head_photo:/app/chatserver-api/head_photo  wooveep/chatserver-api:latest' 
     - echo "Application successfully deployed."
