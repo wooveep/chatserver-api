@@ -1,7 +1,7 @@
 <!--
  * @Author: cloudyi.li
  * @Date: 2023-05-10 09:15:49
- * @LastEditTime: 2023-05-28 18:27:32
+ * @LastEditTime: 2023-06-09 10:45:08
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/README.md
 -->
@@ -11,6 +11,8 @@
 ## 体验站
 
   [https://chat.wooveep.net](https://chat.wooveep.net/#/register/uNJtISQw)
+
+新增功能： 支持联网的GPT搜索对接谷歌搜索API与腾讯NLP服务API
 
 本仓库为后端API服务，依赖的前端仓库为[wooveep](https://github.com/wooveep)/[chatserver-web](https://github.com/wooveep/chatserver-web)
 
@@ -60,6 +62,7 @@
 - [x] 基于卡密方式的用户额度充值
 - [x] 用户消费明细查询
 - [x] 用户邀请控制
+- [x] 联网的GPT
 
 ## 应用场景
 
