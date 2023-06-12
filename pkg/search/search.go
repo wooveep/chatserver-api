@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-01 08:53:25
- * @LastEditTime: 2023-06-12 13:14:54
+ * @LastEditTime: 2023-06-12 19:06:08
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/search.go
  */
@@ -125,7 +125,7 @@ func CustomSearch(ctx context.Context, queryoriginal string) (string, error) {
 	switch ner {
 	case 2:
 		{
-			resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(10).Sort("date").Cr("zh-CN").DateRestrict("d[2]").ExactTerms(keyword).Q(query).Do()
+			resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(8).Sort("date").Cr("zh-CN").DateRestrict("d[2]").ExactTerms(keyword).Q(query).Do()
 			if err != nil {
 				logger.Errorf("%s", err)
 				return "", err
@@ -133,7 +133,7 @@ func CustomSearch(ctx context.Context, queryoriginal string) (string, error) {
 		}
 	default:
 		{
-			resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(10).Cr("zh-CN").DateRestrict("y[3]").ExactTerms(keyword).Sort("date").Q(query).Do()
+			resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(8).Cr("zh-CN").DateRestrict("y[3]").ExactTerms(keyword).Sort("date").Q(query).Do()
 			if err != nil {
 				logger.Errorf("%s", err)
 				return "", err
@@ -153,8 +153,8 @@ func CustomSearch(ctx context.Context, queryoriginal string) (string, error) {
 	if lenresult == 0 {
 		return "", nil
 	}
-	if lenresult > 6 {
-		lenresult = 6
+	if lenresult > 3 {
+		lenresult = 3
 	}
 	wg := sync.WaitGroup{}
 
