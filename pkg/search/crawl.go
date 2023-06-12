@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-07 09:50:35
- * @LastEditTime: 2023-06-08 16:32:20
+ * @LastEditTime: 2023-06-12 13:15:30
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/crawl.go
  */
@@ -27,7 +27,8 @@ import (
 
 func delete_extra_space(s string) string {
 	//删除字符串中的多余空格，有多个空格时，仅保留一个空格
-	s1 := strings.Replace(s, "	", " ", -1)       //替换tab为空格
+	s0 := strings.Replace(s, "	", " ", -1) //替换tab为空格
+	s1 := strings.Replace(s0, "\n", " ", -1)
 	regstr := "\\s{2,}"                          //两个及两个以上空格的正则表达式
 	reg, _ := regexp.Compile(regstr)             //编译正则表达式
 	s2 := make([]byte, len(s1))                  //定义字符数组切片
@@ -74,8 +75,8 @@ func crawlPage(u string) string {
 	if textlen == 0 {
 		return ""
 	}
-	if textlen > 3500 {
-		textlen = 3500
+	if textlen > 5000 {
+		textlen = 5000
 	}
 	return article.Title + "\n" + textcontent[:textlen-1]
 }

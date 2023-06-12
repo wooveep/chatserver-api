@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-06 11:23:44
- * @LastEditTime: 2023-06-08 16:22:35
+ * @LastEditTime: 2023-06-12 13:15:52
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/ner.go
  */
@@ -66,11 +66,10 @@ func genin(target string, str_array []string) (count int) {
 func nerDetec(query string) (int, string) {
 	var nlpres nlpResponse
 	var participles []string
+	var wordpos []string
+	var containSearch bool
 	tencentcfg := config.AppConfig.TencentConfig
 
-	// 实例化一个认证对象，入参需要传入腾讯云账户 SecretId 和 SecretKey，此处还需注意密钥对的保密
-	// 代码泄露可能会导致 SecretId 和 SecretKey 泄露，并威胁账号下所有资源的安全性。以下代码示例仅供参考，建议采用更安全的方式来使用密钥，请参见：https://cloud.tencent.com/document/product/1278/85305
-	// 密钥可前往官网控制台 https://console.cloud.tencent.com/cam/capi 进行获取
 	credential := common.NewCredential(
 		tencentcfg.SecretId,
 		tencentcfg.SecretKey,
@@ -98,14 +97,13 @@ func nerDetec(query string) (int, string) {
 	}
 	// 输出json格式的字符串回包
 	json.Unmarshal([]byte(response.ToJsonString()), &nlpres)
-	// fmt.Printf("%s\n", nlpres.Response.NormalText)
 	for _, v := range nlpres.Response.CompoundParticiples {
-		// if v.Pos == "NR" || v.Pos == "NN" || v.Pos == "FW" {
-		// 	participles = append(participles, v.Word)
-		// }
+		wordpos = append(wordpos, v.Pos)
+		if v.Word == "搜索" {
+			containSearch = true
+		}
 		logger.Debug(v.Pos + "||" + v.Word)
 	}
-	// fmt.Printf("%s\n", nlpres.Response.BasicParticiples[0].Pos)
 	var generic []string
 	if len(nlpres.Response.Entities) > 0 {
 		for _, v := range nlpres.Response.Entities {
@@ -118,10 +116,13 @@ func nerDetec(query string) (int, string) {
 	} else {
 		return 0, ""
 	}
-
+	if wordpos[0] == "VV" && !containSearch {
+		return 0, ""
+	}
 	if len(nlpres.Response.Entities) == genin("quantity.generic", generic) {
 		return 0, ""
 	}
+
 	if genin("time.generic", generic) > 0 {
 		return 2, strings.Join(participles, " ")
 	}

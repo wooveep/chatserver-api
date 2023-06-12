@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-01 08:53:25
- * @LastEditTime: 2023-06-08 16:23:10
+ * @LastEditTime: 2023-06-12 13:14:54
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/search.go
  */
@@ -24,11 +24,6 @@ import (
 	"google.golang.org/api/googleapi/transport"
 )
 
-// 实体检测
-
-// 页面爬取
-
-// 页面摘要提取
 func summaryContent(message string) string {
 	if message == "" {
 		return ""
@@ -37,12 +32,46 @@ func summaryContent(message string) string {
 	var chatMessages []openai.ChatCompletionMessage
 	var systemPreset, userMessage openai.ChatCompletionMessage
 	systemPreset.Role = openai.ChatMessageRoleSystem
-	systemPreset.Content = `Summarize the content of the webpage based on its title, extract the main information and list the detailed data included,and keep it within 300 words.please respond in Chinese.`
+	systemPreset.Content = `Extract information is limited to 500 words. Please answer in Chinese and do not add any additional prompts.`
 	userMessage.Role = openai.ChatMessageRoleUser
 	userMessage.Content = message
 	chatMessages = append(chatMessages, systemPreset, userMessage)
 	req.Model = "gpt-3.5-turbo"
 	req.MaxTokens = 700
+	req.Messages = chatMessages
+	client, err := openai.NewClient()
+	if err != nil {
+		logger.Errorf("%s", err)
+		return ""
+	}
+	resp, err := client.CreateChatCompletion(req)
+	if err != nil {
+		logger.Errorf("%s", err)
+		return ""
+	}
+	content := resp.Choices[0].Message.Content
+	return content
+}
+
+func queryExtra(message string) string {
+	if message == "" {
+		return ""
+	}
+	var req openai.ChatCompletionRequest
+	var chatMessages []openai.ChatCompletionMessage
+	var systemPreset, userMessage openai.ChatCompletionMessage
+	systemPreset.Role = openai.ChatMessageRoleSystem
+	systemPreset.Content = `Your task is to rewrite user-submitted content into efficient search engine query statements. Example:''' 
+	user: "搜索一下台湾最新的选举情况"
+	assistant: "台湾 最新 选举 情况"
+	user: "南京今天天气怎么样呢"
+	assistant: "南京 今天 天气"
+	''' `
+	userMessage.Role = openai.ChatMessageRoleUser
+	userMessage.Content = message
+	chatMessages = append(chatMessages, systemPreset, userMessage)
+	req.Model = "gpt-3.5-turbo"
+	req.MaxTokens = 100
 	req.Messages = chatMessages
 	client, err := openai.NewClient()
 	if err != nil {
@@ -67,13 +96,14 @@ type searchOne struct {
 	Link    string
 }
 
-func CustomSearch(ctx context.Context, query string) (string, error) {
+func CustomSearch(ctx context.Context, queryoriginal string) (string, error) {
 	googlecfg := config.AppConfig.GoogelConfig
-	ner, keyword := nerDetec(query)
+	ner, keyword := nerDetec(queryoriginal)
 	if ner == 0 {
 		logger.Debug("没有实体返回")
 		return "", nil
 	}
+	query := queryExtra(queryoriginal)
 	rc := cache.GetRedisClient()
 	cacheresult, err := rc.Get(ctx, consts.QuerySearchPrefix+security.Md5(query)).Result()
 	if err == nil {
