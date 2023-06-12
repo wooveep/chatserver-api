@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-06-08 16:55:35
+ * @LastEditTime: 2023-06-12 14:18:47
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -65,7 +65,6 @@ type ChatService interface {
 	ChatEmbeddingCompare(ctx context.Context, question, classify string) (contextStr string, err error)
 	ChatCostCalculate(ctx *gin.Context, promptMsgs []openai.ChatCompletionMessage, model string)
 	ChatSearchExtension(ctx *gin.Context, question string) (result string)
-	// ChatTest(ctx context.Context, text string) (keyword string)
 }
 
 // userService 实现UserService接口
@@ -341,10 +340,11 @@ func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, 
 			content := strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Format(consts.DateLayout), -1)
 			systemPreset.Content = strings.Replace(content, "{{ context }}", searchContext, -1)
 		}
-	// 翻译助手
+		// 翻译助手
 	case 4:
 		{
-			lastMessage.Content = "translate:\t"
+			records = records[len(records)-1:]
+			lastMessage.Content = "Translate:  "
 		}
 	//embedding 数据
 	case 3:
@@ -443,7 +443,8 @@ func (cs *chatService) ChatChattingReqProcess(ctx *gin.Context, lastquestion str
 	// 翻译助手
 	case 4:
 		{
-			lastMessage.Content = "translate:\t"
+			records = []model.RecordOne{}
+			lastMessage.Content = "Translate:  "
 		}
 	//embedding 数据
 	case 3:
@@ -565,7 +566,6 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 				stream.Close()
 				lastMessage.Content = resmessage
 				lastMessage.Role = openai.ChatMessageRoleAssistant
-				// cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
 				chatMessages = append(chatMessages, lastMessage, blankMessage)
 				reqnew = req
 				reqnew.Messages = chatMessages
@@ -578,18 +578,12 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 			}
 			if response.Choices[0].FinishReason == "stop" {
 				logger.Debugf("chat请求ID：%s", response.ID)
-				// lastMessage.Content = resmessage
-				// lastMessage.Role = openai.ChatMessageRoleAssistant
-				// cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
 				stream.Close()
 				close(chanStream)
 				return
 			}
 			if response.Choices[0].FinishReason == "content_filter" {
 				logger.Debugf("chat请求ID：%s", response.ID)
-				// lastMessage.Content = resmessage
-				// lastMessage.Role = openai.ChatMessageRoleAssistant
-				// cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
 				chanStream <- "[content_filter]"
 				stream.Close()
 				time.Sleep(1 * time.Millisecond)
@@ -598,9 +592,6 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 			}
 		}
 		if errors.Is(err, io.EOF) {
-			// lastMessage.Content = resmessage
-			// lastMessage.Role = openai.ChatMessageRoleAssistant
-			// cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
 			logger.Info("Stream finished")
 			stream.Close()
 			close(chanStream)
@@ -608,18 +599,12 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 		}
 		if err != nil {
 			logger.Errorf("Stream error: %v\n", err)
-			// lastMessage.Content = resmessage
-			// lastMessage.Role = openai.ChatMessageRoleAssistant
-			// cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
 			stream.Close()
 			close(chanStream)
 			return
 		}
 		select {
 		case <-ctx.Writer.CloseNotify():
-			// lastMessage.Content = resmessage
-			// lastMessage.Role = openai.ChatMessageRoleAssistant
-			// cs.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{lastMessage}, req.Model)
 			stream.Close()
 			close(chanStream)
 			return
@@ -644,7 +629,6 @@ func (cs *chatService) ChatEmbeddingGenerate(str []string) (embedVectors []opena
 		logger.Errorf("Embeddings error: %v\n", err)
 		return
 	}
-	// tokens = resp.Usage.TotalTokens
 	embedVectors = resp.Data
 	return
 }
@@ -708,7 +692,3 @@ func (cs *chatService) ChatSearchExtension(ctx *gin.Context, question string) (r
 
 	return
 }
-
-// func (cs *chatService) ChatTest(ctx context.Context, text string) (keyword string) {
-// 	return cs.jieba.GetKeyword(text)
-// }
