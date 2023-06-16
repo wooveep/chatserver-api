@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-07 09:50:35
- * @LastEditTime: 2023-06-12 13:15:30
+ * @LastEditTime: 2023-06-16 07:37:15
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/crawl.go
  */
@@ -52,7 +52,7 @@ func crawlPage(u string) string {
 	}
 	c := &http.Client{
 		Transport: tr,
-		Timeout:   20 * time.Second,
+		Timeout:   9 * time.Second,
 	}
 	req, _ := http.NewRequest("GET", u, nil)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1")

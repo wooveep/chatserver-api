@@ -1,13 +1,16 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-07 09:50:35
- * @LastEditTime: 2023-06-07 17:04:42
+ * @LastEditTime: 2023-06-15 22:01:30
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/crawl_test.go
  */
 package search
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func Test_crawlpage(t *testing.T) {
 	type args struct {
@@ -20,12 +23,12 @@ func Test_crawlpage(t *testing.T) {
 		// TODO: Add test cases.
 		{
 			name: "test1",
-			args: args{u: "http://www.mafengwo.cn/gonglve/ziyouxing/2606.html"},
+			args: args{u: "https://wiki.mbalib.com/wiki/IBM%E5%85%AC%E5%8F%B8"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			crawlPage(tt.args.u)
+			fmt.Printf(crawlPage(tt.args.u))
 		})
 	}
 }

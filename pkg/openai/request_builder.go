@@ -6,27 +6,27 @@ import (
 	"net/http"
 )
 
-type requestBuilder interface {
-	build(ctx context.Context, method, url string, request any) (*http.Request, error)
+type RequestBuilder interface {
+	Build(ctx context.Context, method, url string, request any) (*http.Request, error)
 }
 
-type httpRequestBuilder struct {
-	marshaller marshaller
+type HTTPRequestBuilder struct {
+	marshaller Marshaller
 }
 
-func newRequestBuilder() *httpRequestBuilder {
-	return &httpRequestBuilder{
-		marshaller: &jsonMarshaller{},
+func NewRequestBuilder() *HTTPRequestBuilder {
+	return &HTTPRequestBuilder{
+		marshaller: &JSONMarshaller{},
 	}
 }
 
-func (b *httpRequestBuilder) build(ctx context.Context, method, url string, request any) (*http.Request, error) {
+func (b *HTTPRequestBuilder) Build(ctx context.Context, method, url string, request any) (*http.Request, error) {
 	if request == nil {
 		return http.NewRequestWithContext(ctx, method, url, nil)
 	}
 
 	var reqBytes []byte
-	reqBytes, err := b.marshaller.marshal(request)
+	reqBytes, err := b.marshaller.Marshal(request)
 	if err != nil {
 		return nil, err
 	}

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-01 08:53:25
- * @LastEditTime: 2023-06-08 16:32:52
+ * @LastEditTime: 2023-06-16 07:34:13
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/search_test.go
  */
@@ -22,7 +22,8 @@ func Test_customSearch(t *testing.T) {
 	cache.InitRedis(c.RedisConfig)
 
 	type args struct {
-		query string
+		query    string
+		classify string
 	}
 	tests := []struct {
 		name string
@@ -31,9 +32,10 @@ func Test_customSearch(t *testing.T) {
 	}{
 		// TODO: Add test cases.
 		{
-			name: "test3",
+			name: "test",
 			args: args{
-				query: "今年高考作文题目是什么",
+				query:    "南京人口",
+				classify: "Web",
 			},
 		},
 		// {
@@ -45,7 +47,7 @@ func Test_customSearch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotResultstr, err := CustomSearch(context.Background(), tt.args.query)
+			gotResultstr, err := CustomSearch(context.Background(), tt.args.query, tt.args.classify)
 			if err != nil {
 				fmt.Println(err)
 			}

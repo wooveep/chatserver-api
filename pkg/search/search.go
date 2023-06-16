@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-01 08:53:25
- * @LastEditTime: 2023-06-12 21:01:07
+ * @LastEditTime: 2023-06-15 22:35:01
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/search.go
  */
@@ -32,12 +32,12 @@ func summaryContent(message string) string {
 	var chatMessages []openai.ChatCompletionMessage
 	var systemPreset, userMessage openai.ChatCompletionMessage
 	systemPreset.Role = openai.ChatMessageRoleSystem
-	systemPreset.Content = `Extract information is limited to 500 words. Please answer in Chinese and do not add any additional prompts.`
+	systemPreset.Content = `Extract information is limited to 1000 words. Please answer in Chinese and do not add any additional prompts.`
 	userMessage.Role = openai.ChatMessageRoleUser
 	userMessage.Content = message
 	chatMessages = append(chatMessages, systemPreset, userMessage)
-	req.Model = "gpt-3.5-turbo"
-	req.MaxTokens = 700
+	req.Model = "gpt-3.5-turbo-16k-0613"
+	req.MaxTokens = 2000
 	req.Messages = chatMessages
 	client, err := openai.NewClient()
 	if err != nil {
@@ -96,14 +96,8 @@ type searchOne struct {
 	Link    string
 }
 
-func CustomSearch(ctx context.Context, queryoriginal string) (string, error) {
+func CustomSearch(ctx context.Context, query string, classify string) (string, error) {
 	googlecfg := config.AppConfig.GoogelConfig
-	ner, keyword := nerDetec(queryoriginal)
-	if ner == 0 {
-		logger.Debug("没有实体返回")
-		return "", nil
-	}
-	query := queryExtra(queryoriginal)
 	rc := cache.GetRedisClient()
 	cacheresult, err := rc.Get(ctx, consts.QuerySearchPrefix+security.Md5(query)).Result()
 	if err == nil {
@@ -122,10 +116,18 @@ func CustomSearch(ctx context.Context, queryoriginal string) (string, error) {
 
 	var resp *customsearch.Search
 
-	switch ner {
-	case 2:
+	switch classify {
+	case "Entity":
 		{
-			resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(10).Sort("date").Cr("zh-CN").DateRestrict("d[2]").ExactTerms(keyword).Q(query).Do()
+			resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(3).Cr("zh-CN").Lr("lang_zh-CN").SiteSearch("wikipedia.org").SiteSearchFilter("i").Q(query).Do()
+			if err != nil {
+				logger.Errorf("%s", err)
+				return "", err
+			}
+		}
+	case "News":
+		{
+			resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(3).Cr("zh-CN").Lr("lang_zh-CN").DateRestrict("m[1]").Sort("date").Q(query).Do()
 			if err != nil {
 				logger.Errorf("%s", err)
 				return "", err
@@ -133,7 +135,7 @@ func CustomSearch(ctx context.Context, queryoriginal string) (string, error) {
 		}
 	default:
 		{
-			resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(10).Cr("zh-CN").DateRestrict("y[3]").ExactTerms(keyword).Sort("date").Q(query).Do()
+			resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(4).Cr("zh-CN").DateRestrict("y[3]").Sort("date").Q(query).Do()
 			if err != nil {
 				logger.Errorf("%s", err)
 				return "", err
@@ -153,9 +155,6 @@ func CustomSearch(ctx context.Context, queryoriginal string) (string, error) {
 	if lenresult == 0 {
 		return "", nil
 	}
-	if lenresult > 5 {
-		lenresult = 5
-	}
 	wg := sync.WaitGroup{}
 
 	var lock sync.Mutex
@@ -165,12 +164,12 @@ func CustomSearch(ctx context.Context, queryoriginal string) (string, error) {
 		go func(v searchOne) {
 			defer wg.Done()
 			content := crawlPage(v.Link)
-			var summary string
-			if content != "" {
-				summary = summaryContent("Title:" + v.Title + "\n" + "Link" + v.Link + "\n" + "Content:" + content)
-			}
+			// var summary string
+			// if content != "" {
+			// 	summary = summaryContent("Title:" + v.Title + "\n" + "Link" + v.Link + "\n" + "Content:" + content)
+			// }
 			lock.Lock()
-			textcontent += "Title:\n" + v.Title + "\n" + "Snippet:\n" + v.Snippet + "\n" + "Content:\n" + summary + "\n" + "Web Link:\n" + v.Link + "\n"
+			textcontent += "Title:\n" + v.Title + "\n" + "Snippet:\n" + v.Snippet + "\n" + "Content:\n" + content + "\n" + "Web Link:\n" + v.Link + "\n"
 			lock.Unlock()
 		}(v)
 

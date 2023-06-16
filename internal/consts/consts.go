@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:51:03
- * @LastEditTime: 2023-06-08 16:51:55
+ * @LastEditTime: 2023-06-16 22:21:32
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/consts/consts.go
  */
@@ -55,6 +55,7 @@ const (
 	ChatRecordIDPrefix   = "Chat_RecordId_set:"
 	ChatSearchPrefix     = "Chat_Search_list:"
 	QuerySearchPrefix    = "Query_Search_list:"
+	WeatherSearchPrefix  = "Weather_Search_list:"
 )
 
 var AzureToModel = map[string]string{
@@ -64,7 +65,8 @@ var AzureToModel = map[string]string{
 }
 
 var ModelMaxToken = map[string]int{
-	"gpt-3.5-turbo": 4096,
+	"gpt-3.5-turbo":     4096,
+	"gpt-3.5-turbo-16k": 16384,
 }
 
 const (
@@ -72,8 +74,8 @@ const (
 	RegularMembers
 	SeniorMember
 	InfiniteMember
-	Enterprise
 	Administrator = 100
+	Enterprise    = 301
 )
 
 var RoleToString = map[int]string{
