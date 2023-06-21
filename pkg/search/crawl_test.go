@@ -1,18 +1,22 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-07 09:50:35
- * @LastEditTime: 2023-06-15 22:01:30
+ * @LastEditTime: 2023-06-21 21:49:15
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/crawl_test.go
  */
 package search
 
 import (
+	"chatserver-api/pkg/config"
+	"chatserver-api/pkg/logger"
 	"fmt"
 	"testing"
 )
 
 func Test_crawlpage(t *testing.T) {
+	c := config.Load("../../configs/config.yml")
+	logger.InitLogger(&c.LogConfig, c.AppName)
 	type args struct {
 		u string
 	}
@@ -22,8 +26,8 @@ func Test_crawlpage(t *testing.T) {
 	}{
 		// TODO: Add test cases.
 		{
-			name: "test1",
-			args: args{u: "https://wiki.mbalib.com/wiki/IBM%E5%85%AC%E5%8F%B8"},
+			name: "test2",
+			args: args{u: "https://www.pconline.com.cn/focus/1627/16275165.html"},
 		},
 	}
 	for _, tt := range tests {

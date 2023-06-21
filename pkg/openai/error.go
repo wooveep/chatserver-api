@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-30 18:16:24
- * @LastEditTime: 2023-05-11 10:53:07
+ * @LastEditTime: 2023-06-21 10:41:02
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/openai/error.go
  */

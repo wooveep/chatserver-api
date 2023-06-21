@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"golang.org/x/net/proxy"
 )
@@ -31,28 +32,34 @@ func NewClient() (*Client, error) {
 	} else {
 		c = DefaultConfig(config)
 	}
-	if config.ProxyMode == "socks5" {
-		proxyadd := fmt.Sprintf("%s:%s", config.ProxyIP, config.ProxyPort)
-		dialer, err := proxy.SOCKS5("tcp", proxyadd, nil, proxy.Direct)
-		if err != nil {
-			return nil, err
-		}
-		transport := &http.Transport{
-			Dial: dialer.Dial,
-		}
-		c.HTTPClient = &http.Client{
-			Transport: transport,
-		}
-
+	transport := &http.Transport{
+		MaxIdleConns:    10,
+		IdleConnTimeout: time.Second * 10,
+		// DisableCompression:  true,
+		// DisableKeepAlives:   true,
+		TLSHandshakeTimeout: time.Second * 5,
 	}
-	if config.ProxyMode == "http" {
-		proxyUrl, _ := url.Parse(fmt.Sprintf("http://%s:%s", config.ProxyIP, config.ProxyPort))
-		transport := &http.Transport{
-			Proxy: http.ProxyURL(proxyUrl),
+
+	switch config.ProxyMode {
+	case "socks5":
+		{
+			proxyadd := fmt.Sprintf("%s:%s", config.ProxyIP, config.ProxyPort)
+			dialer, err := proxy.SOCKS5("tcp", proxyadd, nil, proxy.Direct)
+			if err != nil {
+				return nil, err
+			}
+			transport.Dial = dialer.Dial
 		}
-		c.HTTPClient = &http.Client{
-			Transport: transport,
+	case "http":
+		{
+			proxyUrl, _ := url.Parse(fmt.Sprintf("http://%s:%s", config.ProxyIP, config.ProxyPort))
+			transport.Proxy = http.ProxyURL(proxyUrl)
 		}
+	default:
+	}
+	c.HTTPClient = &http.Client{
+		Transport: transport,
+		Timeout:   60 * time.Second,
 	}
 	return NewClientWithConfig(c), nil
 }

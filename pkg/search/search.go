@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-01 08:53:25
- * @LastEditTime: 2023-06-15 22:35:01
+ * @LastEditTime: 2023-06-21 21:45:23
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/search.go
  */
@@ -13,7 +13,6 @@ import (
 	"chatserver-api/pkg/cache"
 	"chatserver-api/pkg/config"
 	"chatserver-api/pkg/logger"
-	"chatserver-api/pkg/openai"
 	"chatserver-api/utils/security"
 	"context"
 	"net/http"
@@ -24,68 +23,69 @@ import (
 	"google.golang.org/api/googleapi/transport"
 )
 
-func summaryContent(message string) string {
-	if message == "" {
-		return ""
-	}
-	var req openai.ChatCompletionRequest
-	var chatMessages []openai.ChatCompletionMessage
-	var systemPreset, userMessage openai.ChatCompletionMessage
-	systemPreset.Role = openai.ChatMessageRoleSystem
-	systemPreset.Content = `Extract information is limited to 1000 words. Please answer in Chinese and do not add any additional prompts.`
-	userMessage.Role = openai.ChatMessageRoleUser
-	userMessage.Content = message
-	chatMessages = append(chatMessages, systemPreset, userMessage)
-	req.Model = "gpt-3.5-turbo-16k-0613"
-	req.MaxTokens = 2000
-	req.Messages = chatMessages
-	client, err := openai.NewClient()
-	if err != nil {
-		logger.Errorf("%s", err)
-		return ""
-	}
-	resp, err := client.CreateChatCompletion(req)
-	if err != nil {
-		logger.Errorf("%s", err)
-		return ""
-	}
-	content := resp.Choices[0].Message.Content
-	return content
-}
+// func summaryContent(message string) string {
+// 	if message == "" {
+// 		return ""
+// 	}
+// 	var req openai.ChatCompletionRequest
+// 	var chatMessages []openai.ChatCompletionMessage
+// 	var systemPreset, userMessage openai.ChatCompletionMessage
+// 	systemPreset.Role = openai.ChatMessageRoleSystem
+// 	systemStr := `Extract information is limited to 1000 words. Please answer in Chinese and do not add any additional prompts.`
+// 	systemPreset.Content = systemStr
+// 	userMessage.Role = openai.ChatMessageRoleUser
+// 	userMessage.Content = message
+// 	chatMessages = append(chatMessages, systemPreset, userMessage)
+// 	req.Model = "gpt-3.5-turbo-16k-0613"
+// 	req.MaxTokens = 2000
+// 	req.Messages = chatMessages
+// 	client, err := openai.NewClient()
+// 	if err != nil {
+// 		logger.Errorf("%s", err)
+// 		return ""
+// 	}
+// 	resp, err := client.CreateChatCompletion(req)
+// 	if err != nil {
+// 		logger.Errorf("%s", err)
+// 		return ""
+// 	}
+// 	content := resp.Choices[0].Message.Content
+// 	return content
+// }
 
-func queryExtra(message string) string {
-	if message == "" {
-		return ""
-	}
-	var req openai.ChatCompletionRequest
-	var chatMessages []openai.ChatCompletionMessage
-	var systemPreset, userMessage openai.ChatCompletionMessage
-	systemPreset.Role = openai.ChatMessageRoleSystem
-	systemPreset.Content = `Your task is to rewrite user-submitted content into efficient search engine query statements. Example:''' 
-	user: "搜索一下台湾最新的选举情况"
-	assistant: "台湾 最新 选举 情况"
-	user: "南京今天天气怎么样呢"
-	assistant: "南京 今天 天气"
-	''' `
-	userMessage.Role = openai.ChatMessageRoleUser
-	userMessage.Content = message
-	chatMessages = append(chatMessages, systemPreset, userMessage)
-	req.Model = "gpt-3.5-turbo"
-	req.MaxTokens = 100
-	req.Messages = chatMessages
-	client, err := openai.NewClient()
-	if err != nil {
-		logger.Errorf("%s", err)
-		return ""
-	}
-	resp, err := client.CreateChatCompletion(req)
-	if err != nil {
-		logger.Errorf("%s", err)
-		return ""
-	}
-	content := resp.Choices[0].Message.Content
-	return content
-}
+// func queryExtra(message string) string {
+// 	if message == "" {
+// 		return ""
+// 	}
+// 	var req openai.ChatCompletionRequest
+// 	var chatMessages []openai.ChatCompletionMessage
+// 	var systemPreset, userMessage openai.ChatCompletionMessage
+// 	systemPreset.Role = openai.ChatMessageRoleSystem
+// 	systemPreset.Content = `Your task is to rewrite user-submitted content into efficient search engine query statements. Example:'''
+// 	user: "搜索一下台湾最新的选举情况"
+// 	assistant: "台湾 最新 选举 情况"
+// 	user: "南京今天天气怎么样呢"
+// 	assistant: "南京 今天 天气"
+// 	''' `
+// 	userMessage.Role = openai.ChatMessageRoleUser
+// 	userMessage.Content = message
+// 	chatMessages = append(chatMessages, systemPreset, userMessage)
+// 	req.Model = "gpt-3.5-turbo"
+// 	req.MaxTokens = 100
+// 	req.Messages = chatMessages
+// 	client, err := openai.NewClient()
+// 	if err != nil {
+// 		logger.Errorf("%s", err)
+// 		return ""
+// 	}
+// 	resp, err := client.CreateChatCompletion(req)
+// 	if err != nil {
+// 		logger.Errorf("%s", err)
+// 		return ""
+// 	}
+// 	content := resp.Choices[0].Message.Content
+// 	return content
+// }
 
 // Message拼装
 
@@ -96,10 +96,10 @@ type searchOne struct {
 	Link    string
 }
 
-func CustomSearch(ctx context.Context, query string, classify string) (string, error) {
+func CustomSearch(ctx context.Context, query string) (string, error) {
 	googlecfg := config.AppConfig.GoogelConfig
 	rc := cache.GetRedisClient()
-	cacheresult, err := rc.Get(ctx, consts.QuerySearchPrefix+security.Md5(query)).Result()
+	cacheresult, err := rc.Get(ctx, consts.SearchCachePrefix+security.Md5(query)).Result()
 	if err == nil {
 		logger.Debug("获取缓存返回")
 		return cacheresult, nil
@@ -116,31 +116,10 @@ func CustomSearch(ctx context.Context, query string, classify string) (string, e
 
 	var resp *customsearch.Search
 
-	switch classify {
-	case "Entity":
-		{
-			resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(3).Cr("zh-CN").Lr("lang_zh-CN").SiteSearch("wikipedia.org").SiteSearchFilter("i").Q(query).Do()
-			if err != nil {
-				logger.Errorf("%s", err)
-				return "", err
-			}
-		}
-	case "News":
-		{
-			resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(3).Cr("zh-CN").Lr("lang_zh-CN").DateRestrict("m[1]").Sort("date").Q(query).Do()
-			if err != nil {
-				logger.Errorf("%s", err)
-				return "", err
-			}
-		}
-	default:
-		{
-			resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(4).Cr("zh-CN").DateRestrict("y[3]").Sort("date").Q(query).Do()
-			if err != nil {
-				logger.Errorf("%s", err)
-				return "", err
-			}
-		}
+	resp, err = svc.Cse.List().Cx(googlecfg.CxId).Num(5).Cr("zh-CN").Sort("date").Q(query).Do()
+	if err != nil {
+		logger.Errorf("%s", err)
+		return "", err
 	}
 
 	for _, result := range resp.Items {
@@ -177,6 +156,6 @@ func CustomSearch(ctx context.Context, query string, classify string) (string, e
 
 	wg.Wait()
 
-	err = rc.Set(ctx, consts.QuerySearchPrefix+security.Md5(query), textcontent, 30*time.Minute).Err()
+	err = rc.Set(ctx, consts.SearchCachePrefix+security.Md5(query), textcontent, 30*time.Minute).Err()
 	return textcontent, err
 }

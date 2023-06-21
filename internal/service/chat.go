@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-06-16 23:12:42
+ * @LastEditTime: 2023-06-21 22:21:47
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -25,10 +25,10 @@ import (
 	"chatserver-api/pkg/openai"
 	"chatserver-api/pkg/pgvector"
 	"chatserver-api/pkg/tiktoken"
-	"chatserver-api/pkg/tokenize"
 	"chatserver-api/utils/security"
 	"chatserver-api/utils/uuid"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -51,6 +51,7 @@ type ChatService interface {
 	ChatListGet(ctx *gin.Context) (res model.ChatListRes, err error)
 	ChatRecordGet(ctx *gin.Context) (res model.RecordHistoryRes, err error)
 	ChatRecordClear(ctx *gin.Context) (err error)
+	ChatRecordDelete(ctx *gin.Context, msgId int64) (err error)
 	ChatBalanceVerify(ctx *gin.Context) (err error)
 	ChatBalanceUpdate(ctx *gin.Context) (err error)
 	ChatMessageSave(ctx *gin.Context, role, message string, msgid int64) (err error)
@@ -59,8 +60,8 @@ type ChatService interface {
 	ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, memoryLevel int16) (answerid int64, req openai.ChatCompletionRequest, err error)
 	ChatChattingReqProcess(ctx *gin.Context, lastquestion string, memoryLevel int16) (questionId int64, req openai.ChatCompletionRequest, err error)
 	ChatReqUnit(ctx *gin.Context, lastquestion string, records []model.RecordOne) (req openai.ChatCompletionRequest, err error)
-	ChatStremResGenerate(ctx *gin.Context, req openai.ChatCompletionRequest, chanStream chan<- string)
-	ChatStreamResProcess(ctx *gin.Context, chanStream <-chan string, questionId, answerid int64) (msgid int64, messages string)
+	ChatStremResGenerate(ctx context.Context, retry int, req openai.ChatCompletionRequest, chanStream chan<- string, closeNotify <-chan bool)
+	ChatStreamResProcess(ctx *gin.Context, chanStream <-chan string, questionId, answerid int64) (msgid int64, messages string, filter bool)
 	ChatEmbeddingSave(ctx context.Context, title, body, classify string, embeddata openai.Embedding) error
 	ChatEmbeddingGenerate(str []string) (embedVectors []openai.Embedding, err error)
 	ChatEmbeddingCompare(ctx context.Context, question, classify string) (contextStr string, err error)
@@ -70,20 +71,22 @@ type ChatService interface {
 
 // userService 实现UserService接口
 type chatService struct {
-	cd    dao.ChatDao
-	uSrv  UserService
-	rc    *redis.Client
-	jieba tokenize.Tokenizer
-	iSrv  uuid.SnowNode
+	cd   dao.ChatDao
+	uSrv UserService
+	rc   *redis.Client
+	// jieba tokenize.Tokenizer
+	iSrv uuid.SnowNode
 }
 
-func NewChatService(_cd dao.ChatDao, _uSrv UserService, _jieba tokenize.Tokenizer) *chatService {
+// func NewChatService(_cd dao.ChatDao, _uSrv UserService, _jieba tokenize.Tokenizer) *chatService {
+func NewChatService(_cd dao.ChatDao, _uSrv UserService) *chatService {
+
 	return &chatService{
-		cd:    _cd,
-		uSrv:  _uSrv,
-		iSrv:  *uuid.NewNode(1),
-		rc:    cache.GetRedisClient(),
-		jieba: _jieba,
+		cd:   _cd,
+		uSrv: _uSrv,
+		iSrv: *uuid.NewNode(1),
+		rc:   cache.GetRedisClient(),
+		// jieba: _jieba,
 	}
 }
 
@@ -225,6 +228,13 @@ func (cs *chatService) ChatRecordClear(ctx *gin.Context) (err error) {
 	return
 }
 
+func (cs *chatService) ChatRecordDelete(ctx *gin.Context, msgId int64) (err error) {
+	chatId := ctx.GetInt64(consts.ChatID)
+	err = cs.cd.ChatRecordDelete(ctx, msgId)
+	cs.rc.SRem(ctx, consts.ChatRecordIDPrefix+strconv.FormatInt(chatId, 10), msgId)
+	return
+}
+
 func (cs *chatService) ChatBalanceVerify(ctx *gin.Context) (err error) {
 	userId := ctx.GetInt64(consts.UserID)
 	userbalance, err := cs.uSrv.UserGetBalance(ctx, userId)
@@ -297,15 +307,20 @@ func (cs *chatService) ChatMessageSave(ctx *gin.Context, role, message string, m
 
 func (cs *chatService) ChatRegenerategReqProcess(ctx *gin.Context, msgid int64, memoryLevel int16) (answerid int64, req openai.ChatCompletionRequest, err error) {
 	chatId := ctx.GetInt64(consts.ChatID)
+	var lastquestion string
 	records, answerid, err := cs.cd.ChatRegenRecordGet(ctx, chatId, msgid, memoryLevel)
 	logger.Debugf("answerid:%d", answerid)
 	if err != nil {
 		logger.Errorf("获取会话消息记录失败: %v\n", err)
 		return
 	}
-	lastquestion := records[len(records)-1].Message
+	if len(records) == 0 {
+		lastquestion = " "
+	} else {
+		lastquestion = records[len(records)-1].Message
+	}
 	if len(records) > 1 {
-		records = records[:len(records)-2]
+		records = records[:len(records)-1]
 	} else {
 		records = []model.RecordOne{}
 	}
@@ -337,7 +352,7 @@ func (cs *chatService) ChatReqUnit(ctx *gin.Context, lastquestion string, record
 	var chatMessages []openai.ChatCompletionMessage
 	var systemPreset, historyMessage, lastMessage openai.ChatCompletionMessage
 	var logitbia map[string]int
-	var emquestion, embedcontexts string
+	var emquestion, embedcontexts, messagePrefix string
 	userId := ctx.GetInt64(consts.UserID)
 	chatId := ctx.GetInt64(consts.ChatID)
 	preset, err := cs.cd.ChatDetailGet(ctx, userId, chatId)
@@ -361,24 +376,26 @@ func (cs *chatService) ChatReqUnit(ctx *gin.Context, lastquestion string, record
 	// 默认智能助手
 	case 1:
 		{
-			systemPreset.Content = strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Local().Format(consts.DateLayout), -1)
+
+			systemPreset.Content = strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Local().Format(consts.TimeLayout), -1)
 		}
 	// 联网搜索
 	case 2:
 		{
 			// lastquestion 查询拼接
 			ctx.Set(consts.PriceRatioCtx, 5)
-			req.Functions = []*openai.FunctionDefine{&chatfunc.FuncGetWeather}
+			req.Functions = []*openai.FunctionDefine{&chatfunc.FuncGetWeather, &chatfunc.FuncEntitySearch, &chatfunc.FuncGoogleSearch}
 			// searchContext := cs.ChatSearchExtension(ctx, lastquestion)
 			// content := strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Format(consts.DateLayout), -1)
 			// systemPreset.Content = strings.Replace(content, "{{ context }}", searchContext, -1)
-			systemPreset.Content = strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Format(consts.DateLayout), -1)
+			systemPreset.Content = strings.Replace(preset.PresetContent, "{{ current_date }}", time.Now().Format(consts.TimeLayout), -1)
 		}
 	// 翻译助手
 	case 4:
 		{
 			records = []model.RecordOne{}
-			lastMessage.Content = "Translate:  "
+			messagePrefix = "Translate:  "
+			systemPreset.Content = preset.PresetContent
 		}
 	//embedding 数据
 	case 3:
@@ -392,9 +409,10 @@ func (cs *chatService) ChatReqUnit(ctx *gin.Context, lastquestion string, record
 			}
 			emquestion += lastquestion
 			//将用户问题进行关键词提取
-			emkeyword := cs.jieba.GetKeyword(emquestion) + lastquestion
+			// emkeyword := cs.jieba.GetKeyword(emquestion) + lastquestion
 			//通过用户问题 lastquestion + records（User历史）获取Context信息
-			embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emkeyword, preset.Classify)
+			// embedcontexts, err = cs.ChatEmbeddingCompare(ctx, emkeyword, preset.Classify)
+			embedcontexts, err = cs.ChatEmbeddingCompare(ctx, lastquestion, preset.Classify)
 			if err != nil {
 				logger.Errorf("获取embedding上下文失败: %v\n", err)
 				return
@@ -403,6 +421,7 @@ func (cs *chatService) ChatReqUnit(ctx *gin.Context, lastquestion string, record
 			systemPreset.Content = strings.Replace(preset.PresetContent, "{{ context }}", embedcontexts, -1)
 		}
 	default:
+
 		systemPreset.Content = preset.PresetContent
 	}
 	chatMessages = append(chatMessages, systemPreset)
@@ -413,7 +432,7 @@ func (cs *chatService) ChatReqUnit(ctx *gin.Context, lastquestion string, record
 		chatMessages = append(chatMessages, historyMessage)
 	}
 	lastMessage.Role = openai.ChatMessageRoleUser
-	lastMessage.Content += lastquestion
+	lastMessage.Content = messagePrefix + lastquestion
 	chatMessages = append(chatMessages, lastMessage)
 	req.Model = preset.ModelName
 	req.Stream = true
@@ -424,10 +443,11 @@ func (cs *chatService) ChatReqUnit(ctx *gin.Context, lastquestion string, record
 	req.FrequencyPenalty = float32(preset.Frequency)
 	req.PresencePenalty = float32(preset.Presence)
 	req.Messages = chatMessages
+	req.User = strconv.FormatInt(ctx.GetInt64(consts.UserID), 10)
 	cs.ChatCostCalculate(ctx, chatMessages[1:], preset.ModelName)
 	return
 }
-func (cs *chatService) ChatStreamResProcess(ctx *gin.Context, chanStream <-chan string, questionId, answerid int64) (msgid int64, messages string) {
+func (cs *chatService) ChatStreamResProcess(ctx *gin.Context, chanStream <-chan string, questionId, answerid int64) (msgid int64, messages string, filter bool) {
 
 	msgtime := time.Now().Format(consts.TimeLayout)
 	if answerid != 0 {
@@ -439,6 +459,7 @@ func (cs *chatService) ChatStreamResProcess(ctx *gin.Context, chanStream <-chan 
 		if msg, ok := <-chanStream; ok {
 			if msg == "[content_filter]" {
 				err_messages := "尊敬的客户，非常感谢您使用我们的服务。我们注意到您最近提交的问题被我们的内容过滤器拦截了。我们深表歉意，因为我们的过滤器是为了保护我们的用户免受不良内容的侵害而设置的。但是，我们也理解您的问题对您来说非常重要。如果您有任何疑问或需要进一步的帮助，请随时联系网站管理员。再次感谢您的支持和理解。"
+				filter = true
 				ctx.SSEvent("chatting", map[string]string{"question_id": strconv.FormatInt(questionId, 10), "msgid": strconv.FormatInt(msgid, 10), "time": msgtime, "text": err_messages})
 				return false
 			}
@@ -460,17 +481,17 @@ func (cs *chatService) ChatStreamResProcess(ctx *gin.Context, chanStream <-chan 
 	return
 }
 
-func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCompletionRequest, chanStream chan<- string) {
+func (cs *chatService) ChatStremResGenerate(ctx context.Context, retry int, req openai.ChatCompletionRequest, chanStream chan<- string, closeNotify <-chan bool) {
 	var chatMessages []openai.ChatCompletionMessage
-	var lastMessage, blankMessage openai.ChatCompletionMessage
+	var lastMessage, blankMessage, funcMessage openai.ChatCompletionMessage
 	var resmessage, funcname, funcargument string
-	var reqnew openai.ChatCompletionRequest
 	blankMessage.Content = "[cmd:continue]"
-	blankMessage.Role = openai.ChatMessageRoleUser
+	// blankMessage.Content = " "
+	blankMessage.Role = openai.ChatMessageRoleSystem
 	chatMessages = req.Messages
 	// cs.ChatCostCalculate(ctx, chatMessages[1:], req.Model)
 	for _, v := range chatMessages {
-		logger.Debugf("role: %s ;content: %s ", v.Role, v.Content)
+		logger.Debugf("role: %s  , content: %s ", v.Role, v.Content)
 	}
 	client, err := openai.NewClient()
 	if err != nil {
@@ -479,9 +500,34 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 	}
 	stream, err := client.CreateChatCompletionStream(req)
 	if err != nil {
+		if apierror, ok := err.(*openai.APIError); ok {
+			switch apierror.HTTPStatusCode {
+			case 429, 504, 500, 503:
+				{
+					if retry < 3 {
+						logger.Warnf("ChatCompletionStream error重试: %v\n", err)
+						retry += 1
+						cs.ChatStremResGenerate(ctx, retry, req, chanStream, closeNotify)
+					}
+				}
+			case 400:
+				{
+					chanStream <- "[content_filter]"
+				}
+			default:
+				{
+					chanStream <- "[REQ_ERROR]"
+				}
+			}
+		} else if urlErr, ok := err.(*url.Error); ok {
+			if urlErr.Timeout() && retry < 3 {
+				logger.Warnf("ChatCompletionStream error重试: %v\n", err)
+				retry += 1
+				cs.ChatStremResGenerate(ctx, retry, req, chanStream, closeNotify)
+			}
+		}
 		logger.Errorf("ChatCompletionStream error: %v\n", err)
-		chanStream <- "[REQ_ERROR]"
-		time.Sleep(1 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 		close(chanStream)
 		return
 	}
@@ -500,13 +546,12 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 					lastMessage.Content = resmessage
 					lastMessage.Role = openai.ChatMessageRoleAssistant
 					chatMessages = append(chatMessages, lastMessage, blankMessage)
-					reqnew = req
-					reqnew.Messages = chatMessages
+					req.Messages = chatMessages
 					if consts.ModelMaxToken[req.Model] < tiktoken.NumTokensFromMessages(chatMessages, req.Model)+req.MaxTokens {
 						close(chanStream)
 						return
 					}
-					cs.ChatStremResGenerate(ctx, reqnew, chanStream)
+					cs.ChatStremResGenerate(ctx, retry, req, chanStream, closeNotify)
 					return
 				}
 			case openai.FinishReasonStop:
@@ -527,26 +572,29 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, req openai.ChatCom
 				}
 			case openai.FinishReasonFunctionCall:
 				{
-					logger.Debugf("chat请求ID：%s调用函数", response.ID)
 					//
 					stream.Close()
-					funcContent := chatfunc.ChatFuncProcess(funcname, funcargument)
-					lastMessage.Content = funcContent
-					lastMessage.Name = funcname
-					lastMessage.Role = openai.ChatMessageRoleFunction
-					chatMessages = append(chatMessages, lastMessage, blankMessage)
-					reqnew = req
+					logger.Debug("chat调用函数", logger.Pair("OpenAI_ID", response.ID), logger.Pair("funcname", funcname), logger.Pair("funccontent", funcargument))
+					funcContent := chatfunc.ChatFuncProcess(ctx, funcname, funcargument)
+					funcMessage.Content = funcContent
+					funcMessage.Name = funcname
+					funcMessage.Role = openai.ChatMessageRoleFunction
+					lastMessage.Role = openai.ChatMessageRoleAssistant
+					lastMessage.Content = ""
+					funcCall := &openai.FunctionCall{Name: funcname, Arguments: funcargument}
+					lastMessage.FunctionCall = funcCall
+					chatMessages = append(chatMessages, lastMessage, funcMessage)
 					req.Messages = chatMessages
-					cs.ChatStremResGenerate(ctx, reqnew, chanStream)
+					cs.ChatStremResGenerate(ctx, retry, req, chanStream, closeNotify)
 					return
 				}
 			default:
 				{
 					if response.Choices[0].Delta.FunctionCall == nil {
 						resmessage += response.Choices[0].Delta.Content
-						logger.Debugf(resmessage)
+						logger.Debugf(response.Choices[0].Delta.Content)
 						select {
-						case <-ctx.Writer.CloseNotify():
+						case <-closeNotify:
 							stream.Close()
 							close(chanStream)
 							return

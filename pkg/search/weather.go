@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-15 11:29:29
- * @LastEditTime: 2023-06-15 20:49:43
+ * @LastEditTime: 2023-06-21 16:20:06
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/weather.go
  */
@@ -129,7 +129,7 @@ func (c *WeatherClient) WeatherdoGetForecast5(url string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		content = append(content, fmt.Sprintf("%s|%s|%d|%d|%s|%.2f%%|%s|%s", day, week, payload.TemperatureMax[i], payload.TemperatureMin[i], payload.Narrative[i], payload.Qpf[i], SunriseTime, SunsetTime))
+		content = append(content, fmt.Sprintf("%s|%s|%d|%d|%s|%.2f%%|%s|%s", day, week, payload.CalendarDayTemperatureMax[i], payload.CalendarDayTemperatureMin[i], payload.Narrative[i], payload.Qpf[i], SunriseTime, SunsetTime))
 	}
 	return strings.Join(content, "\n"), nil
 }

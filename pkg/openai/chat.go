@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-30 18:16:23
- * @LastEditTime: 2023-06-16 21:02:55
+ * @LastEditTime: 2023-06-20 09:28:30
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/openai/chat.go
  */
@@ -27,7 +27,7 @@ var (
 
 type ChatCompletionMessage struct {
 	Role    string `json:"role"`
-	Content string `json:"content,omitempty"`
+	Content string `json:"content"`
 
 	// This property isn't in the official documentation, but it's in
 	// the documentation for the official library for python:

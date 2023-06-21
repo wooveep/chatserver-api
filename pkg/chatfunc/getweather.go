@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-15 09:23:25
- * @LastEditTime: 2023-06-16 21:09:58
+ * @LastEditTime: 2023-06-21 16:24:41
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/chatfunc/getweather.go
  */
@@ -38,7 +38,7 @@ var FuncGetWeather = openai.FunctionDefine{
 
 func GetWeather(ctx context.Context, address string) string {
 	// lat, lng, _ := search.GeoSearch(address)
-	// w, err := owm.NewForecast("5", "C", "zh_cn", "396b45e06a3d5b34086c578a90561b4e") // valid options for first parameter are "5" and "16"
+	// w, err := owm.NewForecast("5", "C", "zh_cn", "") // valid options for first parameter are "5" and "16"
 	// if err != nil {
 	// 	logger.Error(err.Error())
 	// }
@@ -54,7 +54,7 @@ func GetWeather(ctx context.Context, address string) string {
 	rc := cache.GetRedisClient()
 	lat, lng, fmtadd := search.GeoSearch(address)
 	var content string
-	content, err := rc.Get(ctx, consts.WeatherSearchPrefix+security.Md5(fmtadd)).Result()
+	content, err := rc.Get(ctx, consts.SearchCachePrefix+security.Md5(fmtadd+"weather")).Result()
 	if err != nil {
 		if err != redis.Nil {
 			logger.Errorf("Redis异常%v", err)
@@ -66,12 +66,12 @@ func GetWeather(ctx context.Context, address string) string {
 		if err != nil {
 			logger.Errorf("获取天气API异常：%v", err)
 		} else {
-			err = rc.Set(ctx, consts.WeatherSearchPrefix+security.Md5(fmtadd), content, 6*time.Hour).Err()
+			err = rc.Set(ctx, consts.SearchCachePrefix+security.Md5(fmtadd+"weather"), content, 6*time.Hour).Err()
 			if err != nil {
 				logger.Errorf("Redis异常%v", err)
 			}
 		}
 	}
-	result := fmt.Sprintf("city: %s\nCurrent_Date_Time:%s\n%s", fmtadd, time.Now().Format(consts.TimeLayout), content)
+	result := fmt.Sprintf("Address: %s\nCurrent_Date_Time:%s\n%s\nWebLink: https://weather.com/zh-CN/weather/today/l/%.2f,%.2f?par=google", fmtadd, time.Now().Format(consts.TimeLayout), content, lat, lng)
 	return result
 }

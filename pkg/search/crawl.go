@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-07 09:50:35
- * @LastEditTime: 2023-06-16 07:37:15
+ * @LastEditTime: 2023-06-21 21:52:12
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/crawl.go
  */
@@ -42,41 +42,66 @@ func delete_extra_space(s string) string {
 }
 
 func crawlPage(u string) string {
+	var article readability.Article
 	// dialer, err := proxy.SOCKS5("tcp", "192.168.10.253:1080", nil, proxy.Direct)
 	// if err != nil {
 	// 	logger.Errorf("failed to download %s: %v\n", u, err)
 	// }
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		// Dial:            dialer.Dial,
+		// Dial:                dialer.Dial,
+		MaxIdleConns:        10,
+		IdleConnTimeout:     time.Second * 3,
+		DisableCompression:  true,
+		DisableKeepAlives:   true,
+		TLSHandshakeTimeout: time.Second * 10,
 	}
 	c := &http.Client{
 		Transport: tr,
-		Timeout:   9 * time.Second,
+		Timeout:   15 * time.Second,
 	}
 	req, _ := http.NewRequest("GET", u, nil)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1")
+	retryCount := 3
+	for i := 0; i < retryCount; i++ {
+		resp, err := c.Do(req)
+		if err != nil {
+			logger.Errorf("failed to download %s: %v\n", u, err)
+			// return ""
+			continue
+		}
+		defer resp.Body.Close()
 
-	resp, err := c.Do(req)
-	if err != nil {
-		logger.Errorf("failed to download %s: %v\n", u, err)
-		return ""
+		ur, _ := url.Parse(u)
+		article, err = readability.FromReader(resp.Body, ur)
+		if err != nil {
+			logger.Errorf("failed to parse %s: %v\n", u, err)
+			// return ""
+			continue
+		}
+		if resp.StatusCode == http.StatusOK {
+			// 处理响应数据
+			break
+		}
+		// fmt.Printf("Request failed with status code %d\n", resp.StatusCode)
+		// return ""
+		if i < retryCount-1 {
+			// fmt.Printf("Retrying request in 5 seconds...\n")
+			time.Sleep(time.Second * 2)
+		}
+		if i == 2 {
+			logger.Errorf("重试3次失败")
+			return ""
+		}
 	}
-	defer resp.Body.Close()
 
-	ur, _ := url.Parse(u)
-	article, err := readability.FromReader(resp.Body, ur)
-	if err != nil {
-		logger.Errorf("failed to parse %s: %v\n", u, err)
-		return ""
-	}
 	textcontent := delete_extra_space(article.TextContent)
 	textlen := len(textcontent)
 	if textlen == 0 {
 		return ""
 	}
-	if textlen > 5000 {
-		textlen = 5000
+	if textlen > 3000 {
+		textlen = 3000
 	}
 	return article.Title + "\n" + textcontent[:textlen-1]
 }
