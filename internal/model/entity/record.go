@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-12 06:09:03
- * @LastEditTime: 2023-05-18 13:04:23
+ * @LastEditTime: 2023-06-25 15:09:26
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/model/entity/record.go
  */
@@ -22,6 +22,9 @@ type Record struct {
 	Message      string                `gorm:"column:message" json:"message" `
 	MessageHash  string                `gorm:"column:message_hash" json:"message_hash"`
 	MessageToken int                   `gorm:"column:message_token" json:"message_token"`
+	IsFunc       bool                  `gorm:"column:is_func" json:"is_func"`
+	IsCall       bool                  `gorm:"column:is_call" json:"is_call"`
+	HasCall      bool                  `gorm:"column:has_call" json:"has_call"`
 	CreatedAt    jtime.JsonTime        `gorm:"column:created_at" json:"created_at" `
 	UpdatedAt    jtime.JsonTime        `gorm:"column:updated_at" json:"updated_at" `
 	DeletedAt    jtime.JsonTime        `gorm:"column:deleted_at" json:"deleted_at" `

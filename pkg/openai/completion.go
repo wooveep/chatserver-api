@@ -5,6 +5,29 @@ import (
 	"net/http"
 )
 
+const chatCompletionsSuffix = "/chat/completions"
+
+type JSONSchemaType string
+
+const (
+	JSONSchemaTypeObject  JSONSchemaType = "object"
+	JSONSchemaTypeNumber  JSONSchemaType = "number"
+	JSONSchemaTypeString  JSONSchemaType = "string"
+	JSONSchemaTypeArray   JSONSchemaType = "array"
+	JSONSchemaTypeNull    JSONSchemaType = "null"
+	JSONSchemaTypeBoolean JSONSchemaType = "boolean"
+)
+
+type FinishReason string
+
+const (
+	FinishReasonStop          FinishReason = "stop"
+	FinishReasonLength        FinishReason = "length"
+	FinishReasonFunctionCall  FinishReason = "function_call"
+	FinishReasonContentFilter FinishReason = "content_filter"
+	FinishReasonNull          FinishReason = "null"
+)
+
 var (
 	ErrCompletionUnsupportedModel              = errors.New("this model is not supported with this method, please use CreateChatCompletion client method instead") //nolint:lll
 	ErrCompletionStreamNotSupported            = errors.New("streaming is not supported with this method, please use CreateCompletionStream")                      //nolint:lll
@@ -16,11 +39,16 @@ var (
 // GPT3 Models are designed for text-based tasks. For code-specific
 // tasks, please refer to the Codex series of models.
 const (
+	GPT432K0613             = "gpt-4-32k-0613"
 	GPT432K0314             = "gpt-4-32k-0314"
 	GPT432K                 = "gpt-4-32k"
+	GPT40613                = "gpt-4-0613"
 	GPT40314                = "gpt-4-0314"
 	GPT4                    = "gpt-4"
+	GPT3Dot5Turbo0613       = "gpt-3.5-turbo-0613"
 	GPT3Dot5Turbo0301       = "gpt-3.5-turbo-0301"
+	GPT3Dot5Turbo16K        = "gpt-3.5-turbo-16k"
+	GPT3Dot5Turbo16K0613    = "gpt-3.5-turbo-16k-0613"
 	GPT3Dot5Turbo           = "gpt-3.5-turbo"
 	GPT3TextDavinci003      = "text-davinci-003"
 	GPT3TextDavinci002      = "text-davinci-002"
@@ -47,14 +75,19 @@ const (
 
 var disabledModelsForEndpoints = map[string]map[string]bool{
 	"/completions": {
-		GPT3Dot5Turbo:     true,
-		GPT3Dot5Turbo0301: true,
-		GPT4:              true,
-		GPT40314:          true,
-		GPT432K:           true,
-		GPT432K0314:       true,
+		GPT3Dot5Turbo:        true,
+		GPT3Dot5Turbo0301:    true,
+		GPT3Dot5Turbo0613:    true,
+		GPT3Dot5Turbo16K:     true,
+		GPT3Dot5Turbo16K0613: true,
+		GPT4:                 true,
+		GPT40314:             true,
+		GPT40613:             true,
+		GPT432K:              true,
+		GPT432K0314:          true,
+		GPT432K0613:          true,
 	},
-	"/chat/completions": {
+	chatCompletionsSuffix: {
 		CodexCodeDavinci002:     true,
 		CodexCodeCushman001:     true,
 		CodexCodeDavinci001:     true,
@@ -147,11 +180,12 @@ func (c *Client) CreateCompletion(
 		err = ErrCompletionUnsupportedModel
 		return
 	}
+
 	if !checkPromptType(request.Prompt) {
 		err = ErrCompletionRequestPromptTypeNotSupported
 		return
 	}
-	req, err := c.requestBuilder.build(c.ctx, http.MethodPost, c.fullURL(urlSuffix, request.Model), request)
+	req, err := c.requestBuilder.Build(c.ctx, http.MethodPost, c.fullURL(urlSuffix, request.Model), request)
 	if err != nil {
 		return
 	}

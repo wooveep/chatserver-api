@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-06 11:23:44
- * @LastEditTime: 2023-06-08 22:37:07
+ * @LastEditTime: 2023-06-26 16:11:18
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/ner_test.go
  */
@@ -50,14 +50,14 @@ func Test_nerDetec(t *testing.T) {
 		{
 			name: "test4",
 			args: args{
-				query: "上一个问题回答一下",
+				query: "这个事情的导火索是什么呢",
 			},
 			want: 0,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, _ := nerDetec(tt.args.query)
+			got, _ := NerDetec(tt.args.query)
 			if !reflect.DeepEqual(tt.want, got) {
 				t.Errorf("nerDetec() = %v, want %v", got, tt.want)
 			}

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-11 10:22:31
- * @LastEditTime: 2023-06-07 22:24:23
+ * @LastEditTime: 2023-06-15 05:56:52
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/preset.go
  */
@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"strconv"
 
+	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"gorm.io/datatypes"
 )
@@ -29,7 +30,7 @@ var _ PresetService = (*presetService)(nil)
 
 type PresetService interface {
 	PresetCreateNew(ctx context.Context, req model.PresetCreateNewReq) (res model.PresetCreateNewRes, err error)
-	PresetGetList(ctx context.Context) (res model.PresetGetListRes, err error)
+	PresetGetList(ctx *gin.Context) (res model.PresetGetListRes, err error)
 	PresetUpdate(ctx context.Context, req model.PresetUpdateReq) (err error)
 }
 
@@ -49,7 +50,7 @@ func NewPresetService(_pd dao.PresetDao) *presetService {
 }
 
 func (ps *presetService) PresetUpdate(ctx context.Context, req model.PresetUpdateReq) (err error) {
-	err = ps.rc.Del(ctx, consts.PresetPrefix+"1").Err()
+	err = ps.rc.Del(ctx, consts.PresetPrefix+strconv.Itoa(req.Privilege)).Err()
 	if err != nil {
 		logger.Errorf("删除PresetList缓存失败:%v", err.Error())
 	}
@@ -80,7 +81,7 @@ func (ps *presetService) PresetUpdate(ctx context.Context, req model.PresetUpdat
 	return nil
 }
 func (ps *presetService) PresetCreateNew(ctx context.Context, req model.PresetCreateNewReq) (res model.PresetCreateNewRes, err error) {
-	err = ps.rc.Del(ctx, consts.PresetPrefix+"1").Err()
+	err = ps.rc.Del(ctx, consts.PresetPrefix+strconv.Itoa(req.Privilege)).Err()
 	if err != nil {
 		logger.Errorf("删除PresetList缓存失败:%v", err.Error())
 	}
@@ -111,8 +112,9 @@ func (ps *presetService) PresetCreateNew(ctx context.Context, req model.PresetCr
 	return res, nil
 }
 
-func (ps *presetService) PresetGetList(ctx context.Context) (res model.PresetGetListRes, err error) {
-	jsonbyte, err := ps.rc.Get(ctx, consts.PresetPrefix+"1").Bytes()
+func (ps *presetService) PresetGetList(ctx *gin.Context) (res model.PresetGetListRes, err error) {
+	roleId := ctx.GetInt(consts.RoleID)
+	jsonbyte, err := ps.rc.Get(ctx, consts.PresetPrefix+strconv.Itoa(roleId)).Bytes()
 	if err == nil {
 		err = json.Unmarshal(jsonbyte, &res)
 		if err == nil {
@@ -127,7 +129,7 @@ func (ps *presetService) PresetGetList(ctx context.Context) (res model.PresetGet
 	}
 	var presetOne model.PresetOneRes
 	var presetlistRes []model.PresetOneRes
-	presetlist, err := ps.pd.PresetGetList(ctx)
+	presetlist, err := ps.pd.PresetGetList(ctx, roleId)
 	if err != nil {
 		return
 	}
@@ -143,7 +145,7 @@ func (ps *presetService) PresetGetList(ctx context.Context) (res model.PresetGet
 		logger.Errorf("PresetListRes序列化失败:%v", err.Error())
 		return res, nil
 	}
-	err = ps.rc.Set(ctx, consts.PresetPrefix+"1", jsonbyte, 0).Err()
+	err = ps.rc.Set(ctx, consts.PresetPrefix+strconv.Itoa(roleId), jsonbyte, 0).Err()
 	if err != nil {
 		logger.Errorf("PresetListRes存储Cache失败:%v", err.Error())
 		return res, nil

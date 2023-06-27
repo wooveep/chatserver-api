@@ -57,7 +57,8 @@ redis:
   pool-size: 10 #同一时刻池中最大连接数
   min-idle-conns: 1 #建立连接时维持的最小空闲连接数量，避免新建连接速度慢
   idle-timeout: 3000 #最大空闲时长，单位是秒s
-
+custom:
+  azureproxy:        #用户SMTP发送邮件之前探测，需要放行出站TCP25端口权限，部分VPS默认封禁则需要配置使用代理
 # 日志配置(使用zap&lumberjack)
 log:
   level: debug

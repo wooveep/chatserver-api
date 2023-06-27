@@ -48,6 +48,7 @@ func NumTokensFromMessages(messages []openai.ChatCompletionMessage, model string
 		if message.Name != "" {
 			num_tokens += tokens_per_name
 		}
+
 	}
 	num_tokens += 3
 	return num_tokens

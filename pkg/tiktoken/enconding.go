@@ -12,8 +12,10 @@ const ENDOFPROMPT string = "<|endofprompt|>"
 
 var MODEL_TO_ENCODING = map[string]string{
 	// chat
-	"gpt-4":         "cl100k_base",
-	"gpt-3.5-turbo": "cl100k_base",
+	"gpt-4":             "cl100k_base",
+	"gpt-3.5-turbo":     "cl100k_base",
+	"gpt-3.5-turbo-16k": "cl100k_base",
+
 	// text
 	"text-davinci-003": "p50k_base",
 	"text-davinci-002": "p50k_base",
@@ -54,8 +56,10 @@ var MODEL_TO_ENCODING = map[string]string{
 
 var MODEL_PREFIX_TO_ENCODING = map[string]string{
 	// chat
-	"gpt-4-":         "cl100k_base", // e.g., gpt-4-0314, etc., plus gpt-4-32k
-	"gpt-3.5-turbo-": "cl100k_base", // e.g, gpt-3.5-turbo-0301, -0401, etc.
+	"gpt-4-":             "cl100k_base", // e.g., gpt-4-0314, etc., plus gpt-4-32k
+	"gpt-3.5-turbo-":     "cl100k_base", // e.g, gpt-3.5-turbo-0301, -0401, etc.
+	"gpt-3.5-turbo-16k-": "cl100k_base", // e.g, gpt-3.5-turbo-0301, -0401, etc.
+
 }
 
 type encoding struct {

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-30 18:16:23
- * @LastEditTime: 2023-05-11 10:50:48
+ * @LastEditTime: 2023-06-20 09:28:33
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/openai/chat_stream.go
  */
@@ -9,18 +9,18 @@ package openai
 
 import (
 	"bufio"
-	"net/http"
 )
 
 type ChatCompletionStreamChoiceDelta struct {
-	Content string `json:"content,omitempty"`
-	Role    string `json:"role,omitempty"`
+	FunctionCall *FunctionCall `json:"function_call,omitempty"`
+	Content      string        `json:"content,omitempty"`
+	Role         string        `json:"role,omitempty"`
 }
 
 type ChatCompletionStreamChoice struct {
 	Index        int                             `json:"index"`
 	Delta        ChatCompletionStreamChoiceDelta `json:"delta"`
-	FinishReason string                          `json:"finish_reason"`
+	FinishReason FinishReason                    `json:"finish_reason"`
 }
 
 type ChatCompletionStreamResponse struct {
@@ -44,7 +44,7 @@ type ChatCompletionStream struct {
 func (c *Client) CreateChatCompletionStream(
 	request ChatCompletionRequest,
 ) (stream *ChatCompletionStream, err error) {
-	urlSuffix := "/chat/completions"
+	urlSuffix := chatCompletionsSuffix
 	if !checkEndpointSupportsModel(urlSuffix, request.Model) {
 		err = ErrChatCompletionInvalidModel
 		return
@@ -60,16 +60,17 @@ func (c *Client) CreateChatCompletionStream(
 	if err != nil {
 		return
 	}
-	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
+	if isFailureStatusCode(resp) {
 		return nil, c.handleErrorResp(resp)
 	}
+
 	stream = &ChatCompletionStream{
 		streamReader: &streamReader[ChatCompletionStreamResponse]{
 			emptyMessagesLimit: c.config.EmptyMessagesLimit,
 			reader:             bufio.NewReader(resp.Body),
 			response:           resp,
-			errAccumulator:     newErrorAccumulator(),
-			unmarshaler:        &jsonUnmarshaler{},
+			errAccumulator:     NewErrorAccumulator(),
+			unmarshaler:        &JSONUnmarshaler{},
 		},
 	}
 	return

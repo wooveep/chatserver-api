@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 )
 
-type unmarshaler interface {
-	unmarshal(data []byte, v any) error
+type Unmarshaler interface {
+	Unmarshal(data []byte, v any) error
 }
 
-type jsonUnmarshaler struct{}
+type JSONUnmarshaler struct{}
 
-func (jm *jsonUnmarshaler) unmarshal(data []byte, v any) error {
+func (jm *JSONUnmarshaler) Unmarshal(data []byte, v any) error {
 	return json.Unmarshal(data, v)
 }

@@ -38,7 +38,7 @@ type EditsResponse struct {
 
 // Perform an API call to the Edits endpoint.
 func (c *Client) Edits(request EditsRequest) (response EditsResponse, err error) {
-	req, err := c.requestBuilder.build(c.ctx, http.MethodPost, c.fullURL("/edits", fmt.Sprint(request.Model)), request)
+	req, err := c.requestBuilder.Build(c.ctx, http.MethodPost, c.fullURL("/edits", fmt.Sprint(request.Model)), request)
 	if err != nil {
 		return
 	}
