@@ -1,15 +1,17 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-07 09:50:35
- * @LastEditTime: 2023-06-21 21:52:12
+ * @LastEditTime: 2023-06-27 10:55:54
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/crawl.go
  */
 package search
 
 import (
+	"bufio"
 	"chatserver-api/pkg/logger"
 	"crypto/tls"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -17,13 +19,44 @@ import (
 	"time"
 
 	readability "github.com/go-shiori/go-readability"
+	"golang.org/x/net/html/charset"
+	"golang.org/x/text/encoding/htmlindex"
 )
 
 // var (
-// 	urls = []string{
-// 		"https://zh.wikipedia.org/wiki/%E5%8D%97%E4%BA%AC%E5%B8%82",
-// 	}
+//
+//	urls = []string{
+//		"https://zh.wikipedia.org/wiki/%E5%8D%97%E4%BA%AC%E5%B8%82",
+//	}
+//
 // )
+func detectContentCharset(body io.Reader) string {
+	r := bufio.NewReader(body)
+	if data, err := r.Peek(1024); err == nil {
+		if _, name, _ := charset.DetermineEncoding(data, ""); len(name) != 0 {
+			return name
+		}
+	}
+
+	return "utf-8"
+}
+
+func DecodeHTMLBody(body io.Reader, charset string) (io.Reader, error) {
+	if charset == "" {
+		charset = detectContentCharset(body)
+	}
+
+	e, err := htmlindex.Get(charset)
+	if err != nil {
+		return nil, err
+	}
+
+	if name, _ := htmlindex.Name(e); name != "utf-8" {
+		body = e.NewDecoder().Reader(body)
+	}
+
+	return body, nil
+}
 
 func delete_extra_space(s string) string {
 	//删除字符串中的多余空格，有多个空格时，仅保留一个空格
@@ -73,7 +106,8 @@ func crawlPage(u string) string {
 		defer resp.Body.Close()
 
 		ur, _ := url.Parse(u)
-		article, err = readability.FromReader(resp.Body, ur)
+		body, _ := DecodeHTMLBody(resp.Body, "")
+		article, err = readability.FromReader(body, ur)
 		if err != nil {
 			logger.Errorf("failed to parse %s: %v\n", u, err)
 			// return ""
@@ -95,13 +129,13 @@ func crawlPage(u string) string {
 		}
 	}
 
-	textcontent := delete_extra_space(article.TextContent)
+	textcontent := []rune(delete_extra_space(article.TextContent))
 	textlen := len(textcontent)
 	if textlen == 0 {
 		return ""
 	}
-	if textlen > 3000 {
-		textlen = 3000
+	if textlen > 2200 {
+		textlen = 2200
 	}
-	return article.Title + "\n" + textcontent[:textlen-1]
+	return article.Title + "\n" + string(textcontent[:textlen-1])
 }

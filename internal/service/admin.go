@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-05-15 13:30:31
- * @LastEditTime: 2023-05-25 16:10:35
+ * @LastEditTime: 2023-06-27 10:51:37
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/admin.go
  */
@@ -104,3 +104,9 @@ func (as *adminService) GiftCardUpdate(ctx *gin.Context, req model.GiftCardUpdat
 	giftcard.CardComment = req.CardComment
 	return as.kd.GiftCardUpdate(ctx, &giftcard)
 }
+
+// 用户管理
+
+// 会话管理
+
+//系统设置

@@ -91,7 +91,7 @@ require (
 	github.com/yanyiwu/gojieba v1.3.0
 	golang.org/x/crypto v0.9.0
 	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/text v0.9.0
 	google.golang.org/api v0.125.0
 	googlemaps.github.io/maps v1.5.0
 	gopkg.in/ini.v1 v1.67.0 // indirect

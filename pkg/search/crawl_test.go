@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-07 09:50:35
- * @LastEditTime: 2023-06-21 21:49:15
+ * @LastEditTime: 2023-06-26 11:51:20
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/crawl_test.go
  */
@@ -27,7 +27,7 @@ func Test_crawlpage(t *testing.T) {
 		// TODO: Add test cases.
 		{
 			name: "test2",
-			args: args{u: "https://www.pconline.com.cn/focus/1627/16275165.html"},
+			args: args{u: "https://www.kanzhun.com/baike_salary/1X170w~~/"},
 		},
 	}
 	for _, tt := range tests {

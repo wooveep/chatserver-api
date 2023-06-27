@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-06 11:23:44
- * @LastEditTime: 2023-06-12 13:15:52
+ * @LastEditTime: 2023-06-26 16:11:13
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/ner.go
  */
@@ -63,7 +63,7 @@ func genin(target string, str_array []string) (count int) {
 	return
 }
 
-func nerDetec(query string) (int, string) {
+func NerDetec(query string) (int, string) {
 	var nlpres nlpResponse
 	var participles []string
 	var wordpos []string

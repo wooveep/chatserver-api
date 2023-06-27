@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-21 16:28:30
- * @LastEditTime: 2023-06-21 21:54:06
+ * @LastEditTime: 2023-06-27 13:47:43
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/chatfunc/websearch.go
  */
@@ -30,20 +30,20 @@ var FuncGoogleSearch = openai.FunctionDefine{
 				Type:        openai.JSONSchemaTypeString,
 				Description: "Extracted query statements from user questions that are applicable for search engines.",
 			},
-			// "classify": {
-			// 	Type: openai.JSONSchemaTypeString,
-			// 	Enum: []string{
-			// 		"News",
-			// 		"Web",
-			// 	},
-			// 	Description: "Determine what category the content to be searched belongs to.",
-			// },
+			"classify": {
+				Type: openai.JSONSchemaTypeString,
+				Enum: []string{
+					"News",
+					"Custom",
+				},
+				Description: "Determine what category the content to be searched belongs to.",
+			},
 		},
-		Required: []string{"query"},
+		Required: []string{"query", "classify"},
 	},
 }
 
-func GoogleSearch(ctx context.Context, query string) string {
+func GoogleSearch(ctx context.Context, query string, classify string) string {
 	var content string
 	rc := cache.GetRedisClient()
 	content, err := rc.Get(ctx, consts.SearchCachePrefix+security.Md5(query)).Result()
@@ -55,7 +55,7 @@ func GoogleSearch(ctx context.Context, query string) string {
 		// wcli := search.NewWeatherClient("3d042ce3865a4fe7842ce3865a0fe725")
 		// url := wcli.Weathermakeapiurl(lat, lng, "m")
 		// content, err = wcli.WeatherdoGetForecast5(url)
-		content, err = search.CustomSearch(ctx, query)
+		content, err = search.CustomSearch(ctx, query, classify)
 		if err != nil {
 			logger.Errorf("获取EntitySearch无缓存异常：%v", err)
 		} else {

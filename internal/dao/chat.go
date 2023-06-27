@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-05 15:36:51
- * @LastEditTime: 2023-06-21 15:50:20
+ * @LastEditTime: 2023-06-25 15:43:03
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/chat.go
  */
@@ -33,5 +33,6 @@ type ChatDao interface {
 	ChatCostUpdate(ctx context.Context, userId int64, balance float64) error
 	ChatBalanceGet(ctx context.Context, userId int64) (model.UserBalance, error)
 	ChatRecordVerify(ctx context.Context, recordid int64) (int64, error)
+	ChatFuncHisGet(ctx context.Context, chatId, start, end int64) ([]model.RecordOne, error)
 	ChatEmbeddingCompare(ctx context.Context, question pgvector.Vector, classify string) ([]model.DocsCompare, error)
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 10:51:03
- * @LastEditTime: 2023-06-19 11:48:05
+ * @LastEditTime: 2023-06-27 14:17:30
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/consts/consts.go
  */
@@ -54,8 +54,7 @@ const (
 	UserChatIDPrefix     = "User_ChatId_set:"
 	ChatRecordIDPrefix   = "Chat_RecordId_set:"
 	ChatSearchPrefix     = "Chat_Search_list:"
-	// QuerySearchPrefix    = "Query_Search_list:"
-	SearchCachePrefix = "Search_Cache_list:"
+	SearchCachePrefix    = "Search_Cache_list:"
 )
 
 var AzureToModel = map[string]string{
@@ -66,6 +65,7 @@ var AzureToModel = map[string]string{
 
 var ModelMaxToken = map[string]int{
 	"gpt-3.5-turbo":          4096,
+	"gpt-3.5-turbo-0613":     4096,
 	"gpt-3.5-turbo-16k":      16384,
 	"gpt-3.5-turbo-16k-0613": 16384,
 }
