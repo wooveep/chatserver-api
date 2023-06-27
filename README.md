@@ -1,22 +1,25 @@
 <!--
  * @Author: cloudyi.li
  * @Date: 2023-05-10 09:15:49
- * @LastEditTime: 2023-06-09 10:45:08
+ * @LastEditTime: 2023-06-27 14:26:37
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/README.md
 -->
 
 # 基于OPENAI的ChatGPT API开发的AI助手服务
 
+## 更新
+
+  智能搜搜：支持OPENAI 函数调用、与16K模型，使用azureAPI时会使用自己实现的函数调用方式处理。
+
 ## 体验站
 
   [https://chat.wooveep.net](https://chat.wooveep.net/#/register/uNJtISQw)
 
-新增功能： 支持联网的GPT搜索对接谷歌搜索API与腾讯NLP服务API
-
 本仓库为后端API服务，依赖的前端仓库为[wooveep](https://github.com/wooveep)/[chatserver-web](https://github.com/wooveep/chatserver-web)
 
 - [基于OPENAI的ChatGPT API开发的AI助手服务](#基于openai的chatgpt-api开发的ai助手服务)
+  - [更新](#更新)
   - [体验站](#体验站)
   - [实现功能](#实现功能)
   - [应用场景](#应用场景)

@@ -67,7 +67,7 @@ type FineTuneDeleteResponse struct {
 
 func (c *Client) CreateFineTune(request FineTuneRequest) (response FineTune, err error) {
 	urlSuffix := "/fine-tunes"
-	req, err := c.requestBuilder.build(c.ctx, http.MethodPost, c.fullURL(urlSuffix), request)
+	req, err := c.requestBuilder.Build(c.ctx, http.MethodPost, c.fullURL(urlSuffix), request)
 	if err != nil {
 		return
 	}
@@ -78,7 +78,7 @@ func (c *Client) CreateFineTune(request FineTuneRequest) (response FineTune, err
 
 // CancelFineTune cancel a fine-tune job.
 func (c *Client) CancelFineTune(fineTuneID string) (response FineTune, err error) {
-	req, err := c.requestBuilder.build(c.ctx, http.MethodPost, c.fullURL("/fine-tunes/"+fineTuneID+"/cancel"), nil)
+	req, err := c.requestBuilder.Build(c.ctx, http.MethodPost, c.fullURL("/fine-tunes/"+fineTuneID+"/cancel"), nil)
 	if err != nil {
 		return
 	}
@@ -88,7 +88,7 @@ func (c *Client) CancelFineTune(fineTuneID string) (response FineTune, err error
 }
 
 func (c *Client) ListFineTunes() (response FineTuneList, err error) {
-	req, err := c.requestBuilder.build(c.ctx, http.MethodGet, c.fullURL("/fine-tunes"), nil)
+	req, err := c.requestBuilder.Build(c.ctx, http.MethodGet, c.fullURL("/fine-tunes"), nil)
 	if err != nil {
 		return
 	}
@@ -99,7 +99,7 @@ func (c *Client) ListFineTunes() (response FineTuneList, err error) {
 
 func (c *Client) GetFineTune(fineTuneID string) (response FineTune, err error) {
 	urlSuffix := fmt.Sprintf("/fine-tunes/%s", fineTuneID)
-	req, err := c.requestBuilder.build(c.ctx, http.MethodGet, c.fullURL(urlSuffix), nil)
+	req, err := c.requestBuilder.Build(c.ctx, http.MethodGet, c.fullURL(urlSuffix), nil)
 	if err != nil {
 		return
 	}
@@ -109,7 +109,7 @@ func (c *Client) GetFineTune(fineTuneID string) (response FineTune, err error) {
 }
 
 func (c *Client) DeleteFineTune(fineTuneID string) (response FineTuneDeleteResponse, err error) {
-	req, err := c.requestBuilder.build(c.ctx, http.MethodDelete, c.fullURL("/fine-tunes/"+fineTuneID), nil)
+	req, err := c.requestBuilder.Build(c.ctx, http.MethodDelete, c.fullURL("/fine-tunes/"+fineTuneID), nil)
 	if err != nil {
 		return
 	}
@@ -119,7 +119,7 @@ func (c *Client) DeleteFineTune(fineTuneID string) (response FineTuneDeleteRespo
 }
 
 func (c *Client) ListFineTuneEvents(fineTuneID string) (response FineTuneEventList, err error) {
-	req, err := c.requestBuilder.build(c.ctx, http.MethodGet, c.fullURL("/fine-tunes/"+fineTuneID+"/events"), nil)
+	req, err := c.requestBuilder.Build(c.ctx, http.MethodGet, c.fullURL("/fine-tunes/"+fineTuneID+"/events"), nil)
 	if err != nil {
 		return
 	}

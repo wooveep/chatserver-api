@@ -69,7 +69,7 @@ type ModerationResponse struct {
 // Moderations — perform a moderation api call over a string.
 // Input can be an array or slice but a string will reduce the complexity.
 func (c *Client) Moderations(request ModerationRequest) (response ModerationResponse, err error) {
-	req, err := c.requestBuilder.build(c.ctx, http.MethodPost, c.fullURL("/moderations", request.Model), request)
+	req, err := c.requestBuilder.Build(c.ctx, http.MethodPost, c.fullURL("/moderations", request.Model), request)
 	if err != nil {
 		return
 	}

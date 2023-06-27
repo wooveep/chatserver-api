@@ -1,13 +1,14 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-30 18:16:24
- * @LastEditTime: 2023-03-31 17:06:59
+ * @LastEditTime: 2023-06-14 10:30:30
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/openai/models.go
  */
 package openai
 
 import (
+	"fmt"
 	"net/http"
 )
 
@@ -46,11 +47,24 @@ type ModelsList struct {
 // ListModels Lists the currently available models,
 // and provides basic information about each model such as the model id and parent.
 func (c *Client) ListModels() (models ModelsList, err error) {
-	req, err := c.requestBuilder.build(c.ctx, http.MethodGet, c.fullURL("/models"), nil)
+	req, err := c.requestBuilder.Build(c.ctx, http.MethodGet, c.fullURL("/models"), nil)
 	if err != nil {
 		return
 	}
 
 	err = c.sendRequest(req, &models)
+	return
+}
+
+// GetModel Retrieves a model instance, providing basic information about
+// the model such as the owner and permissioning.
+func (c *Client) GetModel(modelID string) (model Model, err error) {
+	urlSuffix := fmt.Sprintf("/models/%s", modelID)
+	req, err := c.requestBuilder.Build(c.ctx, http.MethodGet, c.fullURL(urlSuffix), nil)
+	if err != nil {
+		return
+	}
+
+	err = c.sendRequest(req, &model)
 	return
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:43:42
- * @LastEditTime: 2023-05-29 16:57:26
+ * @LastEditTime: 2023-06-25 16:53:47
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/handler/v1/chat/chat.go
  */
@@ -19,6 +19,7 @@ import (
 	"chatserver-api/pkg/tika"
 	"chatserver-api/pkg/tiktoken"
 	"strconv"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 )
@@ -81,17 +82,30 @@ func (ch *ChatHandler) ChatRegenerateg() gin.HandlerFunc {
 		}
 		//go func 请求API；
 		chanStream := make(chan string)
-		go ch.cSrv.ChatStremResGenerate(ctx, openAIReq, chanStream)
-
+		closeNotify := ctx.Writer.CloseNotify()
+		var chatwg sync.WaitGroup
+		chatwg.Add(1)
+		go func() {
+			defer chatwg.Done()
+			ch.cSrv.ChatStremResGenerate(ctx, 0, openAIReq, chanStream, closeNotify)
+		}()
 		//返回生成信息；
-		msgId, messages := ch.cSrv.ChatStreamResProcess(ctx, chanStream, questionId, answerId)
-
+		msgId, messages, flag := ch.cSrv.ChatStreamResProcess(ctx, chanStream, questionId, answerId)
+		chatwg.Wait()
 		ch.cSrv.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{{Role: openai.ChatMessageRoleAssistant, Content: messages}}, openAIReq.Model)
 
 		//保存生成信息;
-		if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleAssistant, messages, msgId); err != nil {
-			logger.Errorf("生成问题消息保存失败:%s", err)
-			return
+		if flag != -1 && flag != 2 {
+			if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleAssistant, messages, msgId, 0); err != nil {
+				logger.Errorf("生成问题消息保存失败:%s", err)
+				return
+			}
+		}
+		if flag == 1 {
+			if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleUser, "", questionId, 3); err != nil {
+				logger.Error("消息更新", logger.Pair("消息ID", questionId), logger.Pair("更新原因", "更新函数调用"), logger.Pair("错误信息", err))
+				return
+			}
 		}
 		if err := ch.cSrv.ChatBalanceUpdate(ctx); err != nil {
 			logger.Errorf("保存计费消息失败:%s", err)
@@ -148,25 +162,49 @@ func (ch *ChatHandler) ChatChatting() gin.HandlerFunc {
 		}
 
 		//会话请求消息保存
-		if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleUser, req.Message, questionId); err != nil {
+		if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleUser, req.Message, questionId, 0); err != nil {
 			response.JSON(ctx, errors.Wrap(err, ecode.Unknown, "用户请求消息保存失败"), nil)
 			return
 		}
 
 		chanStream := make(chan string)
 		//开始生成回答
-		go ch.cSrv.ChatStremResGenerate(ctx, openAIReq, chanStream)
+		//go func 请求API；
+		closeNotify := ctx.Writer.CloseNotify()
+		var chatwg sync.WaitGroup
+		chatwg.Add(1)
+		go func() {
+			defer chatwg.Done()
+			ch.cSrv.ChatStremResGenerate(ctx, 0, openAIReq, chanStream, closeNotify)
+		}()
+		//返回生成信息；
 		//发送回答
-		msgId, messages := ch.cSrv.ChatStreamResProcess(ctx, chanStream, questionId, 0)
+		msgId, messages, flag := ch.cSrv.ChatStreamResProcess(ctx, chanStream, questionId, 0)
+
+		chatwg.Wait()
 		ch.cSrv.ChatCostCalculate(ctx, []openai.ChatCompletionMessage{{Role: openai.ChatMessageRoleAssistant, Content: messages}}, openAIReq.Model)
 		//保存回答消息
-		if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleAssistant, messages, msgId); err != nil {
-			logger.Errorf("生成问题消息保存失败:%s", err)
-			return
+		if flag == -1 {
+			if err := ch.cSrv.ChatRecordDelete(ctx, questionId); err != nil {
+				logger.Error("内容过滤消息删除失败", logger.Pair("Error", err))
+				// return
+			}
+		}
+		if flag != -1 && flag != 2 {
+			if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleAssistant, messages, msgId, 0); err != nil {
+				logger.Errorf("生成回答保存失败:%s", err)
+				// return
+			}
+		}
+		if flag == 1 {
+			if err := ch.cSrv.ChatMessageSave(ctx, openai.ChatMessageRoleUser, "", questionId, 3); err != nil {
+				logger.Error("[消息更新]", logger.Pair("消息ID", questionId), logger.Pair("更新原因", "更新函数调用"), logger.Pair("错误信息", err))
+				return
+			}
 		}
 		if err := ch.cSrv.ChatBalanceUpdate(ctx); err != nil {
 			logger.Errorf("保存计费消息失败:%s", err)
-			return
+			// return
 		}
 	}
 }

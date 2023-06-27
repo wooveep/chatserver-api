@@ -163,6 +163,7 @@ COMMENT ON COLUMN public.bill.id IS '账单ID';
 COMMENT ON COLUMN public.bill.user_id IS '用户ID';
 COMMENT ON COLUMN public.bill.cost_change IS '变动金额';
 COMMENT ON COLUMN public.bill.balance IS '账户余额';
+COMMENT ON COLUMN public.bill.balance IS '账户余额';
 COMMENT ON COLUMN public.bill.cost_comment IS '变动说明';
 COMMENT ON COLUMN public.bill.created_at IS '记录的创建时间，默认为当前时间';
 COMMENT ON COLUMN public.bill.updated_at IS '记录的更新时间，默认为当前时间';
@@ -172,6 +173,7 @@ COMMENT ON COLUMN public.bill.updated_at IS '记录的更新时间，默认为�
 -- Drop table
 
 -- DROP TABLE public.preset;
+
 
 
 CREATE TABLE public.preset (
@@ -192,6 +194,8 @@ CREATE TABLE public.preset (
 	is_del int4 NULL DEFAULT 0, -- 删除标志
 	classify varchar NULL, -- embedding分类
 	privilege int4 NOT NULL DEFAULT 1, -- 预设用户权限
+	preset_tips varchar(255) NULL, -- 预设使用提示
+	"extension" int4 NULL DEFAULT 0, -- 扩展
 	preset_tips varchar(255) NULL, -- 预设使用提示
 	"extension" int4 NULL DEFAULT 0, -- 扩展
 	CONSTRAINT preset_frequency_check CHECK (((frequency >= ('-2'::integer)::double precision) AND (frequency <= (2)::double precision))),
@@ -220,6 +224,8 @@ COMMENT ON COLUMN public.preset.deleted_at IS '删除时间';
 COMMENT ON COLUMN public.preset.is_del IS '删除标志';
 COMMENT ON COLUMN public.preset.classify IS 'embedding分类';
 COMMENT ON COLUMN public.preset.privilege IS '预设用户权限';
+COMMENT ON COLUMN public.preset.preset_tips IS '预设使用提示';
+COMMENT ON COLUMN public.preset."extension" IS '扩展';
 COMMENT ON COLUMN public.preset.preset_tips IS '预设使用提示';
 COMMENT ON COLUMN public.preset."extension" IS '扩展';
 

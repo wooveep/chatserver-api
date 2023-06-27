@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"golang.org/x/net/proxy"
 )
@@ -18,8 +19,8 @@ import (
 type Client struct {
 	config            ClientConfig
 	ctx               context.Context
-	requestBuilder    requestBuilder
-	createFormBuilder func(io.Writer) formBuilder
+	requestBuilder    RequestBuilder
+	createFormBuilder func(io.Writer) FormBuilder
 }
 
 // NewClient creates new OpenAI API client.
@@ -31,28 +32,34 @@ func NewClient() (*Client, error) {
 	} else {
 		c = DefaultConfig(config)
 	}
-	if config.ProxyMode == "socks5" {
-		proxyadd := fmt.Sprintf("%s:%s", config.ProxyIP, config.ProxyPort)
-		dialer, err := proxy.SOCKS5("tcp", proxyadd, nil, proxy.Direct)
-		if err != nil {
-			return nil, err
-		}
-		transport := &http.Transport{
-			Dial: dialer.Dial,
-		}
-		c.HTTPClient = &http.Client{
-			Transport: transport,
-		}
-
+	transport := &http.Transport{
+		MaxIdleConns:    10,
+		IdleConnTimeout: time.Second * 10,
+		// DisableCompression:  true,
+		// DisableKeepAlives:   true,
+		TLSHandshakeTimeout: time.Second * 5,
 	}
-	if config.ProxyMode == "http" {
-		proxyUrl, _ := url.Parse(fmt.Sprintf("http://%s:%s", config.ProxyIP, config.ProxyPort))
-		transport := &http.Transport{
-			Proxy: http.ProxyURL(proxyUrl),
+
+	switch config.ProxyMode {
+	case "socks5":
+		{
+			proxyadd := fmt.Sprintf("%s:%s", config.ProxyIP, config.ProxyPort)
+			dialer, err := proxy.SOCKS5("tcp", proxyadd, nil, proxy.Direct)
+			if err != nil {
+				return nil, err
+			}
+			transport.Dial = dialer.Dial
 		}
-		c.HTTPClient = &http.Client{
-			Transport: transport,
+	case "http":
+		{
+			proxyUrl, _ := url.Parse(fmt.Sprintf("http://%s:%s", config.ProxyIP, config.ProxyPort))
+			transport.Proxy = http.ProxyURL(proxyUrl)
 		}
+	default:
+	}
+	c.HTTPClient = &http.Client{
+		Transport: transport,
+		Timeout:   60 * time.Second,
 	}
 	return NewClientWithConfig(c), nil
 }
@@ -62,9 +69,9 @@ func NewClientWithConfig(config ClientConfig) *Client {
 	return &Client{
 		config:         config,
 		ctx:            context.Background(),
-		requestBuilder: newRequestBuilder(),
-		createFormBuilder: func(body io.Writer) formBuilder {
-			return newFormBuilder(body)
+		requestBuilder: NewRequestBuilder(),
+		createFormBuilder: func(body io.Writer) FormBuilder {
+			return NewFormBuilder(body)
 		},
 	}
 }
@@ -79,12 +86,7 @@ func NewClientWithConfig(config ClientConfig) *Client {
 
 func (c *Client) sendRequest(req *http.Request, v any) error {
 	req.Header.Set("Accept", "application/json; charset=utf-8")
-	if c.config.APIType == consts.APITypeAzure {
-		req.Header.Set(consts.AzureAPIKeyHeader, c.config.authToken)
-	} else {
-		// OpenAI or Azure AD authentication
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.authToken))
-	}
+
 	// Check whether Content-Type is already set, Upload Files API requires
 	// Content-Type == multipart/form-data
 	contentType := req.Header.Get("Content-Type")
@@ -92,9 +94,7 @@ func (c *Client) sendRequest(req *http.Request, v any) error {
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	}
 
-	if len(c.config.OrgID) > 0 {
-		req.Header.Set("OpenAI-Organization", c.config.OrgID)
-	}
+	c.setCommonHeaders(req)
 
 	res, err := c.config.HTTPClient.Do(req)
 	if err != nil {
@@ -103,11 +103,29 @@ func (c *Client) sendRequest(req *http.Request, v any) error {
 
 	defer res.Body.Close()
 
-	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusBadRequest {
+	if isFailureStatusCode(res) {
 		return c.handleErrorResp(res)
 	}
 
 	return decodeResponse(res.Body, v)
+}
+
+func (c *Client) setCommonHeaders(req *http.Request) {
+	// https://learn.microsoft.com/en-us/azure/cognitive-services/openai/reference#authentication
+	// Azure API Key authentication
+	if c.config.APIType == consts.APITypeAzure {
+		req.Header.Set(consts.AzureAPIKeyHeader, c.config.authToken)
+	} else {
+		// OpenAI or Azure AD authentication
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.authToken))
+	}
+	if c.config.OrgID != "" {
+		req.Header.Set("OpenAI-Organization", c.config.OrgID)
+	}
+}
+
+func isFailureStatusCode(resp *http.Response) bool {
+	return resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest
 }
 
 func decodeResponse(body io.Reader, v any) error {
@@ -138,7 +156,6 @@ func (c *Client) fullURL(suffix string, args ...any) string {
 		baseURL := c.config.BaseURL
 		baseURL = strings.TrimRight(baseURL, "/")
 		// if suffix is /models change to {endpoint}/openai/models?api-version=2022-12-01
-		// https://whatserver.openai.azure.com/openai/deployments/davinci/completions?api-version=2022-12-01
 		// https://learn.microsoft.com/en-us/rest/api/cognitiveservices/azureopenaistable/models/list?tabs=HTTP
 		if strings.Contains(suffix, "/models") {
 			return fmt.Sprintf("%s/%s%s?api-version=%s", baseURL, consts.AzureAPIPrefix, suffix, c.config.APIVersion)
@@ -165,7 +182,7 @@ func (c *Client) newStreamRequest(
 	urlSuffix string,
 	body any,
 	model string) (*http.Request, error) {
-	req, err := c.requestBuilder.build(c.ctx, method, c.fullURL(urlSuffix, model), body)
+	req, err := c.requestBuilder.Build(c.ctx, method, c.fullURL(urlSuffix, model), body)
 	if err != nil {
 		return nil, err
 	}
@@ -174,19 +191,11 @@ func (c *Client) newStreamRequest(
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("Cache-Control", "no-cache")
 	req.Header.Set("Connection", "keep-alive")
-	// https://learn.microsoft.com/en-us/azure/cognitive-services/openai/reference#authentication
-	// Azure API Key authentication
-	if c.config.APIType == consts.APITypeAzure {
-		req.Header.Set(consts.AzureAPIKeyHeader, c.config.authToken)
-	} else {
-		// OpenAI or Azure AD authentication
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.authToken))
-	}
-	if c.config.OrgID != "" {
-		req.Header.Set("OpenAI-Organization", c.config.OrgID)
-	}
+
+	c.setCommonHeaders(req)
 	return req, nil
 }
+
 func (c *Client) handleErrorResp(resp *http.Response) error {
 	var errRes ErrorResponse
 	err := json.NewDecoder(resp.Body).Decode(&errRes)
@@ -200,6 +209,7 @@ func (c *Client) handleErrorResp(resp *http.Response) error {
 		}
 		return reqErr
 	}
+
 	errRes.Error.HTTPStatusCode = resp.StatusCode
 	return errRes.Error
 }

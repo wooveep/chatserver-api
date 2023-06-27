@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-05 15:36:51
- * @LastEditTime: 2023-05-28 17:47:23
+ * @LastEditTime: 2023-06-25 15:43:03
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/chat.go
  */
@@ -19,6 +19,7 @@ type ChatDao interface {
 	ChatUpdate(ctx context.Context, chat *entity.Chat) error
 	ChatRecordSave(ctx context.Context, record *entity.Record) error
 	ChatRecordClear(ctx context.Context, chatId int64) error
+	ChatRecordDelete(ctx context.Context, msgId int64) error
 	DocEmbeddingSave(ctx context.Context, docs *entity.Documents) error
 	ChatRecordUpdate(ctx context.Context, record *entity.Record) error
 	ChatRecordGet(ctx context.Context, chatId int64, memory int16) ([]model.RecordOne, error)
@@ -32,5 +33,6 @@ type ChatDao interface {
 	ChatCostUpdate(ctx context.Context, userId int64, balance float64) error
 	ChatBalanceGet(ctx context.Context, userId int64) (model.UserBalance, error)
 	ChatRecordVerify(ctx context.Context, recordid int64) (int64, error)
+	ChatFuncHisGet(ctx context.Context, chatId, start, end int64) ([]model.RecordOne, error)
 	ChatEmbeddingCompare(ctx context.Context, question pgvector.Vector, classify string) ([]model.DocsCompare, error)
 }

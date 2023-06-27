@@ -6,9 +6,9 @@ import (
 	"io"
 )
 
-type errorAccumulator interface {
-	write(p []byte) error
-	unmarshalError() *ErrorResponse
+type ErrorAccumulator interface {
+	Write(p []byte) error
+	Bytes() []byte
 }
 
 type errorBuffer interface {
@@ -17,35 +17,28 @@ type errorBuffer interface {
 	Bytes() []byte
 }
 
-type defaultErrorAccumulator struct {
-	buffer      errorBuffer
-	unmarshaler unmarshaler
+type DefaultErrorAccumulator struct {
+	Buffer errorBuffer
 }
 
-func newErrorAccumulator() errorAccumulator {
-	return &defaultErrorAccumulator{
-		buffer:      &bytes.Buffer{},
-		unmarshaler: &jsonUnmarshaler{},
+func NewErrorAccumulator() ErrorAccumulator {
+	return &DefaultErrorAccumulator{
+		Buffer: &bytes.Buffer{},
 	}
 }
 
-func (e *defaultErrorAccumulator) write(p []byte) error {
-	_, err := e.buffer.Write(p)
+func (e *DefaultErrorAccumulator) Write(p []byte) error {
+	_, err := e.Buffer.Write(p)
 	if err != nil {
 		return fmt.Errorf("error accumulator write error, %w", err)
 	}
 	return nil
 }
 
-func (e *defaultErrorAccumulator) unmarshalError() (errResp *ErrorResponse) {
-	if e.buffer.Len() == 0 {
+func (e *DefaultErrorAccumulator) Bytes() (errBytes []byte) {
+	if e.Buffer.Len() == 0 {
 		return
 	}
-
-	err := e.unmarshaler.unmarshal(e.buffer.Bytes(), &errResp)
-	if err != nil {
-		errResp = nil
-	}
-
+	errBytes = e.Buffer.Bytes()
 	return
 }

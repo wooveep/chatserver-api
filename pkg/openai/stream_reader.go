@@ -18,8 +18,8 @@ type streamReader[T streamable] struct {
 
 	reader         *bufio.Reader
 	response       *http.Response
-	errAccumulator errorAccumulator
-	unmarshaler    unmarshaler
+	errAccumulator ErrorAccumulator
+	unmarshaler    Unmarshaler
 }
 
 func (stream *streamReader[T]) Recv() (response T, err error) {
@@ -28,45 +28,70 @@ func (stream *streamReader[T]) Recv() (response T, err error) {
 		return
 	}
 
-	var emptyMessagesCount uint
+	response, err = stream.processLines()
+	return
+}
 
-waitForData:
-	line, err := stream.reader.ReadBytes('\n')
+func (stream *streamReader[T]) processLines() (T, error) {
+var emptyMessagesCount uint
+
+	for {
+		rawLine, readErr := stream.reader.ReadBytes('\n')
+		if readErr != nil {
+			respErr := stream.unmarshalError()
+			if respErr != nil {
+				return *new(T), fmt.Errorf("error, %w", respErr.Error)
+			}
+			return *new(T), readErr
+		}
+
+		var headerData = []byte("data: ")
+		noSpaceLine := bytes.TrimSpace(rawLine)
+		if !bytes.HasPrefix(noSpaceLine, headerData) {
+			writeErr := stream.errAccumulator.Write(noSpaceLine)
+			if writeErr != nil {
+				return *new(T), writeErr
+			}
+			emptyMessagesCount++
+			if emptyMessagesCount > stream.emptyMessagesLimit {
+				return *new(T), ErrTooManyEmptyStreamMessages
+			}
+
+			continue
+		}
+
+		noPrefixLine := bytes.TrimPrefix(noSpaceLine, headerData)
+		if string(noPrefixLine) == "[DONE]" {
+			stream.isFinished = true
+			return *new(T), io.EOF
+		}
+
+		var response T
+		unmarshalErr := stream.unmarshaler.Unmarshal(noPrefixLine, &response)
+		if unmarshalErr != nil {
+			return *new(T), unmarshalErr
+		}
+
+		return response, nil
+	}
+}
+
+func (stream *streamReader[T]) unmarshalError() (errResp *ErrorResponse) {
+	errBytes := stream.errAccumulator.Bytes()
+	if len(errBytes) == 0 {
+		return
+	}
+
+	err := stream.unmarshaler.Unmarshal(errBytes, &errResp)
 	if err != nil {
-		respErr := stream.errAccumulator.unmarshalError()
-		if respErr != nil {
-			err = fmt.Errorf("error, %w", respErr.Error)
-		}
-		return
+		errResp = nil
 	}
 
-	var headerData = []byte("data: ")
-	line = bytes.TrimSpace(line)
-	if !bytes.HasPrefix(line, headerData) {
-		if writeErr := stream.errAccumulator.write(line); writeErr != nil {
-			err = writeErr
-			return
-		}
-		emptyMessagesCount++
-		if emptyMessagesCount > stream.emptyMessagesLimit {
-			err = ErrTooManyEmptyStreamMessages
-			return
-		}
-
-		goto waitForData
-	}
-
-	line = bytes.TrimPrefix(line, headerData)
-	if string(line) == "[DONE]" {
-		stream.isFinished = true
-		err = io.EOF
-		return
-	}
-
-	err = stream.unmarshaler.unmarshal(line, &response)
 	return
 }
 
 func (stream *streamReader[T]) Close() {
 	stream.response.Body.Close()
+
+
 }

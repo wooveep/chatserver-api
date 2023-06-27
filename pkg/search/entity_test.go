@@ -1,9 +1,9 @@
 /*
  * @Author: cloudyi.li
- * @Date: 2023-06-01 08:53:25
- * @LastEditTime: 2023-06-27 15:08:31
+ * @Date: 2023-06-17 21:58:47
+ * @LastEditTime: 2023-06-20 22:31:48
  * @LastEditors: cloudyi.li
- * @FilePath: /chatserver-api/pkg/search/search_test.go
+ * @FilePath: /chatserver-api/pkg/search/entity_test.go
  */
 package search
 
@@ -16,42 +16,33 @@ import (
 	"testing"
 )
 
-func Test_customSearch(t *testing.T) {
+func TestEntitySearch(t *testing.T) {
 	c := config.Load("../../configs/config.yml")
 	logger.InitLogger(&c.LogConfig, c.AppName)
 	cache.InitRedis(c.RedisConfig)
-
 	type args struct {
-		query    string
-		classify string
+		// ctx   context.Context
+		query string
+		etype string
 	}
 	tests := []struct {
 		name string
 		args args
-		// wantResultstr string
+		// want    string
+		// wantErr bool
 	}{
 		// TODO: Add test cases.
 		{
 			name: "test1",
 			args: args{
-				query:    "",
-				classify: "News",
+				query: "南京邮电大学",
+				etype: "Organization",
 			},
 		},
-		// {
-		// 	name: "test1",
-		// 	args: args{
-		// 		query: "今天有什么新闻",
-		// 	},
-		// },
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotResultstr, err := CustomSearch(context.Background(), tt.args.query, tt.args.classify)
-			if err != nil {
-				fmt.Println(err)
-			}
-			fmt.Println(gotResultstr)
+			fmt.Println(Entity(context.Background(), tt.args.query, tt.args.etype))
 		})
 	}
 }

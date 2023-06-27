@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-30 18:16:24
- * @LastEditTime: 2023-05-11 10:53:07
+ * @LastEditTime: 2023-06-21 10:41:02
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/openai/error.go
  */
@@ -51,9 +51,13 @@ func (e *APIError) UnmarshalJSON(data []byte) (err error) {
 		return
 	}
 
-	err = json.Unmarshal(rawMap["type"], &e.Type)
-	if err != nil {
-		return
+	// optional fields for azure openai
+	// refs: https://github.com/sashabaranov/go-openai/issues/343
+	if _, ok := rawMap["type"]; ok {
+		err = json.Unmarshal(rawMap["type"], &e.Type)
+		if err != nil {
+			return
+		}
 	}
 
 	// optional fields

@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 11:55:27
- * @LastEditTime: 2023-04-05 15:56:13
+ * @LastEditTime: 2023-06-25 11:24:21
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/middleware/logger.go
  */
@@ -31,7 +31,7 @@ func Logger(c *gin.Context) {
 	}
 	c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(requestBody))
 
-	logger.Info("New request start",
+	logger.Info("[Request Start]",
 		logger.Pair(consts.RequestId, reqId),
 		logger.Pair("host", ip),
 		logger.Pair("host", ip),
@@ -42,7 +42,7 @@ func Logger(c *gin.Context) {
 	c.Next()
 	// 请求后
 	latency := time.Since(t)
-	logger.Info("New request end",
+	logger.Info("[Request End]",
 		logger.Pair(consts.RequestId, reqId),
 		logger.Pair("host", ip),
 		logger.Pair("path", reqPath),

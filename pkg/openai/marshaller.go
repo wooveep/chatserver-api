@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 )
 
-type marshaller interface {
-	marshal(value any) ([]byte, error)
+type Marshaller interface {
+	Marshal(value any) ([]byte, error)
 }
 
-type jsonMarshaller struct{}
+type JSONMarshaller struct{}
 
-func (jm *jsonMarshaller) marshal(value any) ([]byte, error) {
+func (jm *JSONMarshaller) Marshal(value any) ([]byte, error) {
 	return json.Marshal(value)
 }

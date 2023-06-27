@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-30 18:16:24
- * @LastEditTime: 2023-05-12 23:17:58
+ * @LastEditTime: 2023-06-14 10:30:38
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/openai/stream.go
  */
@@ -10,7 +10,6 @@ package openai
 import (
 	"bufio"
 	"errors"
-	"net/http"
 )
 
 var (
@@ -49,17 +48,17 @@ func (c *Client) CreateCompletionStream(
 	if err != nil {
 		return
 	}
-
-	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
+	if isFailureStatusCode(resp) {
 		return nil, c.handleErrorResp(resp)
+
 	}
 	stream = &CompletionStream{
 		streamReader: &streamReader[CompletionResponse]{
 			emptyMessagesLimit: c.config.EmptyMessagesLimit,
 			reader:             bufio.NewReader(resp.Body),
 			response:           resp,
-			errAccumulator:     newErrorAccumulator(),
-			unmarshaler:        &jsonUnmarshaler{},
+			errAccumulator:     NewErrorAccumulator(),
+			unmarshaler:        &JSONUnmarshaler{},
 		},
 	}
 	return

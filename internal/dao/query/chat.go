@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-04-05 15:37:14
- * @LastEditTime: 2023-05-28 17:46:45
+ * @LastEditTime: 2023-06-27 15:04:46
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/dao/query/chat.go
  */
@@ -45,10 +45,13 @@ func (cd *chatDao) ChatRecordSave(ctx context.Context, record *entity.Record) er
 func (cd *chatDao) ChatRecordClear(ctx context.Context, chatId int64) error {
 	return cd.ds.Master().Where("chat_id = ?", chatId).Delete(&entity.Record{}).Error
 }
+func (cd *chatDao) ChatRecordDelete(ctx context.Context, msgId int64) error {
+	return cd.ds.Master().Where("id = ?", msgId).Delete(&entity.Record{}).Error
+}
 
 func (cd *chatDao) ChatRecordIdGet(ctx context.Context, chatId int64) ([]int64, error) {
 	var recordlist []int64
-	err := cd.ds.Master().Where("chat_id = ?", chatId).Model(&entity.Record{}).Select("id").Find(&recordlist).Error
+	err := cd.ds.Master().Where("chat_id = ?", chatId).Model(&entity.Record{}).Select("id").Where("is_func = ?", false).Where("is_call = ?", false).Find(&recordlist).Error
 	return recordlist, err
 }
 
@@ -93,7 +96,7 @@ func (cd *chatDao) ChatDetailGet(ctx context.Context, userId, chatId int64) (mod
 
 func (cd *chatDao) ChatRecordGet(ctx context.Context, chatId int64, memory int16) ([]model.RecordOne, error) {
 	var recordlist []model.RecordOne
-	subQuery1 := cd.ds.Master().Model(&entity.Record{}).Where("chat_id = ?", chatId).Order("id desc").Limit(int(memory)).Select("*")
+	subQuery1 := cd.ds.Master().Model(&entity.Record{}).Where("chat_id = ?", chatId).Where("is_func = ?", false).Where("is_call = ?", false).Order("id desc").Limit(int(memory)).Select("*")
 	err := cd.ds.Master().Table("(?) as a ", subQuery1).Order("id").Find(&recordlist).Error
 	return recordlist, err
 }
@@ -101,10 +104,20 @@ func (cd *chatDao) ChatRecordGet(ctx context.Context, chatId int64, memory int16
 func (cd *chatDao) ChatRegenRecordGet(ctx context.Context, chatId, msgid int64, memory int16) ([]model.RecordOne, int64, error) {
 	var recordlist []model.RecordOne
 	var answerid int64
-	err := cd.ds.Master().Model(&entity.Record{}).Where("chat_id = ?", chatId).Where("id > ? ", msgid).Order("id").Limit(1).Select("id").Find(&answerid).Error
-	subQuery2 := cd.ds.Master().Model(&entity.Record{}).Where("chat_id = ?", chatId).Where("id <= ? ", msgid).Order("id desc").Limit(int(memory) + 1).Select("*")
+	err := cd.ds.Master().Model(&entity.Record{}).Where("chat_id = ?", chatId).Where("id > ? ", msgid).Where("is_call = ?", false).Where("is_func = ?", false).Order("id").Limit(1).Select("id").Find(&answerid).Error
+	subQuery2 := cd.ds.Master().Model(&entity.Record{}).Where("chat_id = ?", chatId).Where("id <= ? ", msgid).Where("is_func = ?", false).Where("is_call = ?", false).Order("id desc").Limit(int(memory) + 1).Select("*")
 	err = cd.ds.Master().Table("(?) as a ", subQuery2).Order("id").Find(&recordlist).Error
 	return recordlist, answerid, err
+}
+func (cd *chatDao) ChatFuncHisGet(ctx context.Context, chatId, start, end int64) ([]model.RecordOne, error) {
+	var recordlist []model.RecordOne
+	var err error
+	if end != -1 {
+		err = cd.ds.Master().Model(&entity.Record{}).Where("chat_id = ?", chatId).Where("id between ? and ? ", start, end).Where("is_call = ? OR is_func = ? ", true, true).Order("id").Find(&recordlist).Error
+	} else {
+		err = cd.ds.Master().Model(&entity.Record{}).Where("chat_id = ?", chatId).Where("id > ?", start).Where("is_call = ? OR is_func = ? ", true, true).Order("id").Find(&recordlist).Error
+	}
+	return recordlist, err
 }
 
 func (cd *chatDao) ChatListGet(ctx context.Context, userId int64) ([]model.ChatOne, error) {

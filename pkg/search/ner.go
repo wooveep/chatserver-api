@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-06-06 11:23:44
- * @LastEditTime: 2023-06-08 22:37:28
+ * @LastEditTime: 2023-06-27 15:08:19
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/pkg/search/ner.go
  */
@@ -56,9 +56,11 @@ func genin(target string, str_array []string) (count int) {
 	return
 }
 
-func nerDetec(query string) (int, string) {
+func NerDetec(query string) (int, string) {
 	var nlpres nlpResponse
 	var participles []string
+	var wordpos []string
+	var containSearch bool
 	tencentcfg := config.AppConfig.TencentConfig
 
 	credential := common.NewCredential(
@@ -89,7 +91,10 @@ func nerDetec(query string) (int, string) {
 	// 输出json格式的字符串回包
 	json.Unmarshal([]byte(response.ToJsonString()), &nlpres)
 	for _, v := range nlpres.Response.CompoundParticiples {
-
+		wordpos = append(wordpos, v.Pos)
+		if v.Word == "搜索" {
+			containSearch = true
+		}
 		logger.Debug(v.Pos + "||" + v.Word)
 	}
 	var generic []string
@@ -104,10 +109,13 @@ func nerDetec(query string) (int, string) {
 	} else {
 		return 0, ""
 	}
-
+	if wordpos[0] == "VV" && !containSearch {
+		return 0, ""
+	}
 	if len(nlpres.Response.Entities) == genin("quantity.generic", generic) {
 		return 0, ""
 	}
+
 	if genin("time.generic", generic) > 0 {
 		return 2, strings.Join(participles, " ")
 	}
