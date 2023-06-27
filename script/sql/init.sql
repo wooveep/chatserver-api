@@ -280,6 +280,9 @@ CREATE TABLE public.record (
 	deleted_at timestamptz NULL, -- 删除时间
 	is_del int4 NULL DEFAULT 0, -- 删除标志
 	message_token int4 NULL, -- 当前消息消耗令牌
+	is_func bool NULL DEFAULT false, -- 是否是函数响应消息
+	is_call bool NULL DEFAULT false, -- 是否是函数调用请求
+	has_call bool NULL DEFAULT false, -- 是否触发函数调用
 	CONSTRAINT record_pkey PRIMARY KEY (id),
 	CONSTRAINT record_chat_id_fkey FOREIGN KEY (chat_id) REFERENCES public.chat(id) ON DELETE CASCADE
 );
@@ -298,6 +301,9 @@ COMMENT ON COLUMN public.record.updated_at IS '记录更新时间';
 COMMENT ON COLUMN public.record.deleted_at IS '删除时间';
 COMMENT ON COLUMN public.record.is_del IS '删除标志';
 COMMENT ON COLUMN public.record.message_token IS '当前消息消耗令牌';
+COMMENT ON COLUMN public.record.is_func IS '是否是函数响应消息';
+COMMENT ON COLUMN public.record.is_call IS '是否是函数调用请求';
+COMMENT ON COLUMN public.record.has_call IS '是否触发函数调用';
 
 
 -- Drop table

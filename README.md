@@ -1,7 +1,7 @@
 <!--
  * @Author: cloudyi.li
  * @Date: 2023-05-10 09:15:49
- * @LastEditTime: 2023-06-27 14:26:37
+ * @LastEditTime: 2023-06-27 15:18:33
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/README.md
 -->
@@ -11,7 +11,7 @@
 ## 更新
 
   智能搜搜：支持OPENAI 函数调用、与16K模型，使用azureAPI时会使用自己实现的函数调用方式处理。
-
+  SQL:本次有更新
 ## 体验站
 
   [https://chat.wooveep.net](https://chat.wooveep.net/#/register/uNJtISQw)
