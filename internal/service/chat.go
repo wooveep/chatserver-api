@@ -1,7 +1,7 @@
 /*
  * @Author: cloudyi.li
  * @Date: 2023-03-29 13:45:51
- * @LastEditTime: 2023-06-27 15:07:08
+ * @LastEditTime: 2023-08-03 12:53:30
  * @LastEditors: cloudyi.li
  * @FilePath: /chatserver-api/internal/service/chat.go
  */
@@ -618,6 +618,7 @@ func (cs *chatService) ChatStremResGenerate(ctx *gin.Context, retry int, req ope
 				logger.Warnf("ChatCompletionStream error重试: %v\n", err)
 				retry += 1
 				cs.ChatStremResGenerate(ctx, retry, req, chanStream, closeNotify)
+				return
 			}
 		}
 		logger.Errorf("ChatCompletionStream error: %v\n", err)
