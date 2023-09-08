@@ -196,8 +196,6 @@ CREATE TABLE public.preset (
 	privilege int4 NOT NULL DEFAULT 1, -- 预设用户权限
 	preset_tips varchar(255) NULL, -- 预设使用提示
 	"extension" int4 NULL DEFAULT 0, -- 扩展
-	preset_tips varchar(255) NULL, -- 预设使用提示
-	"extension" int4 NULL DEFAULT 0, -- 扩展
 	CONSTRAINT preset_frequency_check CHECK (((frequency >= ('-2'::integer)::double precision) AND (frequency <= (2)::double precision))),
 	CONSTRAINT preset_pkey PRIMARY KEY (id),
 	CONSTRAINT preset_presence_check CHECK (((presence >= ('-2'::integer)::double precision) AND (presence <= (2)::double precision))),
